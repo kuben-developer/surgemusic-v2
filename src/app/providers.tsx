@@ -1,13 +1,23 @@
 "use client";
 
-import { ClerkProvider } from "@clerk/nextjs";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ClerkProvider } from '@clerk/nextjs'
+import { ConvexReactClient } from 'convex/react'
+import { ConvexProviderWithClerk } from 'convex/react-clerk'
+import { useAuth } from '@clerk/nextjs'
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+  throw new Error('Missing NEXT_PUBLIC_CONVEX_URL in your .env file')
+}
+
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL)
+
 function ConvexClientProvider({ children }: { children: React.ReactNode }) {
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return (
+    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      {children}
+    </ConvexProviderWithClerk>
+  )
 }
 
 const ThemeProvider = dynamic(
@@ -16,22 +26,13 @@ const ThemeProvider = dynamic(
 )
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-
   return (
-    <ConvexClientProvider>
-      <ThemeProvider >
-        <ClerkProvider
-          appearance={{
-            variables: {
-              colorPrimary: "#6366f1",
-              colorText: "#374151",
-            },
-          }}
-        >
+    <ClerkProvider>
+      <ConvexClientProvider>
+        <ThemeProvider>
           {children}
-        </ClerkProvider>
-      </ThemeProvider>
-    </ConvexClientProvider>
+        </ThemeProvider>
+      </ConvexClientProvider>
+    </ClerkProvider>
   );
 }

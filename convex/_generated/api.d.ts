@@ -13,8 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as scripts_migrate from "../scripts/migrate.js";
-import type * as scripts_migrateGeneratedVideos from "../scripts/migrateGeneratedVideos.js";
+import type * as auth_example from "../auth_example.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -25,8 +24,7 @@ import type * as scripts_migrateGeneratedVideos from "../scripts/migrateGenerate
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  "scripts/migrate": typeof scripts_migrate;
-  "scripts/migrateGeneratedVideos": typeof scripts_migrateGeneratedVideos;
+  auth_example: typeof auth_example;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
