@@ -13,7 +13,13 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as auth_example from "../auth_example.js";
+import type * as ayrshare from "../ayrshare.js";
+import type * as campaigns from "../campaigns.js";
+import type * as folders from "../folders.js";
+import type * as public_ from "../public.js";
+import type * as reports from "../reports.js";
+import type * as stripe from "../stripe.js";
+import type * as users from "../users.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -24,7 +30,13 @@ import type * as auth_example from "../auth_example.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  auth_example: typeof auth_example;
+  ayrshare: typeof ayrshare;
+  campaigns: typeof campaigns;
+  folders: typeof folders;
+  public: typeof public_;
+  reports: typeof reports;
+  stripe: typeof stripe;
+  users: typeof users;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
