@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as analytics from "../analytics.js";
 import type * as ayrshare from "../ayrshare.js";
 import type * as campaigns from "../campaigns.js";
 import type * as folders from "../folders.js";
@@ -30,6 +31,7 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
   ayrshare: typeof ayrshare;
   campaigns: typeof campaigns;
   folders: typeof folders;

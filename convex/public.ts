@@ -1,4 +1,4 @@
-import { query, action, internalQuery } from "./_generated/server";
+import { action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -41,8 +41,8 @@ export const getSharedReport = action({
         campaignIds: report.campaignIds,
       });
 
-      // Use the existing fetchCombinedAnalytics function from campaigns
-      const analyticsData = await ctx.runAction(internal.campaigns.fetchCombinedAnalytics, {
+      // Use the existing fetchCombinedAnalytics function from analytics
+      const analyticsData = await ctx.runAction(internal.analytics.fetchCombinedAnalytics, {
         campaignIds: campaignIds as any,
         days: args.days,
         clerkId: report.userId as any, // Pass the report owner's ID
