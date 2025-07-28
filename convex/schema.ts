@@ -29,6 +29,7 @@ export default defineSchema({
 
   campaigns: defineTable({
     userId: v.id('users'),
+    referenceId: v.string(),
     campaignName: v.string(),
     songName: v.string(),
     artistName: v.string(),
@@ -66,10 +67,42 @@ export default defineSchema({
       type: v.string(),
     }),
 
-    // Scheduling info
-    ayrshare: v.optional(v.object({
+    tiktokUpload: v.optional(v.object({
       scheduledAt: v.number(),
-      platform: socialPlatforms,
+      socialAccountId: v.id('socialAccounts'),
+      status: v.object({
+        isPosted: v.boolean(),
+        isFailed: v.boolean(),
+        failedReason: v.optional(v.string()),
+      }),
+      post: v.object({
+        id: v.string(),
+        refId: v.optional(v.string()),
+        caption: v.string(),
+        url: v.optional(v.string()),
+        templateId: v.optional(v.string()),
+      }),
+    })),
+
+    instagramUpload: v.optional(v.object({
+      scheduledAt: v.number(),
+      socialAccountId: v.id('socialAccounts'),
+      status: v.object({
+        isPosted: v.boolean(),
+        isFailed: v.boolean(),
+        failedReason: v.optional(v.string()),
+      }),
+      post: v.object({
+        id: v.string(),
+        refId: v.optional(v.string()),
+        caption: v.string(),
+        url: v.optional(v.string()),
+        templateId: v.optional(v.string()),
+      }),
+    })),
+
+    youtubeUpload: v.optional(v.object({
+      scheduledAt: v.number(),
       socialAccountId: v.id('socialAccounts'),
       status: v.object({
         isPosted: v.boolean(),
@@ -99,5 +132,20 @@ export default defineSchema({
     name: v.string(),
     userId: v.id('users'),
     campaignIds: v.array(v.id('campaigns')),
+  }),
+
+  // Temporary tables for migration
+  migrationMappings: defineTable({
+    type: v.string(),
+    data: v.any(),
+  }),
+
+  migrationProgress: defineTable({
+    type: v.string(),
+    offset: v.number(),
+    processedCount: v.number(),
+    skippedCount: v.number(),
+    errors: v.array(v.string()),
+    timestamp: v.number(),
   })
 })

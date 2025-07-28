@@ -13,6 +13,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as scripts_migrate from "../scripts/migrate.js";
+import type * as scripts_migrateGeneratedVideos from "../scripts/migrateGeneratedVideos.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -22,7 +24,10 @@ import type {
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "scripts/migrate": typeof scripts_migrate;
+  "scripts/migrateGeneratedVideos": typeof scripts_migrateGeneratedVideos;
+}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">
