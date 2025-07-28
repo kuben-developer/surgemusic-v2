@@ -25,7 +25,8 @@ export default defineSchema({
       postScheduler: v.number(),
       postSchedulerAdditional: v.number(),
     }),
-  }),
+  })
+    .index("by_clerkId", ["clerkId"]),
 
   campaigns: defineTable({
     userId: v.id('users'),
@@ -42,13 +43,19 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("failed"),
     ),
-  }),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_referenceId", ["referenceId"])
+    .index("by_status", ["status"])
+    .index("by_userId_status", ["userId", "status"]),
 
   ayrshareProfiles: defineTable({
     profileName: v.string(),
     profileKey: v.string(),
     userId: v.id('users'),
-  }),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_profileName", ["profileName"]),
 
   socialAccounts: defineTable({
     ayrshareProfileId: v.id('ayrshareProfiles'),
@@ -56,7 +63,9 @@ export default defineSchema({
     profileUrl: v.string(),
     userImage: v.string(),
     username: v.string(),
-  }),
+  })
+    .index("by_ayrshareProfileId", ["ayrshareProfileId"])
+    .index("by_platform", ["platform"]),
 
   generatedVideos: defineTable({
     campaignId: v.id('campaigns'),
@@ -118,7 +127,8 @@ export default defineSchema({
       }),
     })),
 
-  }),
+  })
+    .index("by_campaignId", ["campaignId"]),
 
   reports: defineTable({
     name: v.string(),
@@ -126,13 +136,15 @@ export default defineSchema({
     publicShareId: v.optional(v.string()),
     campaignIds: v.array(v.id('campaigns')),
     hiddenVideoIds: v.array(v.id('generatedVideos')),
-  }),
+  })
+    .index("by_userId", ["userId"]),
 
   folders: defineTable({
     name: v.string(),
     userId: v.id('users'),
     campaignIds: v.array(v.id('campaigns')),
-  }),
+  })
+    .index("by_userId", ["userId"]),
 
   // Temporary tables for migration
   migrationMappings: defineTable({
