@@ -209,7 +209,7 @@ export default function SocialAccountsPage() {
         } catch (error) {
           setProfileCheckResults(prevResults =>
             prevResults.map((r, idx) =>
-              idx === overallIndex ? { ...r, message: error.message || "Sync failed", status: 'error' } : r
+              idx === overallIndex ? { ...r, message: (error as Error).message || "Sync failed", status: 'error' } : r
             )
           );
         } finally {
@@ -293,8 +293,8 @@ export default function SocialAccountsPage() {
   const openProfileManager = async (profileKey: string) => {
     try {
       const data = await generateUrlMutation({ profileKey })
-      if (data?.url) {
-        window.open(data.url, '_blank')
+      if (data && 'url' in data && data.url) {
+        window.open(data.url as string, '_blank')
       }
     } catch (error) {
       toast.error(`Failed to generate manager URL: ${(error as Error).message}`)

@@ -33,27 +33,32 @@ import { CommentsSection } from "@/components/analytics/CommentsSection"
 
 // Define the types for our analytics data
 interface Campaign {
-    _id: string;
+    id: string;
+    _id?: string;
     campaignName: string;
 }
 
 interface VideoCampaign {
-    id: string;
+    id: number;
     campaignName: string;
 }
 
 interface VideoInfo {
-    _id: string;
+    id: string;
+    _id?: string;
     postId: string | null;
     videoUrl: string;
     videoName: string;
     videoType: string;
-    _creationTime: number;
+    tiktokUrl: string;
+    createdAt: Date;
+    _creationTime?: number;
     campaign: VideoCampaign;
 }
 
 interface VideoMetric {
-    id: string;
+    id?: string;
+    _id?: string;
     videoInfo: VideoInfo;
     views: number;
     likes: number;
@@ -254,12 +259,13 @@ const AnalyticsContent = ({
     const { dailyData = [], avgEngagementRate = "0", campaigns = [], videoMetrics = [], totals = { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 } } = analyticsData ?? {};
     
     // Map videoMetrics to have the expected 'id' field
-    const mappedVideoMetrics = videoMetrics.map((vm) => ({
+    const mappedVideoMetrics = videoMetrics.map((vm: any) => ({
         ...vm,
         id: vm._id || vm.id || Math.random().toString(36).substr(2, 9),
         videoInfo: {
             ...vm.videoInfo,
             id: vm.videoInfo._id || vm.videoInfo.id || Math.random().toString(36).substr(2, 9),
+            tiktokUrl: vm.videoInfo.tiktokUrl || '',
             createdAt: vm.videoInfo._creationTime ? new Date(vm.videoInfo._creationTime) : new Date(),
             campaign: {
                 id: parseInt(vm.videoInfo.campaign?.id || vm.videoInfo.campaign?._id || '0'),
@@ -319,7 +325,7 @@ const AnalyticsContent = ({
 
             <motion.div variants={fadeInUp}>
                 <CommentsSection 
-                    campaignIds={selectedCampaigns.length > 0 ? selectedCampaigns : campaigns.map(c => c._id)}
+                    campaignIds={selectedCampaigns.length > 0 ? selectedCampaigns : campaigns.map((c: any) => c._id)}
                 />
             </motion.div>
         </motion.div>
@@ -452,7 +458,7 @@ export default function AnalyticsClient() {
                     onCampaignChange={handleCampaignChange}
                     onResetCampaigns={handleResetCampaigns}
                     allCampaigns={allCampaigns?.map(c => ({
-                        _id: c._id,
+                        id: c._id,
                         campaignName: c.campaignName
                     })) || []}
                     dateRange={dateRange}

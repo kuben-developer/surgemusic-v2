@@ -21,13 +21,9 @@ export default function EditReportPage() {
     const reportId = params.id as string; // Type assertion
 
     // Fetch existing report data
-    const { data: reportData, isLoading: isLoadingReport, error: reportError } = api.reports.get.useQuery(
-        { id: reportId },
-        {
-            enabled: !!reportId, // Only run query if reportId is available
-            staleTime: Infinity, // Don't refetch initial data automatically
-        }
-    );
+    const reportData = useQuery(api.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
+    const isLoadingReport = reportData === undefined;
+    const reportError = null;
 
     const updateMutation = useMutation(api.reports.update);
     const [isUpdating, setIsUpdating] = React.useState(false);
@@ -71,7 +67,7 @@ export default function EditReportPage() {
         return (
             <div className="container mx-auto py-10">
                 <h1 className="text-3xl font-bold mb-6">Edit Report</h1>
-                <p className="text-red-500">Error loading report data: {reportError.message}</p>
+                <p className="text-red-500">Error loading report data</p>
             </div>
         );
     }

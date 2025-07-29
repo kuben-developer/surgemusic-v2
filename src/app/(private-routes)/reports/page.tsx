@@ -51,16 +51,17 @@ type Report = Doc<"reports"> & {
 };
 
 export default function ReportsPage() {
-    const { data: reports, isLoading, error, refetch } = api.reports.list.useQuery();
+    const reports = useQuery(api.reports.list);
+    const isLoading = reports === undefined;
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<Report | null>(null);
 
-    const deleteMutation = useMutation(api.reports.delete);
+    const deleteReport = useMutation(api.reports.deleteReport);
     
     const handleDelete = async (reportId: string) => {
         try {
-            const data = await deleteMutation({ id: reportId as Id<"reports"> });
+            const data = await deleteReport({ id: reportId as Id<"reports"> });
             toast.success(`Report "${data.name}" deleted successfully.`);
             closeDeleteDialog();
         } catch (error) {
@@ -87,7 +88,10 @@ export default function ReportsPage() {
         setIsDeleteDialogOpen(false);
     };
 
-    const handleDeleteConfirm = () => {
+    const error = null; // No error handling for Convex queries
+    const refetch = () => {}; // No refetch for Convex queries
+    
+    const handleDeleteConfirm = async () => {
         if (reportToDelete) {
             await handleDelete(reportToDelete._id);
         }
@@ -121,7 +125,7 @@ export default function ReportsPage() {
                      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center bg-destructive/5 border border-destructive/20 rounded-lg p-8">
                         <FileText className="h-12 w-12 text-destructive/60 mb-4" />
                         <h2 className="text-2xl font-semibold mb-2 text-destructive">Error Loading Reports</h2>
-                        <p className="text-destructive/80 mb-6">{error instanceof Error ? error.message : 'An unknown error occurred'}</p>
+                        <p className="text-destructive/80 mb-6">An error occurred</p>
                         <Button variant="destructive" onClick={() => refetch()}>Try Again</Button>
                      </div>
                 )}

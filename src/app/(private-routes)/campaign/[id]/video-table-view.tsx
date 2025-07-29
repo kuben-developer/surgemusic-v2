@@ -446,8 +446,8 @@ export function VideoTableView({
                             checked={selectedVideos.includes(String(video._id))}
                             onCheckedChange={(checked) => {
                               // Get the current event to check for shift key
-                              const event = window.event as MouseEvent | undefined;
-                              toggleSelectVideo(String(video._id), event);
+                              const event = window.event as any;
+                              toggleSelectVideo(String(video._id), event as any);
                             }}
                             onClick={(e) => {
                               // Prevent default checkbox behavior to handle shift-click ourselves

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "../../../../../../convex/_generated/api";
 import { motion } from "framer-motion";
 import { AlertCircle, Ban, Clock, Eye, Heart, Link2Off, MessageSquare, RefreshCw, Server, Share2 } from 'lucide-react';
 import Image from 'next/image';
@@ -206,7 +206,7 @@ export function PublicReportContent() {
 
   // Filter out hidden videos from videoMetrics for display
   const visibleVideoMetrics = data?.videoMetrics?.filter(
-    vm => !data.hiddenVideoIds?.includes(vm.videoInfo.id)
+    (vm: any) => !data.hiddenVideoIds?.includes(vm.videoInfo.id)
   ) || [];
 
   // Calculate totals from visible videos only
@@ -441,7 +441,7 @@ export function PublicReportContent() {
         {/* Comments Section */}
         <motion.div variants={fadeInUp}>
           <CommentsSection 
-            campaignIds={data.campaigns?.map(c => c.id)}
+            campaignIds={data.campaigns?.map((c: any) => c.id)}
           />
         </motion.div>
 

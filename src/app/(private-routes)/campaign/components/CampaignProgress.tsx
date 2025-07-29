@@ -31,13 +31,13 @@ export function CampaignProgress({ campaign, progress }: CampaignProgressProps) 
             <h2 className="text-lg font-medium">Generation Status</h2>
           </div>
           <Badge
-            variant={campaign.status === 'completed' ? "default" : "secondary"}
+            variant={campaign.status === 'failed' ? "destructive" : "secondary"}
             className={cn(
               "px-3 py-1",
-              campaign.status === 'completed' ? "bg-primary/10 text-primary" : "animate-pulse"
+              campaign.status === 'failed' ? "bg-destructive/10 text-destructive" : "animate-pulse"
             )}
           >
-            {campaign.status === 'completed' ? "Completed" : "Processing"}
+            {campaign.status === 'failed' ? "Failed" : "Processing"}
           </Badge>
         </div>
 

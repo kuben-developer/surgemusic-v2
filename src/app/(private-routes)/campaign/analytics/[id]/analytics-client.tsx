@@ -79,42 +79,9 @@ export default function AnalyticsClient() {
     const [activeMetric, setActiveMetric] = useState('views')
     const [currentPage, setCurrentPage] = useState(0)
     const [itemsPerPage, setItemsPerPage] = useState(5)
-    const [analyticsData, setAnalyticsData] = useState<{
-        aggregatedData: {
-            platform: string;
-            metrics: {
-                views: number;
-                likes: number;
-                comments: number;
-                shares: number;
-            };
-        }[];
-        videoAnalytics: {
-            videoId: string;
-            videoName: string;
-            platforms: {
-                platform: string;
-                postId: string;
-                caption: string;
-                postedAt: Date;
-                metrics: {
-                    views: number;
-                    likes: number;
-                    comments: number;
-                    shares: number;
-                };
-                postUrl?: string;
-            }[];
-        }[];
-        chartData: {
-            date: string;
-            views: number;
-            likes: number;
-            comments: number;
-            shares: number;
-        }[];
-    } | null>(null)
+    const [analyticsData, setAnalyticsData] = useState<any>(null)
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true)
+    
 
     const campaign = useQuery(api.campaigns.get, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
     const isCampaignLoading = campaign === undefined
@@ -219,14 +186,19 @@ export default function AnalyticsClient() {
         )
     }
 
-    const { totals, dailyData, avgEngagementRate, lastUpdatedAt } = analyticsData;
+    // Extract data from analytics with proper defaults
+    const totals = analyticsData?.totals || { views: 0, likes: 0, comments: 0, shares: 0 };
+    const dailyData = analyticsData?.dailyData || [];
+    const avgEngagementRate = analyticsData?.avgEngagementRate || '0';
+    const lastUpdatedAt = analyticsData?.lastUpdatedAt;
+    const videoMetrics = analyticsData?.videoMetrics || [];
 
     // Calculate growth metrics
     const viewsGrowth = calculateGrowth(dailyData, 'views');
     const likesGrowth = calculateGrowth(dailyData, 'likes');
     const commentsGrowth = calculateGrowth(dailyData, 'comments');
     const sharesGrowth = calculateGrowth(dailyData, 'shares');
-    const engagementGrowth = calculateGrowth(dailyData.map((day) => ({
+    const engagementGrowth = calculateGrowth(dailyData.map((day: any) => ({
         ...day,
         engagement: ((day.likes + day.comments + day.shares) / Math.max(day.views, 1)) * 100
     })), 'engagement');
@@ -614,7 +586,7 @@ export default function AnalyticsClient() {
                                 <div className="text-xs text-muted-foreground mb-1">Average</div>
                                 <div className="text-lg font-semibold">
                                     {Math.round(
-                                        dailyData.reduce((sum: number, day) => sum + (day[activeMetric as keyof typeof day] as number), 0) /
+                                        dailyData.reduce((sum: number, day: any) => sum + (day[activeMetric as keyof typeof day] as number), 0) /
                                         (dailyData.length || 1)
                                     ).toLocaleString()}
                                 </div>
@@ -697,7 +669,7 @@ export default function AnalyticsClient() {
                                 generatedVideos
                                     // Map videos with their analytics data
                                     .map((video) => {
-                                        const videoMetric = analyticsData.videoMetrics.find((m) => m.id === (video.tiktokUpload?.post?.id || video.instagramUpload?.post?.id || video.youtubeUpload?.post?.id)) || {
+                                        const videoMetric = videoMetrics.find((m: any) => m.id === (video.tiktokUpload?.post?.id || video.instagramUpload?.post?.id || video.youtubeUpload?.post?.id)) || {
                                             views: 0,
                                             likes: 0,
                                             comments: 0,
