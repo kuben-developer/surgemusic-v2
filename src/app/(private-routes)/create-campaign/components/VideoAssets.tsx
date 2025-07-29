@@ -1,8 +1,8 @@
 "use client"
 
-import { OurFileRouter } from "@/app/api/uploadthing/core"
+import type { OurFileRouter } from "@/app/api/uploadthing/core"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { UploadDropzone } from "@uploadthing/react"
 import { Video } from "lucide-react"
 
@@ -21,7 +21,7 @@ export function VideoAssets({
     setMusicVideoBase64,
     musicVideoError
 }: VideoAssetsProps) {
-    const { toast } = useToast()
+    // Using sonner toast directly
 
     return (
         <section className={`bg-card rounded-xl p-8 shadow-sm border ${musicVideoError ? 'ring-2 ring-red-500' : ''}`}>
@@ -93,10 +93,8 @@ export function VideoAssets({
                             }}
                             onUploadError={(error: Error) => {
                                 if (error.message.includes("FileSizeMismatch")) {
-                                    toast({
-                                        title: "File Size Too Large",
-                                        description: "Please upload a smaller file.",
-                                        variant: "destructive",
+                                    toast.error("File Size Too Large", {
+                                        description: "Please upload a smaller file."
                                     });
                                 }
                             }}

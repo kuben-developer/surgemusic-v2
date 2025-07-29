@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/trpc/react';
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { ReportForm } from '@/components/report-form';
 import { toast } from "sonner";
 
@@ -15,16 +17,8 @@ type ReportCreateFormValues = {
 
 export default function CreateReportPage() {
     const router = useRouter();
-    const createMutation = api.report.create.useMutation({
-        onSuccess: (data) => {
-            toast.success(`Report "${data.name}" created successfully.`);
-            // Redirect to the report analytics page (assuming /reports/[id]/analytics)
-            router.push(`/reports/${data.id}`); 
-        },
-        onError: (error) => {
-            toast.error(`Failed to create report: ${error.message}`);
-        },
-    });
+    const createMutation = useMutation(api.reports.create);
+    const [isCreating, setIsCreating] = React.useState(false);
 
     const handleCreateSubmit = async (values: ReportCreateFormValues) => {
         // Ensure campaignIds is defined and not empty for the create API call
@@ -35,10 +29,20 @@ export default function CreateReportPage() {
              return; // Prevent submission
         }
         
-        createMutation.mutate({
-            name: values.name,
-            campaignIds: values.campaignIds, // Pass validated campaignIds
-        });
+        setIsCreating(true);
+        try {
+            const data = await createMutation({
+                name: values.name,
+                campaignIds: values.campaignIds.map(id => id as Id<"campaigns">), // Pass validated campaignIds
+            });
+            toast.success(`Report "${data.name}" created successfully.`);
+            // Redirect to the report analytics page (assuming /reports/[id]/analytics)
+            router.push(`/reports/${data._id}`);
+        } catch (error) {
+            toast.error(`Failed to create report: ${(error as Error).message}`);
+        } finally {
+            setIsCreating(false);
+        }
     };
 
     return (
@@ -46,7 +50,7 @@ export default function CreateReportPage() {
             <h1 className="text-3xl font-bold mb-6">Create New Report</h1>
             <ReportForm 
                 onSubmit={handleCreateSubmit} 
-                isLoading={createMutation.isPending} // Use isPending
+                isLoading={isCreating}
                 submitButtonText="Create Report"
             />
         </div>

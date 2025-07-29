@@ -1,4 +1,5 @@
 "use client"
+import React from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -15,7 +16,7 @@ interface CreditOption {
   credits: number;
   price: number;
   priceId: string;
-  icon: JSX.Element;
+  icon: React.ReactElement;
 }
 
 const creditOptions: CreditOption[] = [

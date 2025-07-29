@@ -6,7 +6,8 @@ import {
     Share2,
     TrendingUp
 } from "lucide-react";
-import { KpiCard, GrowthData } from "./KpiCard";
+import { KpiCard } from "./KpiCard";
+import type { GrowthData } from "./KpiCard";
 
 // Define Totals type
 interface Totals {

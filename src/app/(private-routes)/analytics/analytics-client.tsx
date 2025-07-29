@@ -11,38 +11,45 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { api } from "@/trpc/react"
+import { useQuery, useAction } from "convex/react"
+import { api } from "../../../../convex/_generated/api"
+import { toast } from "sonner"
 import { motion } from "framer-motion"
+import { useState, useMemo, useEffect } from "react"
 import {
     Eye,
     Heart,
     MessageSquare,
     Share2,
 } from "lucide-react"
-import { useState, useMemo } from "react"
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader"
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid"
-import { PerformanceChartCard, MetricKey, MetricInfo, DailyData, Totals } from "@/components/analytics/PerformanceChartCard"
+import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard"
+import type { MetricKey, MetricInfo, DailyData, Totals } from "@/components/analytics/PerformanceChartCard"
 import { TopContentCard } from "@/components/analytics/TopContentCard"
-import { GrowthData } from "@/components/analytics/KpiCard"
+import type { GrowthData } from "@/components/analytics/KpiCard"
 import { CommentsSection } from "@/components/analytics/CommentsSection"
 
 // Define the types for our analytics data
 interface Campaign {
+    _id: string;
+    campaignName: string;
+}
+
+interface VideoCampaign {
     id: string;
     campaignName: string;
 }
 
 interface VideoInfo {
-    id: string;
+    _id: string;
     postId: string | null;
     videoUrl: string;
     videoName: string;
     videoType: string;
-    createdAt: Date;
-    campaign: Campaign;
+    _creationTime: number;
+    campaign: VideoCampaign;
 }
 
 interface VideoMetric {
@@ -55,14 +62,15 @@ interface VideoMetric {
     engagementRate: string;
 }
 
-// Combined analytics data structure (Reflects API response shape)
-// Note: Totals are calculated client-side, not part of the API response type
-// interface ApiAnalyticsData {
-//     dailyData: DailyData[];
-//     videoMetrics: VideoMetric[];
-//     avgEngagementRate: string;
-//     campaigns: Campaign[];
-// }
+// Combined analytics data structure
+interface AnalyticsData {
+    dailyData: DailyData[];
+    totals: Totals & { totalVideos: number };
+    avgEngagementRate: string;
+    videoMetrics: VideoMetric[];
+    campaigns: Campaign[];
+    lastUpdatedAt: string | null;
+}
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -163,19 +171,32 @@ const AnalyticsContent = ({
     setActiveMetric: (metric: MetricKey) => void;
     currentPage: number;
     itemsPerPage: number;
-    refetchAnalytics: ReturnType<typeof api.campaign.getCombinedAnalytics.useQuery>['refetch'];
+    refetchAnalytics: () => Promise<void>;
 }) => {
-    // Use inferred type from tRPC query for analyticsData
-    const { data: analyticsData, isLoading: isAnalyticsLoading, error: analyticsError } = api.campaign.getCombinedAnalytics.useQuery(
-        {
-            campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : undefined,
-            days: parseInt(dateRange)
-        }
-        , {
-            refetchOnWindowFocus: false,
+    // Use Convex action for analytics data
+    const getCombinedAnalytics = useAction(api.analytics.getCombinedAnalytics);
+    const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+    const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
+    const [analyticsError, setAnalyticsError] = useState<Error | null>(null);
 
-        }
-    );
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            setIsAnalyticsLoading(true);
+            setAnalyticsError(null);
+            try {
+                const data = await getCombinedAnalytics({
+                    campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : undefined,
+                    days: parseInt(dateRange)
+                });
+                setAnalyticsData(data);
+            } catch (error) {
+                setAnalyticsError(error as Error);
+            } finally {
+                setIsAnalyticsLoading(false);
+            }
+        };
+        fetchAnalytics();
+    }, [selectedCampaigns, dateRange, getCombinedAnalytics]);
 
     // --- Loading State ---
     if (isAnalyticsLoading && !analyticsData) {
@@ -202,7 +223,17 @@ const AnalyticsContent = ({
                 <p className="text-muted-foreground mb-4">
                     {analyticsError.message || "Could not load analytics data at this time."}
                 </p>
-                <Button onClick={() => refetchAnalytics()} variant="outline">
+                <Button onClick={async () => {
+                    try {
+                        const data = await getCombinedAnalytics({
+                            campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : undefined,
+                            days: parseInt(dateRange)
+                        });
+                        setAnalyticsData(data);
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }} variant="outline">
                     Try Again
                 </Button>
             </div>
@@ -221,6 +252,21 @@ const AnalyticsContent = ({
 
     // --- Data Processing ---
     const { dailyData = [], avgEngagementRate = "0", campaigns = [], videoMetrics = [], totals = { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 } } = analyticsData ?? {};
+    
+    // Map videoMetrics to have the expected 'id' field
+    const mappedVideoMetrics = videoMetrics.map((vm) => ({
+        ...vm,
+        id: vm._id || vm.id || Math.random().toString(36).substr(2, 9),
+        videoInfo: {
+            ...vm.videoInfo,
+            id: vm.videoInfo._id || vm.videoInfo.id || Math.random().toString(36).substr(2, 9),
+            createdAt: vm.videoInfo._creationTime ? new Date(vm.videoInfo._creationTime) : new Date(),
+            campaign: {
+                id: parseInt(vm.videoInfo.campaign?.id || vm.videoInfo.campaign?._id || '0'),
+                campaignName: vm.videoInfo.campaign?.campaignName || ''
+            }
+        }
+    }));
 
     const viewsGrowth = calculateGrowth(dailyData, 'views');
     const likesGrowth = calculateGrowth(dailyData, 'likes');
@@ -264,7 +310,7 @@ const AnalyticsContent = ({
                 />
 
                 <TopContentCard
-                    videoMetrics={videoMetrics}
+                    videoMetrics={mappedVideoMetrics}
                     currentPage={currentPage}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
@@ -273,7 +319,7 @@ const AnalyticsContent = ({
 
             <motion.div variants={fadeInUp}>
                 <CommentsSection 
-                    campaignIds={selectedCampaigns.length > 0 ? selectedCampaigns : campaigns.map(c => c.id)}
+                    campaignIds={selectedCampaigns.length > 0 ? selectedCampaigns : campaigns.map(c => c._id)}
                 />
             </motion.div>
         </motion.div>
@@ -281,7 +327,6 @@ const AnalyticsContent = ({
 };
 
 export default function AnalyticsClient() {
-    const { toast } = useToast()
     const [dateRange, setDateRange] = useState("30")
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [activeMetric, setActiveMetric] = useState<MetricKey>('views')
@@ -289,17 +334,33 @@ export default function AnalyticsClient() {
     const [itemsPerPage, setItemsPerPage] = useState(5)
     const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
 
-    const { data: allCampaigns, isLoading: isCampaignsLoading } = api.campaign.getAll.useQuery()
-    // Always call this hook unconditionally to maintain hook order
-    const { data: analyticsData, refetch: refetchAnalytics } = api.campaign.getCombinedAnalytics.useQuery(
-        {
-            campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : undefined,
-            days: parseInt(dateRange)
-        }, {
-        refetchOnWindowFocus: false,
+    const allCampaigns = useQuery(api.campaigns.getAll)
+    const isCampaignsLoading = allCampaigns === undefined
+    const getCombinedAnalytics = useAction(api.analytics.getCombinedAnalytics)
+    const [analyticsData, setAnalyticsData] = useState<any>(null)
+    const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false)
 
-    }
-    )
+    // Fetch analytics data
+    const refetchAnalytics = async () => {
+        setIsAnalyticsLoading(true);
+        try {
+            const data = await getCombinedAnalytics({
+                campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : undefined,
+                days: parseInt(dateRange)
+            });
+            setAnalyticsData(data);
+        } catch (error) {
+            console.error("Error fetching analytics:", error);
+            toast.error("Failed to fetch analytics data");
+        } finally {
+            setIsAnalyticsLoading(false);
+        }
+    };
+
+    // Initial fetch
+    useEffect(() => {
+        refetchAnalytics();
+    }, [selectedCampaigns, dateRange]);
 
     // Memoize content to prevent unnecessary re-renders
     const memoizedContent = useMemo(() => (
@@ -311,7 +372,9 @@ export default function AnalyticsClient() {
             setActiveMetric={setActiveMetric}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
-            refetchAnalytics={refetchAnalytics}
+            refetchAnalytics={async () => {
+                await refetchAnalytics();
+            }}
         />
     ), [selectedCampaigns, dateRange, currentPage, activeMetric, itemsPerPage, refetchAnalytics]);
 
@@ -324,16 +387,13 @@ export default function AnalyticsClient() {
         setIsRefreshing(true);
         try {
             await refetchAnalytics();
-            toast({
-                title: "Analytics refreshed",
+            toast.success("Analytics refreshed", {
                 description: "Latest data has been loaded",
             });
         } catch (error) {
             console.error("Error refreshing analytics:", error);
-            toast({
-                title: "Error refreshing analytics",
+            toast.error("Error refreshing analytics", {
                 description: "Could not load latest data. Please try again.",
-                variant: "destructive",
             });
         } finally {
             setIsRefreshing(false);
@@ -391,13 +451,16 @@ export default function AnalyticsClient() {
                     selectedCampaigns={selectedCampaigns}
                     onCampaignChange={handleCampaignChange}
                     onResetCampaigns={handleResetCampaigns}
-                    allCampaigns={allCampaigns}
+                    allCampaigns={allCampaigns?.map(c => ({
+                        _id: c._id,
+                        campaignName: c.campaignName
+                    })) || []}
                     dateRange={dateRange}
                     onDateRangeChange={handleDateRangeChange}
                     onRefresh={refreshAnalytics}
                     isRefreshing={isRefreshing}
                     campaignCount={allCampaigns?.length || 0}
-                    lastUpdatedAt={analyticsData?.lastUpdatedAt}
+                    lastUpdatedAt={analyticsData?.lastUpdatedAt || null}
                 />
 
                 {/* Only this part re-renders when campaign selection changes */}

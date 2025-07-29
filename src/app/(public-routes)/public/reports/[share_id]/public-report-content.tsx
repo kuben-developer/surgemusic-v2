@@ -1,14 +1,16 @@
 'use client';
 
 import { KpiMetricsGrid } from '@/components/analytics/KpiMetricsGrid';
-import { PerformanceChartCard, MetricKey, MetricInfo } from '@/components/analytics/PerformanceChartCard';
+import { PerformanceChartCard } from '@/components/analytics/PerformanceChartCard';
+import type { MetricKey, MetricInfo } from '@/components/analytics/PerformanceChartCard';
 import { TopContentCard } from '@/components/analytics/TopContentCard';
 import { CommentsSection } from '@/components/analytics/CommentsSection';
 import { AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/trpc/react';
+import { useAction } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import { motion } from "framer-motion";
 import { AlertCircle, Ban, Clock, Eye, Heart, Link2Off, MessageSquare, RefreshCw, Server, Share2 } from 'lucide-react';
 import Image from 'next/image';
@@ -141,24 +143,45 @@ export function PublicReportContent() {
     }
   }, [shareId, router]);
 
-  // Use TRPC to fetch the shared report data
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-    isRefetching
-  } = api.public.getSharedReport.useQuery({
-    shareId,
-    days: parseInt(dateRange, 10)
-  }, {
-    refetchOnWindowFocus: false,
-    retry: 2,
-    retryDelay: 1000,
-    enabled: !!shareId && shareId.length >= 16
-  });
+  // Use Convex action to fetch the shared report data
+  const getSharedReport = useAction(api.public.getSharedReport);
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<any>(null);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isRefetching, setIsRefetching] = useState(false);
+
+  const fetchReport = async () => {
+    if (!shareId || shareId.length < 16) return;
+    
+    try {
+      setIsFetching(true);
+      setIsError(false);
+      setError(null);
+      const result = await getSharedReport({
+        shareId,
+        days: parseInt(dateRange, 10)
+      });
+      setData(result);
+    } catch (err) {
+      setIsError(true);
+      setError(err);
+    } finally {
+      setIsLoading(false);
+      setIsFetching(false);
+      setIsRefetching(false);
+    }
+  };
+
+  const refetch = () => {
+    setIsRefetching(true);
+    fetchReport();
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, [shareId, dateRange]);
 
   // Log errors in console
   useEffect(() => {

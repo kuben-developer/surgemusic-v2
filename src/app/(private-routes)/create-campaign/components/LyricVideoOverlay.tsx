@@ -1,8 +1,8 @@
 "use client"
 
-import { OurFileRouter } from "@/app/api/uploadthing/core"
+import type { OurFileRouter } from "@/app/api/uploadthing/core"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { UploadDropzone } from "@uploadthing/react"
 import { Video } from "lucide-react"
 
@@ -19,7 +19,7 @@ export function LyricVideoOverlay({
     lyricVideoBase64,
     setLyricVideoBase64
 }: LyricVideoOverlayProps) {
-    const { toast } = useToast()
+    // Using sonner toast directly
 
     return (
         <section className="bg-card rounded-xl p-8 shadow-sm border">
@@ -82,18 +82,15 @@ export function LyricVideoOverlay({
                             onClientUploadComplete={(res) => {
                                 if (res?.[0]) {
                                     setLyricVideoUrl(res[0].ufsUrl)
-                                    toast({
-                                        title: "Lyric Video Uploaded",
-                                        description: "Your lyric video has been uploaded successfully.",
+                                    toast.success("Lyric Video Uploaded", {
+                                        description: "Your lyric video has been uploaded successfully."
                                     });
                                 }
                             }}
                             onUploadError={(error: Error) => {
                                 if (error.message.includes("FileSizeMismatch")) {
-                                    toast({
-                                        title: "File Size Too Large",
-                                        description: "Please upload a smaller file.",
-                                        variant: "destructive",
+                                    toast.error("File Size Too Large", {
+                                        description: "Please upload a smaller file."
                                     });
                                 }
                             }}

@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { api } from '@/trpc/react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../../../convex/_generated/api";
+import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { ReportForm } from '@/components/report-form';
 import { toast } from "sonner";
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
@@ -19,7 +21,7 @@ export default function EditReportPage() {
     const reportId = params.id as string; // Type assertion
 
     // Fetch existing report data
-    const { data: reportData, isLoading: isLoadingReport, error: reportError } = api.report.get.useQuery(
+    const { data: reportData, isLoading: isLoadingReport, error: reportError } = api.reports.get.useQuery(
         { id: reportId },
         {
             enabled: !!reportId, // Only run query if reportId is available
@@ -27,16 +29,8 @@ export default function EditReportPage() {
         }
     );
 
-    const updateMutation = api.report.update.useMutation({
-        onSuccess: (data) => {
-            toast.success(`Report "${data.name}" updated successfully.`);
-            // Redirect to the report analytics page
-            router.push(`/reports/${data.id}`);
-        },
-        onError: (error) => {
-            toast.error(`Failed to update report: ${error.message}`);
-        },
-    });
+    const updateMutation = useMutation(api.reports.update);
+    const [isUpdating, setIsUpdating] = React.useState(false);
 
     const handleUpdateSubmit = async (values: ReportUpdateFormValues) => {
         // Ensure campaignIds is defined if provided (API requires min 1 if updating)
@@ -45,13 +39,22 @@ export default function EditReportPage() {
              return; 
         }
 
-        updateMutation.mutate({
-            id: reportId,
-            name: values.name,
-            // Only include campaignIds if they are part of the values submitted
-            // (React Hook Form might not include it if unchanged depending on setup)
-            ...(values.campaignIds && { campaignIds: values.campaignIds }), 
-        });
+        setIsUpdating(true);
+        try {
+            const data = await updateMutation({
+                id: reportId as Id<"reports">,
+                name: values.name,
+                // Only include campaignIds if they are part of the values submitted
+                // (React Hook Form might not include it if unchanged depending on setup)
+                ...(values.campaignIds && { campaignIds: values.campaignIds.map(id => id as Id<"campaigns">) }), 
+            });
+            toast.success(`Report "${data.name}" updated successfully.`);
+            router.push(`/reports/${reportId}`);
+        } catch (error) {
+            toast.error(`Failed to update report: ${(error as Error).message}`);
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     if (isLoadingReport) {
@@ -85,7 +88,7 @@ export default function EditReportPage() {
     // Prepare initial data for the form
     const initialFormData = {
         name: reportData.name,
-        campaignIds: reportData.campaigns.map(c => c.id) // Extract IDs for the form
+        campaignIds: reportData.campaigns.map((c: { _id: string }) => c._id) // Extract IDs for the form
     };
 
     return (
@@ -94,7 +97,7 @@ export default function EditReportPage() {
             <ReportForm 
                 onSubmit={handleUpdateSubmit} 
                 initialData={initialFormData}
-                isLoading={updateMutation.isPending} // Use isPending
+                isLoading={isUpdating}
                 submitButtonText="Update Report"
             />
         </div>

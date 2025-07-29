@@ -46,7 +46,9 @@ import {
   Archive,
   MoreHorizontal
 } from "lucide-react";
-import { api } from "@/trpc/react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner"
 import Image from "next/image";
@@ -103,29 +105,23 @@ export function FolderManagerDialog({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
-  // Fetch folders using tRPC
-  const { data: folders, isLoading, error, refetch } = api.folder.list.useQuery(
-    undefined,
-    {
-      enabled: open, // Only fetch when dialog is open
-    }
-  );
+  // Fetch folders using Convex
+  const folders = useQuery(api.folders.list, open ? {} : "skip");
+  const isLoading = folders === undefined;
+  const error = null; // Convex doesn't have error state
+  const refetch = () => {}; // Convex auto-refreshes
 
   // Fetch all campaigns for search and assignment
-  const { data: allCampaigns, isLoading: campaignsLoading } = api.campaign.getAll.useQuery(
-    undefined,
-    {
-      enabled: open, // Only fetch when dialog is open
-    }
-  );
+  const allCampaigns = useQuery(api.campaigns.getAll, open ? {} : "skip");
+  const campaignsLoading = allCampaigns === undefined;
 
   // Fetch campaigns in the selected folder
-  const { data: folderCampaigns, isLoading: folderCampaignsLoading, refetch: refetchFolderCampaigns } = api.folder.getCampaigns.useQuery(
-    { folderId: selectedFolderId!, page: 1, limit: 100 },
-    {
-      enabled: open && !!selectedFolderId, // Only fetch when dialog is open and folder is selected
-    }
+  const folderCampaigns = useQuery(
+    api.folders.getCampaigns, 
+    open && selectedFolderId ? { folderId: selectedFolderId as Id<"folders">, page: 1, limit: 100 } : "skip"
   );
+  const folderCampaignsLoading = folderCampaigns === undefined;
+  const refetchFolderCampaigns = () => {}; // Convex auto-refreshes
 
   // Filter campaigns based on search query and exclude those already in the selected folder
   const filteredAvailableCampaigns = useMemo(() => {
@@ -146,149 +142,25 @@ export function FolderManagerDialog({
     
     // Exclude campaigns already in the selected folder
     if (selectedFolderId && folderCampaigns?.campaigns) {
-      const folderCampaignIds = new Set(folderCampaigns.campaigns.map(c => c.id));
-      filtered = filtered.filter(campaign => !folderCampaignIds.has(campaign.id));
+      const folderCampaignIds = new Set(folderCampaigns.campaigns.map(c => c._id));
+      filtered = filtered.filter(campaign => !folderCampaignIds.has(campaign._id));
     }
     
     return filtered;
   }, [allCampaigns, campaignSearchQuery, selectedFolderId, folderCampaigns]);
 
-  // tRPC mutations
-  const createFolderMutation = api.folder.create.useMutation({
-    onSuccess: (data) => {
-      setNewFolderName("");
-      setIsCreating(false);
-      setShowCreateForm(false);
-      refetch();
-      toast({
-        title: "✅ Folder created successfully",
-        description: `Successfully created folder "${data.name}".`,
-        duration: 4000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to create folder:", error);
-      setIsCreating(false);
-      toast({
-        title: "❌ Failed to create folder",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  // Convex mutations
+  const createFolderMutation = useMutation(api.folders.create);
 
-  const updateFolderMutation = api.folder.update.useMutation({
-    onSuccess: (data) => {
-      setRenameFolderName("");
-      setIsRenaming(false);
-      setShowRenameForm(false);
-      refetch();
-      toast({
-        title: "✅ Folder renamed successfully",
-        description: `Successfully renamed folder to "${data.name}".`,
-        duration: 4000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to update folder:", error);
-      setIsRenaming(false);
-      toast({
-        title: "❌ Failed to rename folder",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  const updateFolderMutation = useMutation(api.folders.update);
 
-  const deleteFolderMutation = api.folder.delete.useMutation({
-    onSuccess: (data) => {
-      setSelectedFolderId(null);
-      setShowDeleteDialog(false);
-      setIsDeleting(false);
-      refetch();
-      toast({
-        title: "✅ Folder deleted successfully",
-        description: `Successfully deleted folder. ${data.campaignsAffected} campaign${data.campaignsAffected !== 1 ? 's' : ''} removed from folder.`,
-        duration: 4000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to delete folder:", error);
-      setIsDeleting(false);
-      toast({
-        title: "❌ Failed to delete folder",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  const deleteFolderMutation = useMutation(api.folders.deleteFolder);
 
-  const addCampaignMutation = api.folder.addCampaign.useMutation({
-    onSuccess: (data) => {
-      refetch();
-      refetchFolderCampaigns();
-      toast({
-        title: "✅ Campaign added successfully",
-        description: data.message,
-        duration: 3000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to add campaign to folder:", error);
-      toast({
-        title: "❌ Failed to add campaign",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  const addCampaignMutation = useMutation(api.folders.addCampaign);
 
-  const addCampaignsMutation = api.folder.addCampaigns.useMutation({
-    onSuccess: (data) => {
-      refetch();
-      refetchFolderCampaigns();
-      setSelectedCampaignIds(new Set());
-      toast({
-        title: "✅ Campaigns added successfully",
-        description: data.message,
-        duration: 4000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to add campaigns to folder:", error);
-      toast({
-        title: "❌ Failed to add campaigns",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  const addCampaignsMutation = useMutation(api.folders.addCampaigns);
 
-  const removeCampaignMutation = api.folder.removeCampaign.useMutation({
-    onSuccess: (data) => {
-      refetch();
-      refetchFolderCampaigns();
-      toast({
-        title: "✅ Campaign removed successfully",
-        description: data.message,
-        duration: 3000,
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to remove campaign from folder:", error);
-      toast({
-        title: "❌ Failed to remove campaign",
-        description: error.message || "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  const removeCampaignMutation = useMutation(api.folders.removeCampaign);
 
   // Reset selection when dialog closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -305,14 +177,14 @@ export function FolderManagerDialog({
     onOpenChange(newOpen);
   };
 
-  const selectedFolder = folders?.find(folder => folder.id === selectedFolderId);
+  const selectedFolder = folders?.find(folder => folder._id === selectedFolderId);
 
   // Set rename input when folder is selected
   const handleFolderSelect = (folderId: string) => {
     setSelectedFolderId(folderId);
     setShowRenameForm(false);
     setSelectedCampaignIds(new Set());
-    const folder = folders?.find(f => f.id === folderId);
+    const folder = folders?.find(f => f._id === folderId);
     if (folder) {
       setRenameFolderName(folder.name);
     }
@@ -335,7 +207,7 @@ export function FolderManagerDialog({
     if (!folders) return false;
     return folders.some(folder => 
       folder.name.toLowerCase() === name.toLowerCase() && 
-      folder.id !== excludeId
+      folder._id !== excludeId
     );
   };
 
@@ -343,25 +215,31 @@ export function FolderManagerDialog({
   const handleCreateFolder = async () => {
     const validationError = validateFolderName(newFolderName);
     if (validationError) {
-      toast({
-        title: "Invalid folder name",
+      toast.error("Invalid folder name", {
         description: validationError,
-        variant: "destructive",
       });
       return;
     }
 
     if (isDuplicateName(newFolderName.trim())) {
-      toast({
-        title: "Duplicate folder name",
+      toast.error("Duplicate folder name", {
         description: "A folder with this name already exists.",
-        variant: "destructive",
       });
       return;
     }
     
     setIsCreating(true);
-    createFolderMutation.mutate({ name: newFolderName.trim() });
+    try {
+      await createFolderMutation({ name: newFolderName.trim() });
+      setNewFolderName("");
+      setShowCreateForm(false);
+      setIsCreating(false);
+      toast.success("✅ Folder created successfully");
+    } catch (error) {
+      console.error("Failed to create folder:", error);
+      setIsCreating(false);
+      toast.error("❌ Failed to create folder");
+    }
   };
 
   // Handle folder renaming
@@ -370,28 +248,34 @@ export function FolderManagerDialog({
 
     const validationError = validateFolderName(renameFolderName);
     if (validationError) {
-      toast({
-        title: "Invalid folder name",
+      toast.error("Invalid folder name", {
         description: validationError,
-        variant: "destructive",
       });
       return;
     }
 
-    if (isDuplicateName(renameFolderName.trim(), selectedFolder.id)) {
-      toast({
-        title: "Duplicate folder name",
+    if (isDuplicateName(renameFolderName.trim(), selectedFolder._id)) {
+      toast.error("Duplicate folder name", {
         description: "A folder with this name already exists.",
-        variant: "destructive",
       });
       return;
     }
     
     setIsRenaming(true);
-    updateFolderMutation.mutate({ 
-      id: selectedFolder.id, 
-      name: renameFolderName.trim() 
-    });
+    try {
+      await updateFolderMutation({ 
+        id: selectedFolder._id as Id<"folders">, 
+        name: renameFolderName.trim() 
+      });
+      setRenameFolderName("");
+      setIsRenaming(false);
+      setShowRenameForm(false);
+      toast.success("✅ Folder renamed successfully");
+    } catch (error) {
+      console.error("Failed to update folder:", error);
+      setIsRenaming(false);
+      toast.error("❌ Failed to rename folder");
+    }
   };
 
   // Handle folder deletion
@@ -399,27 +283,49 @@ export function FolderManagerDialog({
     if (!selectedFolder) return;
     
     setIsDeleting(true);
-    deleteFolderMutation.mutate({ id: selectedFolder.id });
+    try {
+      await deleteFolderMutation({ id: selectedFolder._id as Id<"folders"> });
+      setSelectedFolderId(null);
+      setShowDeleteDialog(false);
+      setIsDeleting(false);
+      toast.success("✅ Folder deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete folder:", error);
+      setIsDeleting(false);
+      toast.error("❌ Failed to delete folder");
+    }
   };
 
   // Handle adding campaign to folder
-  const handleAddCampaign = (campaignId: string) => {
+  const handleAddCampaign = async (campaignId: string) => {
     if (!selectedFolderId) return;
     
-    addCampaignMutation.mutate({
-      folderId: selectedFolderId,
-      campaignId: campaignId,
-    });
+    try {
+      await addCampaignMutation({
+        folderId: selectedFolderId as Id<"folders">,
+        campaignId: campaignId as Id<"campaigns">,
+      });
+      toast.success("✅ Campaign added successfully");
+    } catch (error) {
+      console.error("Failed to add campaign to folder:", error);
+      toast.error("❌ Failed to add campaign");
+    }
   };
 
   // Handle removing campaign from folder
-  const handleRemoveCampaign = (campaignId: string) => {
+  const handleRemoveCampaign = async (campaignId: string) => {
     if (!selectedFolderId) return;
     
-    removeCampaignMutation.mutate({
-      folderId: selectedFolderId,
-      campaignId: campaignId,
-    });
+    try {
+      await removeCampaignMutation({
+        folderId: selectedFolderId as Id<"folders">,
+        campaignId: campaignId as Id<"campaigns">,
+      });
+      toast.success("✅ Campaign removed successfully");
+    } catch (error) {
+      console.error("Failed to remove campaign from folder:", error);
+      toast.error("❌ Failed to remove campaign");
+    }
   };
 
   // Handle bulk campaign selection
@@ -436,7 +342,7 @@ export function FolderManagerDialog({
   // Handle select all campaigns
   const handleSelectAllCampaigns = (checked: boolean) => {
     if (checked) {
-      setSelectedCampaignIds(new Set(filteredAvailableCampaigns.map(c => c.id)));
+      setSelectedCampaignIds(new Set(filteredAvailableCampaigns.map(c => c._id)));
     } else {
       setSelectedCampaignIds(new Set());
     }
@@ -447,19 +353,21 @@ export function FolderManagerDialog({
     if (!selectedFolderId || selectedCampaignIds.size === 0) return;
     
     try {
-      await addCampaignsMutation.mutateAsync({
-        folderId: selectedFolderId,
-        campaignIds: Array.from(selectedCampaignIds),
+      await addCampaignsMutation({
+        folderId: selectedFolderId as Id<"folders">,
+        campaignIds: Array.from(selectedCampaignIds) as Id<"campaigns">[],
       });
+      setSelectedCampaignIds(new Set());
+      toast.success("✅ Campaigns added successfully");
     } catch (error) {
-      // Error handling is done in the mutation's onError callback
       console.error("Failed to add campaigns:", error);
+      toast.error("❌ Failed to add campaigns");
     }
   };
 
   // Campaign card component for available campaigns
   const CampaignCard = ({ campaign, isSelected, onSelect }: { 
-    campaign: CampaignData; 
+    campaign: any; // Using any for Convex campaign type 
     isSelected: boolean;
     onSelect: (checked: boolean) => void;
   }) => (
@@ -502,15 +410,15 @@ export function FolderManagerDialog({
           <Badge variant="secondary" className="text-xs">
             {campaign.genre}
           </Badge>
-          <div className={`w-2 h-2 rounded-full ${campaign.isCompleted ? 'bg-green-600' : 'bg-orange-400'}`} />
-          <span className="text-xs text-muted-foreground">{campaign.videoCount} videos</span>
+          <div className={`w-2 h-2 rounded-full ${campaign.status === 'completed' ? 'bg-green-600' : 'bg-orange-400'}`} />
+          <span className="text-xs text-muted-foreground">{campaign.videoCount || 0} videos</span>
         </div>
       </div>
     </div>
   );
 
   // Campaign card component for campaigns in folder
-  const FolderCampaignCard = ({ campaign, onRemove }: { campaign: CampaignData; onRemove: () => void }) => (
+  const FolderCampaignCard = ({ campaign, onRemove }: { campaign: any; onRemove: () => void }) => (
     <div className="group flex items-center space-x-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
       <div className="relative w-10 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
         {campaign.campaignCoverImageUrl ? (
@@ -537,22 +445,18 @@ export function FolderManagerDialog({
           <Badge variant="secondary" className="text-xs">
             {campaign.genre}
           </Badge>
-          <div className={`w-1.5 h-1.5 rounded-full ${campaign.isCompleted ? 'bg-green-600' : 'bg-orange-400'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full ${campaign.status === 'completed' ? 'bg-green-600' : 'bg-orange-400'}`} />
         </div>
       </div>
       <Button
         size="sm"
         variant="ghost"
         onClick={onRemove}
-        disabled={removeCampaignMutation.isPending}
+        disabled={false}
         className="opacity-60 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all flex-shrink-0 h-8 w-8 p-0"
         title="Remove from folder"
       >
-        {removeCampaignMutation.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <X className="h-4 w-4" />
-        )}
+        <X className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -666,7 +570,7 @@ export function FolderManagerDialog({
                       </div>
                       <p className="text-sm text-destructive mb-1">Failed to load folders</p>
                       <p className="text-xs text-muted-foreground mb-3">
-                        {error.message || 'An unexpected error occurred'}
+                        An unexpected error occurred
                       </p>
                       <Button 
                         size="sm" 
@@ -682,15 +586,15 @@ export function FolderManagerDialog({
                     // Folder list
                     folders.map((folder) => (
                       <div
-                        key={folder.id}
+                        key={folder._id}
                         className={cn(
                           "group flex items-center justify-between p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200",
                           "hover:bg-accent hover:text-accent-foreground",
-                          selectedFolderId === folder.id 
+                          selectedFolderId === folder._id 
                             ? "bg-primary text-primary-foreground shadow-sm" 
                             : "text-muted-foreground hover:text-foreground"
                         )}
-                        onClick={() => handleFolderSelect(folder.id)}
+                        onClick={() => handleFolderSelect(folder._id)}
                       >
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                           <Folder className="h-4 w-4 flex-shrink-0" />
@@ -703,7 +607,7 @@ export function FolderManagerDialog({
                             </p>
                           </div>
                         </div>
-                        {selectedFolderId === folder.id && (
+                        {selectedFolderId === folder._id && (
                           <ChevronRight className="h-4 w-4 flex-shrink-0" />
                         )}
                       </div>
@@ -864,20 +768,11 @@ export function FolderManagerDialog({
                               {selectedCampaignIds.size > 0 && (
                                 <Button
                                   onClick={handleBulkAddCampaigns}
-                                  disabled={addCampaignsMutation.isPending}
+                                  disabled={false}
                                   size="sm"
                                 >
-                                  {addCampaignsMutation.isPending ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Adding...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add {selectedCampaignIds.size} Campaign{selectedCampaignIds.size !== 1 ? 's' : ''}
-                                    </>
-                                  )}
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Add {selectedCampaignIds.size} Campaign{selectedCampaignIds.size !== 1 ? 's' : ''}
                                 </Button>
                               )}
                             </div>
@@ -902,10 +797,10 @@ export function FolderManagerDialog({
                             ) : filteredAvailableCampaigns.length > 0 ? (
                               filteredAvailableCampaigns.map((campaign) => (
                                 <CampaignCard
-                                  key={campaign.id}
+                                  key={campaign._id}
                                   campaign={campaign}
-                                  isSelected={selectedCampaignIds.has(campaign.id)}
-                                  onSelect={(checked) => handleCampaignSelect(campaign.id, checked)}
+                                  isSelected={selectedCampaignIds.has(campaign._id)}
+                                  onSelect={(checked) => handleCampaignSelect(campaign._id, checked)}
                                 />
                               ))
                             ) : (
@@ -954,9 +849,9 @@ export function FolderManagerDialog({
                             ) : folderCampaigns?.campaigns && folderCampaigns.campaigns.length > 0 ? (
                               folderCampaigns.campaigns.map((campaign) => (
                                 <FolderCampaignCard
-                                  key={campaign.id}
+                                  key={campaign._id}
                                   campaign={campaign}
-                                  onRemove={() => handleRemoveCampaign(campaign.id)}
+                                  onRemove={() => handleRemoveCampaign(campaign._id)}
                                 />
                               ))
                             ) : (

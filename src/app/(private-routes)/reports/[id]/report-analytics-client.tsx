@@ -10,9 +10,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { api } from "@/trpc/react";
+import { useQuery, useAction, useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import {
     Eye,
@@ -33,7 +34,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
-import { PerformanceChartCard, MetricKey, MetricInfo } from "@/components/analytics/PerformanceChartCard";
+import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard";
+import type { MetricKey, MetricInfo } from "@/components/analytics/PerformanceChartCard";
 import { TopContentCard } from "@/components/analytics/TopContentCard";
 import { toast } from "sonner";
 import {
@@ -215,7 +217,7 @@ export function ReportAnalyticsClient() {
     const [isEditVideosModalOpen, setIsEditVideosModalOpen] = useState(false);
 
     // Fetch report details
-    const { data: report, isLoading: isLoadingReport } = api.report.get.useQuery(
+    const { data: report, isLoading: isLoadingReport } = api.reports.get.useQuery(
         { id: reportId },
         { enabled: !!reportId }
     );
@@ -225,7 +227,7 @@ export function ReportAnalyticsClient() {
         data: analyticsData,
         isLoading: isLoadingAnalytics,
         refetch: refetchAnalytics
-    } = api.report.getAnalytics.useQuery(
+    } = api.reports.getAnalytics.useQuery(
         {
             id: reportId,
             days: parseInt(dateRange)
@@ -234,39 +236,39 @@ export function ReportAnalyticsClient() {
     );
 
     // Delete report mutation
-    const deleteMutation = api.report.delete.useMutation({
-        onSuccess: (data) => {
+    const deleteMutation = api.reports.delete.useMutation({
+        onSuccess: (data: { name: string }) => {
             toast.success(`Report "${data.name}" deleted successfully.`);
             setIsDeleteDialogOpen(false);
             router.push('/reports');
         },
-        onError: (error) => {
+        onError: (error: Error) => {
             toast.error(`Failed to delete report: ${error.message}`);
             setIsDeleteDialogOpen(false);
         },
     });
 
     // Add the share report mutation
-    const { mutate: shareReport } = api.report.share.useMutation({
-        onSuccess: (data) => {
+    const { mutate: shareReport } = api.reports.share.useMutation({
+        onSuccess: (data: { shareUrl: string }) => {
             setShareUrl(data.shareUrl);
             setIsSharing(false);
             setIsShareDialogOpen(true);
         },
-        onError: (error) => {
+        onError: (error: Error) => {
             toast.error(`Failed to generate sharing link: ${error.message}`);
             setIsSharing(false);
         }
     });
 
     // Add the update hidden videos mutation
-    const updateHiddenVideosMutation = api.report.updateHiddenVideos.useMutation({
+    const updateHiddenVideosMutation = api.reports.updateHiddenVideos.useMutation({
         onSuccess: () => {
             toast.success("Video visibility updated successfully");
             void refetchAnalytics();
             setIsEditVideosModalOpen(false);
         },
-        onError: (error) => {
+        onError: (error: Error) => {
             toast.error(`Failed to update video visibility: ${error.message}`);
         }
     });
@@ -672,7 +674,7 @@ export function ReportAnalyticsClient() {
 
             {/* Comments Section */}
             <CommentsSection 
-                campaignIds={report?.campaigns.map(c => c.id)}
+                campaignIds={report?.campaigns.map((c: Campaign) => c.id)}
             />
 
             {/* Delete Confirmation Dialog */}

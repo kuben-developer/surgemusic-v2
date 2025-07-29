@@ -19,11 +19,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
-import type { AyrshareProfile, SocialAccount } from "@prisma/client"
 import { CheckCircle2, ChevronDown, ChevronUp, ExternalLink, Loader2, Trash2, UserPlus, Users, XCircle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useQuery, useMutation } from "convex/react"
+import { api } from "../../../../convex/_generated/api"
+import { toast } from "sonner"
 
 // SVG Icons for platforms
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -46,9 +46,29 @@ const YouTubeIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-type ProfileWithAccounts = AyrshareProfile & {
-  socialAccounts: SocialAccount[]
+// Define types based on Convex schema
+type SocialAccount = {
+  _id: string;
+  platform: string;
+  username: string;
+  userImage: string;
+  profileUrl: string;
+  status: string;
+  connectedAt: string;
+  _creationTime: number;
 }
+
+type AyrshareProfile = {
+  _id: string;
+  profileName: string;
+  totalAccounts: number;
+  createdAt: string;
+  profileKey?: string;
+  _creationTime: number;
+  socialAccounts: SocialAccount[];
+}
+
+type ProfileWithAccounts = AyrshareProfile
 
 type ProfileCheckResult = {
   profileName: string;
@@ -71,19 +91,14 @@ export default function SocialAccountsPage() {
 
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
   const deletedItemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const { toast } = useToast()
 
-  // Fetch profiles data using tRPC
-  const {
-    data: profiles,
-    isLoading,
-    isError,
-    refetch
-  } = api.ayrshare.getProfiles.useQuery()
+  // Fetch profiles data using Convex
+  const profiles = useQuery(api.ayrshare.getProfiles)
+  const isLoading = profiles === undefined
+  const isError = false // Convex doesn't have isError
+  const refetch = () => {} // Convex auto-refreshes
 
-  const {
-    mutateAsync: checkProfilesMutateAsync
-  } = api.ayrshare.checkProfiles.useMutation()
+  const checkProfilesMutation = useMutation(api.ayrshare.checkProfiles)
 
 
   const totalProfilesToSync = useMemo(() => {
@@ -134,56 +149,13 @@ export default function SocialAccountsPage() {
   }, [profiles])
 
   // Create profile mutation
-  const createProfileMutation = api.ayrshare.createProfile.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Profile created",
-        description: "Your new profile has been created successfully."
-      })
-      setNewProfileName("")
-      setIsUserProfileDialogOpen(false)
-      refetch()
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create profile",
-        variant: "destructive"
-      })
-    }
-  })
+  const createProfileMutation = useMutation(api.ayrshare.createProfile)
 
   // Delete profile mutation
-  const deleteProfileMutation = api.ayrshare.deleteProfile.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Profile deleted",
-        description: "The profile has been deleted successfully."
-      })
-      refetch()
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete profile",
-        variant: "destructive"
-      })
-    }
-  })
+  const deleteProfileMutation = useMutation(api.ayrshare.deleteProfileMutation)
 
   // Generate profile manager URL mutation
-  const generateUrlMutation = api.ayrshare.generateProfileManagerUrl.useMutation({
-    onSuccess: (data) => {
-      window.open(data.url, '_blank')
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate link",
-        variant: "destructive"
-      })
-    }
-  })
+  const generateUrlMutation = useMutation(api.ayrshare.generateProfileManagerUrl)
 
 
   // Function to handle checking all profiles
@@ -191,7 +163,7 @@ export default function SocialAccountsPage() {
     if (!profiles) return;
     const validProfiles = profiles.filter(profile => !!profile.profileName && profile.profileName);
     if (validProfiles.length === 0) {
-      toast({ title: "No valid profiles to sync.", variant: "default" });
+      toast.info("No valid profiles to sync.");
       return;
     }
 
@@ -228,13 +200,13 @@ export default function SocialAccountsPage() {
         setCurrentCheckIndex(overallIndex); 
 
         try {
-          const data = await checkProfilesMutateAsync({ profileName: profile.profileName! });
+          const data = await checkProfilesMutation({ profileName: profile.profileName! });
           setProfileCheckResults(prevResults =>
             prevResults.map((r, idx) =>
               idx === overallIndex ? { ...r, message: data.message, status: 'success' } : r
             )
           );
-        } catch (error: any) {
+        } catch (error) {
           setProfileCheckResults(prevResults =>
             prevResults.map((r, idx) =>
               idx === overallIndex ? { ...r, message: error.message || "Sync failed", status: 'error' } : r
@@ -247,32 +219,37 @@ export default function SocialAccountsPage() {
       await Promise.all(batchPromises);
     }
     
-    toast({ title: "Profile sync complete!", description: `${completedChecksCount} of ${totalProfilesToSync} profiles checked.` });
+    toast.success("Profile sync complete!", {
+      description: `${completedChecksCount} of ${totalProfilesToSync} profiles checked.`
+    });
     setIsSyncingInProgress(false); 
     refetch(); 
   };
 
   // Function to handle adding a new user profile
-  const handleAddUserProfile = () => {
+  const handleAddUserProfile = async () => {
     if (newProfileName.trim()) {
-      createProfileMutation.mutate({ profileName: newProfileName.trim() })
+      try {
+        await createProfileMutation({ profileName: newProfileName.trim() })
+        toast.success("Profile created successfully")
+        setNewProfileName("")
+        setIsUserProfileDialogOpen(false)
+        refetch()
+      } catch (error) {
+        toast.error(`Failed to create profile: ${(error as Error).message}`)
+      }
     }
   }
 
   // Function to handle deleting a user profile
-  const handleDeleteUserProfile = (profileName: string) => {
-    deleteProfileMutation.mutate({ profileName }, {
-      onError: (error) => {
-        // Additional error handling specific to deletion
-        if (error.message.includes("unlink all social accounts")) {
-          toast({
-            title: "Cannot Delete Profile",
-            description: "Please unlink all social accounts before deleting this profile.",
-            variant: "destructive"
-          });
-        }
-      }
-    });
+  const handleDeleteUserProfile = async (profileName: string) => {
+    try {
+      await deleteProfileMutation({ profileName })
+      toast.success("Profile deleted successfully")
+      refetch()
+    } catch (error) {
+      toast.error(`Failed to delete profile: ${(error as Error).message}`)
+    }
   }
 
   // Function to toggle profile expansion
@@ -313,8 +290,15 @@ export default function SocialAccountsPage() {
   }
 
   // Function to open Ayrshare profile manager
-  const openProfileManager = (profileKey: string) => {
-    generateUrlMutation.mutate({ profileKey })
+  const openProfileManager = async (profileKey: string) => {
+    try {
+      const data = await generateUrlMutation({ profileKey })
+      if (data?.url) {
+        window.open(data.url, '_blank')
+      }
+    } catch (error) {
+      toast.error(`Failed to generate manager URL: ${(error as Error).message}`)
+    }
   }
 
   return (
@@ -365,9 +349,9 @@ export default function SocialAccountsPage() {
                 <Button variant="outline" onClick={() => setIsUserProfileDialogOpen(false)}>Cancel</Button>
                 <Button
                   onClick={handleAddUserProfile}
-                  disabled={createProfileMutation.isPending}
+                  disabled={false}
                 >
-                  {createProfileMutation.isPending ? (
+                  {false ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating...
@@ -390,7 +374,9 @@ export default function SocialAccountsPage() {
         if (!open && isSyncingInProgress) {
             // Consider if you need to cancel ongoing operations if dialog is closed early.
             // For now, this example doesn't implement cancellation.
-            toast({ title: "Sync Canceled", description: "Profile sync was closed before completion.", variant: "default" });
+            toast.info("Sync Canceled", {
+              description: "Profile sync was closed before completion."
+            });
             // Resetting isSyncingInProgress here might be too early if promises are still flying.
             // Better to let them finish and update state, then isSyncingInProgress is set to false in handleCheckProfiles.
         }
@@ -568,7 +554,7 @@ export default function SocialAccountsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {profiles?.map((profile: ProfileWithAccounts) => (
+          {profiles?.map((profile) => (
             <Card key={profile.profileName} className="overflow-hidden">
               <CardHeader className="py-3 px-4">
                 <div className="flex items-center justify-between">
@@ -577,7 +563,7 @@ export default function SocialAccountsPage() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => toggleProfileExpansion(profile.profileName)}
+                      onClick={() => toggleProfileExpansion(profile.profileName || '')}
                     >
                       {expandedProfiles.includes(profile.profileName) ?
                         <ChevronUp className="h-4 w-4" /> :
@@ -597,10 +583,10 @@ export default function SocialAccountsPage() {
                       variant="ghost"
                       size="sm"
                       className="gap-1 h-7 text-xs"
-                      onClick={() => openProfileManager(profile.profileKey)}
-                      disabled={generateUrlMutation.isPending}
+                      onClick={() => openProfileManager(profile.profileKey || '')}
+                      disabled={false}
                     >
-                      {generateUrlMutation.isPending ? (
+                      {false ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -616,7 +602,7 @@ export default function SocialAccountsPage() {
                           variant="ghost"
                           size="sm"
                           className="gap-1 h-7 text-xs text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                          onClick={() => setDeletingProfileName(profile.profileName)}
+                          onClick={() => setDeletingProfileName(profile.profileName || '')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -657,10 +643,10 @@ export default function SocialAccountsPage() {
                         <DialogFooter>
                           <Button
                             variant="destructive"
-                            onClick={() => handleDeleteUserProfile(profile.profileName)}
-                            disabled={deleteProfileMutation.isPending || profile.socialAccounts.length > 0}
+                            onClick={() => handleDeleteUserProfile(profile.profileName || '')}
+                            disabled={profile.socialAccounts.length > 0}
                           >
-                            {deleteProfileMutation.isPending ? (
+                            {false ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Deleting...
@@ -688,15 +674,15 @@ export default function SocialAccountsPage() {
                       <Button
                         variant="link"
                         className="p-0 h-auto text-sm"
-                        onClick={() => openProfileManager(profile.profileKey)}
+                        onClick={() => openProfileManager(profile.profileKey || '')}
                       >
                         Connect an account
                       </Button>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {profile.socialAccounts.map((account: SocialAccount) => (
-                        <div key={account.id} className="bg-muted/30 rounded-md p-3 flex items-center gap-3">
+                      {profile.socialAccounts.map((account) => (
+                        <div key={account._id} className="bg-muted/30 rounded-md p-3 flex items-center gap-3">
                           {account.userImage ? (
                             <img
                               src={account.userImage}
@@ -721,7 +707,7 @@ export default function SocialAccountsPage() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              Connected {new Date(account.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
+                              Connected {new Date(account._creationTime).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
                           </div>
                           <Badge className={`${getPlatformBadgeClass(account.platform)} text-xs px-2 py-0.5`}>

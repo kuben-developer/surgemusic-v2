@@ -3,7 +3,7 @@ import { ExternalLink, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
 // Assuming VideoMetric type is defined elsewhere or passed/imported
 // For now, using 'any' as a placeholder if the type isn't easily importable
 // Ideally, define or import the actual VideoMetric type
-interface VideoMetric {
+export interface VideoMetric {
     id: string;
     videoInfo: {
         id: string;
@@ -91,5 +91,4 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
     );
 }
 
-// Re-export the type if needed by parent components
-export type { VideoMetric }; 
+ 

@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { api } from '@/trpc/react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import {
     Table,
     TableBody,
@@ -44,31 +46,28 @@ import { cn } from "@/lib/utils";
 
 // Define the type for a single report based on your API output
 // Adjust this based on the actual structure returned by api.report.list
-type Report = {
-    id: string;
-    name: string;
-    createdAt: Date;
+type Report = Doc<"reports"> & {
     campaigns: { id: string; campaignName: string }[];
 };
 
 export default function ReportsPage() {
-    const utils = api.useUtils();
-    const { data: reports, isLoading, error, refetch } = api.report.list.useQuery();
+    const { data: reports, isLoading, error, refetch } = api.reports.list.useQuery();
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<Report | null>(null);
 
-    const deleteMutation = api.report.delete.useMutation({
-        onSuccess: (data) => {
+    const deleteMutation = useMutation(api.reports.delete);
+    
+    const handleDelete = async (reportId: string) => {
+        try {
+            const data = await deleteMutation({ id: reportId as Id<"reports"> });
             toast.success(`Report "${data.name}" deleted successfully.`);
-            refetch();
             closeDeleteDialog();
-        },
-        onError: (error) => {
-            toast.error(`Failed to delete report: ${error.message}`);
+        } catch (error) {
+            toast.error(`Failed to delete report: ${(error as Error).message}`);
             closeDeleteDialog();
-        },
-    });
+        }
+    };
 
     const formatDate = (date: Date) => {
         return new Intl.DateTimeFormat('en-US', {
@@ -90,7 +89,7 @@ export default function ReportsPage() {
 
     const handleDeleteConfirm = () => {
         if (reportToDelete) {
-            deleteMutation.mutate({ id: reportToDelete.id });
+            await handleDelete(reportToDelete._id);
         }
     };
 
@@ -156,17 +155,17 @@ export default function ReportsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {reports.map((report) => (
-                                   <TableRow key={report.id} className="hover:bg-muted/20">
+                                {reports.map((report: Report) => (
+                                   <TableRow key={report._id} className="hover:bg-muted/20">
                                         <TableCell className="font-medium py-3">{report.name}</TableCell>
-                                        <TableCell className="text-center py-3">{report.campaigns.length}</TableCell>
-                                        <TableCell className="text-muted-foreground py-3">{formatDate(report.createdAt)}</TableCell>
+                                        <TableCell className="text-center py-3">{report.campaigns?.length || 0}</TableCell>
+                                        <TableCell className="text-muted-foreground py-3">{formatDate(new Date(report._creationTime))}</TableCell>
                                         <TableCell className="text-right py-2 pr-4">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                          <Button variant="ghost" size="icon" asChild className="text-blue-600 hover:text-blue-700 hover:bg-blue-100/50">
-                                                            <Link href={`/reports/${report.id}`}>
+                                                            <Link href={`/reports/${report._id}`}>
                                                                 <Eye className="h-4 w-4" />
                                                                 <span className="sr-only">View Report</span>
                                                             </Link>
@@ -177,7 +176,7 @@ export default function ReportsPage() {
                                                  <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <Button variant="ghost" size="icon" asChild className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100/50">
-                                                            <Link href={`/reports/${report.id}/edit`}>
+                                                            <Link href={`/reports/${report._id}/edit`}>
                                                                 <Pencil className="h-4 w-4" />
                                                                 <span className="sr-only">Edit Report</span>
                                                              </Link>
@@ -192,9 +191,9 @@ export default function ReportsPage() {
                                                             size="icon" 
                                                             onClick={() => openDeleteDialog(report)} 
                                                             className="text-red-600 hover:text-red-700 hover:bg-red-100/50"
-                                                            disabled={deleteMutation.isPending && reportToDelete?.id === report.id}
+                                                            disabled={false}
                                                         >
-                                                            {deleteMutation.isPending && reportToDelete?.id === report.id ? (
+                                                            {false ? (
                                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                             ) : (
                                                                 <Trash2 className="h-4 w-4" />
@@ -226,10 +225,10 @@ export default function ReportsPage() {
                             <AlertDialogCancel onClick={closeDeleteDialog}>Cancel</AlertDialogCancel>
                             <AlertDialogAction 
                                 onClick={handleDeleteConfirm} 
-                                disabled={deleteMutation.isPending}
+                                disabled={false}
                                 className="bg-red-600 hover:bg-red-700 text-white"
                             >
-                                {deleteMutation.isPending ? (
+                                {false ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
                                     </>

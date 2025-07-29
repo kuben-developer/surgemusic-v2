@@ -1,20 +1,22 @@
 "use client"
-import { api } from "@/trpc/react";
+import { useQuery, useAction } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreditsDialog } from "./credits-dialog";
 
 export function CreditsDisplay() {
   const router = useRouter();
-  const { data: user } = api.user.getCurrentUser.useQuery();
+  const user = useQuery(api.users.getCurrentUser);
 
-  const { mutate: createCheckoutSession } = api.stripe.createCheckoutSession.useMutation({
-    onSuccess: (url) => {
-      if (url) {
-        router.push(url);
-      }
-    },
-  });
+  const createCheckoutSession = useAction(api.stripe.createCheckoutSession);
+
+  const handleCreateCheckoutSession = async (priceId: string, mode: "subscription" | "payment") => {
+    const url = await createCheckoutSession({ priceId, mode });
+    if (url) {
+      router.push(url);
+    }
+  };
 
   if (!user) {
     return null;
@@ -26,10 +28,8 @@ export function CreditsDisplay() {
         <Zap className="w-4 h-4 text-yellow-500" />
         <span className="font-semibold">{user.videoGenerationCredit + user.videoGenerationAdditionalCredit}</span>
       </div>
-      <CreditsDialog onSelectCredits={(priceId) => createCheckoutSession({
-        priceId,
-        mode: "payment",
-      })} hasSubscription={!!user?.subscriptionPriceId && !user?.isTrial} />
+      <CreditsDialog onSelectCredits={(priceId) => handleCreateCheckoutSession(priceId, "payment")} 
+        hasSubscription={!!user?.subscriptionPriceId && !user?.isTrial} />
     </div>
   );
 } 

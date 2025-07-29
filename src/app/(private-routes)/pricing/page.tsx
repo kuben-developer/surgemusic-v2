@@ -9,10 +9,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { api } from '@/trpc/react';
-import { PricingPlan } from '@/types';
+import { useQuery, useAction } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { toast } from "sonner";
+
+interface PricingPlan {
+  name: string;
+  price: number;
+  description: string;
+  videoGenerations: number;
+  songs: number;
+  features: string[];
+  priceId: string;
+  interval: 'month' | 'year';
+}
 import { Calendar, CheckCircle2, Clock, CreditCard, CreditCardIcon, Loader2, Lock, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -97,16 +108,23 @@ export default function PricingPage() {
   const [convertedToPaidPlanLoading, setConvertedToPaidPlanLoading] = useState(false);
   const [isUserOnTrial, setIsUserOnTrial] = useState(false);
   const router = useRouter();
-  const { toast } = useToast();
 
-  const { data: user, isLoading } = api.user.getCurrentUser.useQuery();
-  const { mutate: createCheckoutSession } = api.stripe.createCheckoutSession.useMutation({
-    onSuccess: (url) => {
+  const user = useQuery(api.users.getCurrentUser);
+  const isLoading = user === undefined;
+  const createCheckoutSessionAction = useAction(api.stripe.createCheckoutSession);
+  
+  const createCheckoutSession = async (params: { priceId: string; trial?: boolean }) => {
+    try {
+      const url = await createCheckoutSessionAction(params);
       if (url) {
         router.push(url);
       }
-    },
-  });
+    } catch (error) {
+      toast.error("Failed to create checkout session", {
+        description: (error as Error).message
+      });
+    }
+  };
 
   useEffect(() => {
     setIsUserOnTrial(user?.isTrial || false);
@@ -116,35 +134,46 @@ export default function PricingPage() {
     }
   }, [user]);
 
-  const { mutate: endTrialImmediately } = api.stripe.endTrialImmediately.useMutation({
-    onSuccess: (response) => {
+  const endTrialImmediatelyAction = useAction(api.stripe.endTrialImmediately);
+  
+  const endTrialImmediately = async () => {
+    try {
+      const response = await endTrialImmediatelyAction();
       if (response.status === 'active') {
         setConvertedToPaidPlanLoading(false);
         setIsUserOnTrial(false);
-        toast({
-          title: "Trial Ended Successfully.",
+        toast.success("Trial Ended Successfully.", {
           description: `Your paid plan is now active!`,
         });
-
       } else {
         setConvertedToPaidPlanLoading(false);
-        toast({
-          title: 'Payment Failed.',
+        toast.error('Payment Failed.', {
           description: 'Please contact support if this persists.',
-          variant: 'destructive',
         });
       }
-    },
-  });
+    } catch (error) {
+      setConvertedToPaidPlanLoading(false);
+      toast.error('Error ending trial', {
+        description: (error as Error).message,
+      });
+    }
+  };
 
 
-  const { mutate: createPortalSession } = api.stripe.createCustomerPortalSession.useMutation({
-    onSuccess: (url) => {
+  const createPortalSessionAction = useAction(api.stripe.createCustomerPortalSession);
+  
+  const createPortalSession = async () => {
+    try {
+      const url = await createPortalSessionAction();
       if (url) {
         router.push(url);
       }
-    },
-  });
+    } catch (error) {
+      toast.error("Failed to create portal session", {
+        description: (error as Error).message
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -237,7 +266,7 @@ export default function PricingPage() {
       {user?.subscriptionPriceId && (
         <div className="mb-8 text-center">
           <Button
-            onClick={() => createPortalSession()}
+            onClick={() => void createPortalSession()}
             className="inline-flex items-center gap-2"
           >
             <CreditCardIcon className="h-4 w-4" />
@@ -297,9 +326,9 @@ export default function PricingPage() {
                   className="w-full"
                   onClick={() => {
                     if (isCurrentPlan) {
-                      createPortalSession();
+                      void createPortalSession();
                     } else if (plan.priceId) {
-                      createCheckoutSession({
+                      void createCheckoutSession({
                         priceId: plan.priceId,
                       });
                     }
@@ -319,7 +348,7 @@ export default function PricingPage() {
               <div className="mt-8">
                 <h4 className="text-lg font-semibold text-card-foreground">What's Included</h4>
                 <ul className="mt-4 space-y-4">
-                  {plan.features.map((feature) => (
+                  {plan.features.map((feature: string) => (
                     <li key={feature} className="flex items-start">
                       <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0 text-green-500" />
                       <span className="text-sm text-muted-foreground">{feature}</span>
@@ -406,7 +435,7 @@ export default function PricingPage() {
             <Button
               onClick={() => {
                 if (selectedPlan?.priceId) {
-                  createCheckoutSession({
+                  void createCheckoutSession({
                     priceId: selectedPlan.priceId,
                     trial: true
                   });

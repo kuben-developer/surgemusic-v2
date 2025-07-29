@@ -10,14 +10,27 @@ import { SongDetails } from "@/app/(private-routes)/create-campaign/components/S
 import { VideoAssets } from "@/app/(private-routes)/create-campaign/components/VideoAssets"
 import { VideoCount } from "@/app/(private-routes)/create-campaign/components/VideoCount"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
+import { useQuery, useMutation } from "convex/react"
+import { api } from "../../../../convex/_generated/api"
+import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 
+interface CreateCampaignData {
+    campaignName: string;
+    songName: string;
+    artistName: string;
+    campaignCoverImageUrl?: string;
+    videoCount: number;
+    genre: string;
+    themes: string[];
+    songAudioUrl?: string;
+    musicVideoUrl?: string;
+    lyricVideoUrl?: string;
+}
+
 export default function CreateCampaign() {
-    const { toast } = useToast()
     const searchParams = useSearchParams()
     const router = useRouter()
     const [currentSection, setCurrentSection] = useState(0)
@@ -64,15 +77,25 @@ export default function CreateCampaign() {
     const [themesError, setThemesError] = useState(false)
 
     // Fetch user data
-    const { data: userData } = api.user.getCurrentUser.useQuery()
+    const userData = useQuery(api.users.getCurrentUser)
     const totalCredits = (userData?.videoGenerationCredit ?? 0) + (userData?.videoGenerationAdditionalCredit ?? 0)
     const isSubscribed = Boolean(userData?.subscriptionPriceId)
 
-    const { mutate: createCampaign, isPending } = api.campaign.create.useMutation({
-        onSuccess: (campaignId) => {
+    const createCampaignMutation = useMutation(api.campaigns.create)
+    const [isPending, setIsPending] = useState(false)
+    
+    const createCampaign = async (data: CreateCampaignData) => {
+        setIsPending(true)
+        try {
+            const campaignId = await createCampaignMutation(data)
             router.push(`/campaign/${campaignId}`)
+        } catch (error) {
+            console.error("Error creating campaign:", error)
+            toast.error("Failed to create campaign")
+        } finally {
+            setIsPending(false)
         }
-    })
+    }
 
     // Handle songAudioUrl from URL params
     useState(() => {
@@ -129,50 +152,40 @@ export default function CreateCampaign() {
 
         if (!campaignName.trim()) {
             setCampaignNameError(true)
-            toast({
-                title: "Campaign Name Required",
+            toast.error("Campaign Name Required", {
                 description: "Please enter a name for your campaign",
-                variant: "destructive",
             })
             return false
         }
 
         if (!songName.trim() || !artistName.trim()) {
             setSongDetailsError(true)
-            toast({
-                title: "Song Details Required",
+            toast.error("Song Details Required", {
                 description: "Please enter both song name and artist name",
-                variant: "destructive",
             })
             return false
         }
 
         if (!songAudioUrl) {
             setSongAudioError(true)
-            toast({
-                title: "Song Audio Required",
+            toast.error("Song Audio Required", {
                 description: "Please upload your song audio",
-                variant: "destructive",
             })
             return false
         }
 
         if (!selectedGenre) {
             setGenreError(true)
-            toast({
-                title: "Genre Required",
+            toast.error("Genre Required", {
                 description: "Please select a genre for your music",
-                variant: "destructive",
             })
             return false
         }
 
         if (!selectedVideoCount) {
             setVideoCountError(true)
-            toast({
-                title: "Video Count Required",
+            toast.error("Video Count Required", {
                 description: "Please select the number of videos you want to generate",
-                variant: "destructive",
             })
             return false
         }
@@ -180,30 +193,24 @@ export default function CreateCampaign() {
         if (campaignType === "custom") {
             if (!albumArtUrl) {
                 setAlbumArtError(true)
-                toast({
-                    title: "Album Art Required",
+                toast.error("Album Art Required", {
                     description: "Please upload your album/single artwork",
-                    variant: "destructive",
                 })
                 return false
             }
 
             if (!musicVideoUrl) {
                 setMusicVideoError(true)
-                toast({
-                    title: "Music Video Required",
+                toast.error("Music Video Required", {
                     description: "Please upload a music video clip or performance video",
-                    variant: "destructive",
                 })
                 return false
             }
 
             if (selectedThemes.length === 0) {
                 setThemesError(true)
-                toast({
-                    title: "Content Themes Required",
+                toast.error("Content Themes Required", {
                     description: "Please select at least one content theme",
-                    variant: "destructive",
                 })
                 return false
             }
@@ -221,7 +228,7 @@ export default function CreateCampaign() {
                 campaignName,
                 songName,
                 artistName,
-                campaignCoverImageUrl: albumArtUrl,
+                campaignCoverImageUrl: albumArtUrl || undefined,
                 videoCount: selectedVideoCount,
                 genre: selectedGenre,
                 themes: selectedThemes,

@@ -1,8 +1,8 @@
 "use client"
 
-import { OurFileRouter } from "@/app/api/uploadthing/core"
+import type { OurFileRouter } from "@/app/api/uploadthing/core"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { UploadDropzone } from "@uploadthing/react"
 import { ExternalLink, Music } from "lucide-react"
 
@@ -21,7 +21,7 @@ export function SongAudio({
     setSongAudioBase64,
     songAudioError
 }: SongAudioProps) {
-    const { toast } = useToast()
+    // Using sonner toast directly
 
     return (
         <section className={`bg-card rounded-xl p-8 shadow-sm border ${songAudioError ? 'ring-2 ring-red-500' : ''}`}>
@@ -103,10 +103,8 @@ export function SongAudio({
                                             };
                                             audioReader.readAsDataURL(wavBlob);
                                         } catch (error) {
-                                            toast({
-                                                title: "No Audio Found in Video",
-                                                description: "Please upload a video file with sound.",
-                                                variant: "destructive",
+                                            toast.error("No Audio Found in Video", {
+                                                description: "Please upload a video file with sound."
                                             });
                                         }
                                     };
@@ -130,10 +128,8 @@ export function SongAudio({
                             }}
                             onUploadError={(error: Error) => {
                                 if (error.message.includes("FileSizeMismatch")) {
-                                    toast({
-                                        title: "File Size Too Large",
-                                        description: "Please upload a smaller file.",
-                                        variant: "destructive",
+                                    toast.error("File Size Too Large", {
+                                        description: "Please upload a smaller file."
                                     });
                                 }
                             }}

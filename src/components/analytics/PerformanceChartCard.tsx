@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { ArrowUpRight } from "lucide-react";
 import React from "react";
-import { GrowthData } from "./KpiCard"; // Assuming GrowthData is exported from KpiCard
+import type { GrowthData } from "./KpiCard"; // Assuming GrowthData is exported from KpiCard
 
 // Define metric info structure
 interface MetricInfoData {

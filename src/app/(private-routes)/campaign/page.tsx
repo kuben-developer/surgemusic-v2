@@ -1,6 +1,6 @@
 'use client';
 
-// import { FolderManagerDialog } from "@/components/folder-manager-dialog";
+import { FolderManagerDialog } from "@/components/folder-manager-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useQuery } from "convex/react";
@@ -440,7 +440,7 @@ export default function Campaign() {
       )}
 
       {/* Folder Manager Dialog */}
-      {/* <FolderManagerDialog
+      <FolderManagerDialog
         open={folderManagerOpen}
         onOpenChange={(open) => {
           setFolderManagerOpen(open);
@@ -449,7 +449,7 @@ export default function Campaign() {
             // No need to manually refetch with Convex
           }
         }}
-      /> */}
+      />
     </div>
   )
 }

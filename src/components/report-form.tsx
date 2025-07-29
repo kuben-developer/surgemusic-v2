@@ -26,7 +26,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/trpc/react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, ListChecks, Save } from "lucide-react";
 
@@ -40,6 +41,12 @@ const reportFormSchema = z.object({
 });
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
+
+interface Campaign {
+    _id: string;
+    campaignName: string;
+    // Add other fields as needed
+}
 
 interface ReportFormProps {
     onSubmit: (values: ReportFormValues) => Promise<void>; // Function to handle actual API call
@@ -56,7 +63,9 @@ export function ReportForm({
 }: ReportFormProps) {
     
     // Fetch campaigns for selection
-    const { data: campaigns, isLoading: isLoadingCampaigns, error: campaignsError } = api.campaign.getAll.useQuery();
+    const campaigns = useQuery(api.campaigns.getAll);
+    const isLoadingCampaigns = campaigns === undefined;
+    const campaignsError = null; // Convex doesn't expose errors the same way
 
     const form = useForm<ReportFormValues>({
         resolver: zodResolver(reportFormSchema),
@@ -69,7 +78,7 @@ export function ReportForm({
 
     // Watch campaignIds for checkbox updates
     const selectedCampaignIds = form.watch("campaignIds", initialData.campaignIds ?? []);
-    const allCampaignIds = React.useMemo(() => campaigns?.map(c => c.id) ?? [], [campaigns]);
+    const allCampaignIds = React.useMemo(() => campaigns?.map((c: Campaign) => c._id) ?? [], [campaigns]);
 
     const selectAll = () => {
         form.setValue("campaignIds", allCampaignIds, { shouldValidate: true });
@@ -151,7 +160,7 @@ export function ReportForm({
                                     )}
                                     {campaignsError && (
                                         <p className="text-sm font-medium text-destructive">
-                                            Error loading campaigns: {campaignsError.message}
+                                            Error loading campaigns
                                         </p>
                                     )}
                                     {campaigns && campaigns.length === 0 && !isLoadingCampaigns && (
@@ -185,27 +194,27 @@ export function ReportForm({
                                             </div>
                                             <ScrollArea className="h-60 w-full rounded-md border">
                                                 <div className="p-4">
-                                                    {campaigns.map((campaign) => (
+                                                    {campaigns.map((campaign: Campaign) => (
                                                         <FormField
-                                                            key={campaign.id}
+                                                            key={campaign._id}
                                                             control={form.control}
                                                             name="campaignIds"
                                                             render={({ field }) => {
                                                                 return (
                                                                     <FormItem
-                                                                        key={campaign.id}
+                                                                        key={campaign._id}
                                                                         className="flex flex-row items-center space-x-3 space-y-0 py-2 border-b last:border-b-0"
                                                                     >
                                                                         <FormControl>
                                                                             <Checkbox
-                                                                                checked={field.value?.includes(campaign.id)}
+                                                                                checked={field.value?.includes(campaign._id)}
                                                                                 onCheckedChange={(checked) => {
                                                                                     const currentIds = field.value ?? [];
                                                                                     return checked
-                                                                                        ? field.onChange([...currentIds, campaign.id])
+                                                                                        ? field.onChange([...currentIds, campaign._id])
                                                                                         : field.onChange(
                                                                                             currentIds.filter(
-                                                                                                (value) => value !== campaign.id
+                                                                                                (value) => value !== campaign._id
                                                                                             )
                                                                                         );
                                                                                 }}
