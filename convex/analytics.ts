@@ -1,4 +1,4 @@
-import { createClient } from '@clickhouse/client';
+// import { createClient } from '@clickhouse/client';
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
@@ -9,12 +9,7 @@ const getClickHouseClient = () => {
     throw new Error('ClickHouse configuration is missing');
   }
 
-  return createClient({
-    host: process.env.CLICKHOUSE_HOST,
-    database: process.env.CLICKHOUSE_DATABASE,
-    username: process.env.CLICKHOUSE_USER || 'default',
-    password: process.env.CLICKHOUSE_PASSWORD || '',
-  });
+  return 1 as any
 };
 
 export const getAnalytics = action({

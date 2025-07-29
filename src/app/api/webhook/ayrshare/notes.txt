@@ -1,0 +1,52 @@
+Ayrshare webhook received: {
+  action: 'scheduled',
+  created: '2025-04-01T17:15:13Z',
+  errors: [
+    {
+      action: 'post',
+      status: 'error',
+      code: 289,
+      message: 'TikTok failed to process the media. Please see here for the TikTok media requirements: https://www.ayrshare.com/docs/media-guidelines/tiktok',
+      details: 'frame_rate_check_failed'
+    }
+  ],
+  hookId: 'SqkEek6PiAhWpthpUnA2',
+  id: 'G1YglYvID2CSrAWHEca7',
+  idShare: 'v_pub_url~v2.7488394180776183814',
+  isVideo: true,
+  platforms: [ 'tiktok' ],
+  post: 'test by test #rap',
+  refId: 'bc1764d1e71d9764211cec5440149e2594691c88',
+  status: 'success',
+  title: 'test|1d5aa2d7-f349-43b4-83e0-f897ecda906d',
+  url: 'https://surgemusic-git-preview-seek-social.vercel.app/api/webhook/ayrshare'
+}
+
+
+Ayrshare webhook received: {
+  action: 'scheduled',
+  created: '2025-04-15T17:43:29Z',
+  errors: [],
+  hookId: 'ZXgXvx11Tq3Z1ecjyo7h',
+  id: '1YMnkXA4EtV2MAG6Mxpq',
+  mediaUrls: [
+    'https://f002.backblazeb2.com/file/creatomate-c8xg3hsxdu/606c41fd-263a-4581-a658-fbaab8ddb926.mp4'
+  ],
+  platforms: [ 'tiktok' ],
+  post: 'test by test #rap',
+  postIds: [
+    {
+      status: 'success',
+      idShare: 'v_pub_url~v2.7493596322768193542',
+      id: 'pending',
+      isVideo: true,
+      platform: 'tiktok'
+    }
+  ],
+  refId: 'bc1764d1e71d9764211cec5440149e2594691c88',
+  source: 'user',
+  status: 'success',
+  tikTokId: 'v_pub_url~v2.7493596322768193542',
+  title: 'test|1d5aa2d7-f349-43b4-83e0-f897ecda906d',
+  url: 'https://surgemusic-git-preview-seek-social.vercel.app/api/webhook/ayrshare'
+}

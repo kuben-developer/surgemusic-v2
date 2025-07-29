@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
-import { useToast } from "./ui/use-toast";
+import { toast } from "sonner"
 import Image from "next/image";
 
 interface FolderManagerDialogProps {
@@ -98,9 +98,7 @@ export function FolderManagerDialog({
   // Campaign search and management state
   const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
-  
-  const { toast } = useToast();
-  
+    
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const onOpenChange = controlledOnOpenChange || setInternalOpen;
