@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import type { Doc } from "../../../../../convex/_generated/dataModel"
+import type { Doc } from "../../../../convex/_generated/dataModel"
 
 export function useCampaignProgress(campaign: Doc<"campaigns"> | null | undefined) {
   const [progress, setProgress] = useState(0)

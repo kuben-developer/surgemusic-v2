@@ -1,6 +1,6 @@
 "use client"
 
-import { CreditsDialog } from "@/components/credits-dialog"
+import { CreditsDialog } from "@/components/common/credits-dialog"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"

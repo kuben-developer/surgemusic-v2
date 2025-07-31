@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import type { Doc } from "../../../../../convex/_generated/dataModel"
+import type { Doc } from "../../../../convex/_generated/dataModel"
 
 export type StatusFilter = "all" | "posted" | "failed" | "scheduled" | "unscheduled"
 

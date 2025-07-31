@@ -104,7 +104,7 @@ export default function Page() {
             }}
             onClientUploadComplete={(res) => {
               if (res?.[0]) {
-                router.push(`/create-campaign?songAudioUrl=${encodeURIComponent(res[0].ufsUrl)}`)
+                router.push(`/campaign/create?songAudioUrl=${encodeURIComponent(res[0].ufsUrl)}`)
               }
             }}
             onUploadError={(error: Error) => {

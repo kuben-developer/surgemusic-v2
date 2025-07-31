@@ -47,49 +47,299 @@ The app uses Convex for backend functionality instead of traditional APIs. Key p
 ### 2. File Structure
 ```
 src/
-├── app/
-│   ├── (private-routes)/    # Authenticated routes
-│   │   ├── campaign/         # Campaign management
-│   │   ├── analytics/        # Analytics dashboard
-│   │   └── create-campaign/  # Campaign creation flow
-│   ├── (public-routes)/      # Public routes
+├── app/                      # Next.js App Router (routing only)
+│   ├── (dashboard)/          # Authenticated routes
+│   ├── (public)/             # Public routes
 │   └── api/                  # API routes (webhooks, cron)
+├── features/                 # Feature-based modules (business logic)
+│   ├── campaigns/            # Campaign feature module
+│   ├── analytics/            # Analytics feature module
+│   └── reports/              # Reports feature module
 ├── components/               # Shared components
 │   ├── ui/                   # shadcn/ui components
-│   └── analytics/            # Analytics-specific components
-└── hooks/                    # Custom React hooks
+│   └── common/               # Common components
+└── hooks/                    # Global custom React hooks
 ```
 
-### 3. Authentication Flow
+### 3. Feature-Based Architecture
+
+This project uses a **feature-based (vertical slice) architecture** where code is organized by business features rather than technical layers. Each feature is self-contained with its own components, hooks, types, and utilities.
+
+#### Why Feature-Based Architecture?
+
+1. **Better Cohesion**: Related code stays together
+2. **Clear Boundaries**: Easy to understand what belongs to each feature
+3. **Team Scalability**: Different teams can own different features
+4. **Easier Navigation**: Everything for a feature is in one place
+5. **Code Splitting**: Features can be lazy-loaded independently
+
+#### Feature Folder Structure Pattern
+
+Every feature in `src/features/` should follow this structure:
+
+```
+features/
+└── [feature-name]/           # e.g., campaigns, analytics, reports
+    ├── index.ts              # Public API - barrel exports
+    ├── [FeatureName]Page.tsx # Main page component (if applicable)
+    ├── components/           # Feature-specific components
+    ├── hooks/                # Feature-specific hooks
+    ├── types/                # Feature-specific TypeScript types
+    ├── utils/                # Feature-specific utilities
+    ├── constants/            # Feature-specific constants
+    └── [sub-features]/       # Complex features can have sub-features
+```
+
+#### Sub-Feature Organization
+
+When a feature becomes large and complex (like campaigns with list, detail, create, videos, analytics), split it into sub-features:
+
+```
+features/
+└── campaigns/                # Main feature
+    ├── list/                 # Sub-feature: Campaign list
+    │   ├── index.ts
+    │   ├── CampaignListPage.tsx
+    │   ├── components/
+    │   └── hooks/
+    ├── detail/               # Sub-feature: Campaign detail
+    ├── create/               # Sub-feature: Create campaign
+    ├── videos/               # Sub-feature: Video management
+    ├── analytics/            # Sub-feature: Campaign analytics
+    └── shared/               # Shared across sub-features
+        ├── components/
+        ├── hooks/
+        ├── types/
+        └── utils/
+```
+
+#### Complete Example: Campaign Feature Structure
+
+Here's the complete structure for the campaigns feature as a reference:
+
+```
+features/campaigns/
+├── list/
+│   ├── index.ts                    # Exports: CampaignListPage, etc.
+│   ├── CampaignListPage.tsx       # Main list page
+│   ├── components/
+│   │   └── CampaignCard.tsx       # List-specific component
+│   └── hooks/
+│       └── useCampaignList.ts     # List-specific hook
+│
+├── detail/
+│   ├── index.ts
+│   ├── CampaignDetailPage.tsx     # Main detail page
+│   ├── components/
+│   │   └── CampaignClient.tsx     # Orchestrates videos sub-feature
+│   └── hooks/
+│       ├── useCampaignData.ts     # Fetch campaign data
+│       └── useCampaignProgress.ts # Track campaign progress
+│
+├── create/
+│   ├── index.ts
+│   ├── CampaignCreatePage.tsx     # Multi-step creation form
+│   ├── components/
+│   │   ├── CampaignInfo.tsx       # Step 1: Basic info
+│   │   ├── ContentThemes.tsx      # Step 2: Themes
+│   │   ├── GenreSelection.tsx     # Step 3: Genre
+│   │   ├── SongDetails.tsx        # Step 4: Song details
+│   │   ├── SongAudio.tsx          # Step 5: Audio upload
+│   │   ├── VideoAssets.tsx        # Step 6: Video assets
+│   │   ├── ImageAssets.tsx        # Step 7: Image assets
+│   │   └── VideoCount.tsx         # Step 8: Video count
+│   └── types/
+│       └── create-campaign.types.ts
+│
+├── videos/                         # NO app route - used by detail sub-feature
+│   ├── index.ts
+│   ├── components/
+│   │   ├── VideoTableView.tsx     # Table view of videos
+│   │   ├── VideoGrid.tsx          # Grid view of videos
+│   │   └── ViewToggle.tsx         # Toggle between views
+│   ├── hooks/
+│   │   ├── useVideoFiltering.ts   # Filter/sort videos
+│   │   └── useVideoDownload.ts    # Download functionality
+│   ├── dialogs/
+│   │   ├── ScheduleDialog.tsx     # Schedule video dialog
+│   │   └── UnscheduleDialog.tsx   # Unschedule video dialog
+│   └── types/
+│       └── video.types.ts
+│
+├── analytics/
+│   ├── index.ts
+│   ├── CampaignAnalyticsPage.tsx
+│   ├── components/
+│   │   └── AnalyticsClient.tsx
+│   └── hooks/
+│       └── useAnalyticsData.ts
+│
+├── shared/
+│   ├── components/
+│   │   ├── CampaignHeader.tsx     # Used across sub-features
+│   │   └── CampaignProgress.tsx   # Used across sub-features
+│   ├── hooks/
+│   │   └── useCampaignShared.ts
+│   ├── types/
+│   │   └── campaign.types.ts      # Common campaign types
+│   └── utils/
+│       └── campaign.utils.ts
+│
+└── index.ts                        # Main feature exports
+```
+
+#### Guidelines for Creating New Features
+
+When creating a new feature or sub-feature, follow these steps:
+
+1. **Determine if it's a new feature or sub-feature**
+   - New feature: Represents a major business domain (e.g., reports, social-accounts)
+   - Sub-feature: Part of existing feature but complex enough for its own folder
+
+2. **Understand sub-feature types**
+   - **Page sub-features**: Have their own route in the app folder (e.g., `list`, `create`, `detail`)
+   - **Component sub-features**: Used by other sub-features, no dedicated route (e.g., `videos` used by `detail`)
+   
+   Example routing:
+   ```
+   app/(dashboard)/campaign/page.tsx           → imports from features/campaigns/list
+   app/(dashboard)/campaign/create/page.tsx    → imports from features/campaigns/create
+   app/(dashboard)/campaign/[id]/page.tsx      → imports from features/campaigns/detail
+   
+   # Note: videos sub-feature has NO route - it's used internally by detail
+   ```
+
+3. **Create the folder structure**
+   ```bash
+   features/
+   └── [new-feature]/
+       ├── index.ts
+       ├── [FeatureName]Page.tsx  # Only if it has a route in app folder
+       ├── components/
+       ├── hooks/
+       └── types/
+   ```
+
+4. **Keep the App Router thin**
+   - App router pages should only import and export from features
+   - Not all sub-features need a corresponding app route
+   - Example: `app/(dashboard)/reports/page.tsx`:
+   ```typescript
+   import { ReportsPage } from '@/features/reports';
+   export default ReportsPage;
+   ```
+
+4. **Use barrel exports (index.ts)**
+   ```typescript
+   // features/reports/index.ts
+   export { ReportsPage } from './ReportsPage';
+   export { useReports } from './hooks/useReports';
+   export type { Report } from './types/report.types';
+   ```
+
+5. **Shared code placement**
+   - Within a feature: Use the `shared/` folder
+   - Across features: Use `src/components/common/` or `src/hooks/`
+   - UI components: Always in `src/components/ui/`
+
+#### Import Patterns
+
+1. **Within a sub-feature**: Use relative imports
+   ```typescript
+   import { VideoCard } from './components/VideoCard';
+   ```
+
+2. **Across sub-features**: Use feature imports
+   ```typescript
+   import { useVideoDownload } from '@/features/campaigns/videos';
+   ```
+
+3. **From shared within feature**: Use relative imports
+   ```typescript
+   import { CampaignHeader } from '../shared/components/CampaignHeader';
+   ```
+
+4. **External features**: Use absolute imports
+   ```typescript
+   import { Button } from '@/components/ui/button';
+   ```
+
+#### How Sub-features Interact
+
+Sub-features can be used by other sub-features within the same feature. Example from campaigns:
+
+```typescript
+// In features/campaigns/detail/components/CampaignClient.tsx
+import { VideoTableView, VideoGrid, useVideoFiltering } from '@/features/campaigns/videos';
+import { ScheduleDialog, UnscheduleDialog } from '@/features/campaigns/videos';
+
+// The detail page uses the videos sub-feature components
+export function CampaignClient() {
+  const { filteredVideos, statusFilter } = useVideoFiltering(videos);
+  
+  return (
+    <>
+      {viewMode === 'table' ? 
+        <VideoTableView videos={filteredVideos} /> : 
+        <VideoGrid videos={filteredVideos} />
+      }
+      <ScheduleDialog />
+      <UnscheduleDialog />
+    </>
+  );
+}
+```
+
+**Key points:**
+- The `videos` sub-feature doesn't have its own page/route
+- It's a collection of reusable components and hooks
+- Other sub-features (like `detail`) import and use these components
+- This promotes code reuse and single responsibility
+
+#### When to Create Sub-features
+
+Create a sub-feature when:
+- The functionality is complex enough to have multiple components and hooks
+- It represents a distinct user workflow or business capability
+- It could potentially be reused in other contexts
+- The feature folder is getting too large (>10-15 files)
+
+Examples of good sub-features:
+- `videos/` - Video management is complex with viewing, filtering, downloading, scheduling
+- `create/` - Multi-step form with many components
+- `analytics/` - Separate concern with its own data and visualizations
+
+### 4. Authentication Flow
 - Clerk handles authentication with middleware protection
 - Private routes require authentication via middleware
 - User data synced to Convex via webhook on signup
 
-### 4. Campaign Video Generation Flow
+### 5. Campaign Video Generation Flow
 1. User creates campaign with details (song, themes, video count)
 2. Data sent to Make.com webhook for processing
 3. Videos generated and uploaded to UploadThing
 4. Webhook updates Convex with video URLs
 5. Users can schedule posts to social platforms via Ayrshare
 
-### 5. State Management Patterns
+### 6. State Management Patterns
 - Use Convex real-time queries for data fetching
 - Loading state: check if query result is `undefined`
 - Error handling: wrap mutations in try-catch blocks
 - Toast notifications: use `sonner` (not shadcn toast)
 
-### 6. Common Hooks
-- `useCampaignData`: Fetch campaign with videos
-- `useVideoDownload`: Download videos as ZIP
-- `useVideoFiltering`: Filter and sort videos
+### 7. Common Hooks and Their Locations
+- `useCampaignData`: Fetch campaign with videos - Located in `features/campaigns/detail/hooks/`
+- `useVideoDownload`: Download videos as ZIP - Located in `features/campaigns/videos/hooks/`
+- `useVideoFiltering`: Filter and sort videos - Located in `features/campaigns/videos/hooks/`
 
 ## Important Migration Context
 
-The codebase is migrating from TRPC to Convex. The `/campaign` folder serves as the reference implementation. When working on unmigrated code:
+The codebase is migrating from TRPC to Convex. The campaigns feature serves as the reference implementation. When working on unmigrated code:
 - Replace TRPC imports with Convex equivalents
 - Update query/mutation patterns
 - Fix property mappings (id → _id)
 - Remove all TypeScript `any` types
+- Organize new features following the feature-based architecture pattern described above
 
 ## Environment Variables
 
@@ -111,6 +361,8 @@ Currently no test framework is configured. When implementing tests:
 
 - TypeScript strict mode is enabled - no `any` types allowed
 - Use absolute imports with `@/` prefix
-- Follow existing component patterns in `/campaign` folder
+- Follow the feature-based architecture pattern for organizing code
 - Extract reusable logic into custom hooks
 - Keep components focused and modular
+- Use barrel exports (index.ts) for clean public APIs
+- Place shared code in appropriate shared folders based on scope

@@ -19,8 +19,8 @@ import { useParams } from "next/navigation"
 import { useState } from "react"
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useQuery, useAction } from "convex/react"
-import { api } from "../../../../../../convex/_generated/api"
-import type { Id, Doc } from "../../../../../../convex/_generated/dataModel"
+import { api } from "../../../../../convex/_generated/api"
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel"
 import { useEffect } from "react"
 
 const fadeInUp = {

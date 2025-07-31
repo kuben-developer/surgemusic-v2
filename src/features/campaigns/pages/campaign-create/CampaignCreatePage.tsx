@@ -1,17 +1,17 @@
 "use client"
 
-import { CampaignInfo } from "@/app/(dashboard)/create-campaign/components/CampaignInfo"
-import { ContentThemes } from "@/app/(dashboard)/create-campaign/components/ContentThemes"
-import { GenreSelection } from "@/app/(dashboard)/create-campaign/components/GenreSelection"
-import { ImageAssets } from "@/app/(dashboard)/create-campaign/components/ImageAssets"
-import { LyricVideoOverlay } from "@/app/(dashboard)/create-campaign/components/LyricVideoOverlay"
-import { SongAudio } from "@/app/(dashboard)/create-campaign/components/SongAudio"
-import { SongDetails } from "@/app/(dashboard)/create-campaign/components/SongDetails"
-import { VideoAssets } from "@/app/(dashboard)/create-campaign/components/VideoAssets"
-import { VideoCount } from "@/app/(dashboard)/create-campaign/components/VideoCount"
+import { CampaignInfo } from "@/features/campaigns/components/forms/CampaignInfo"
+import { ContentThemes } from "@/features/campaigns/components/forms/ContentThemes"
+import { GenreSelection } from "@/features/campaigns/components/forms/GenreSelection"
+import { ImageAssets } from "@/features/campaigns/components/forms/ImageAssets"
+import { LyricVideoOverlay } from "@/features/campaigns/components/forms/LyricVideoOverlay"
+import { SongAudio } from "@/features/campaigns/components/forms/SongAudio"
+import { SongDetails } from "@/features/campaigns/components/forms/SongDetails"
+import { VideoAssets } from "@/features/campaigns/components/forms/VideoAssets"
+import { VideoCount } from "@/features/campaigns/components/forms/VideoCount"
 import { Button } from "@/components/ui/button"
 import { useQuery, useMutation } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
+import { api } from "../../../../../convex/_generated/api"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -30,7 +30,7 @@ interface CreateCampaignData {
     lyricVideoUrl?: string;
 }
 
-export default function CreateCampaign() {
+export default function CampaignCreatePage() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const [currentSection, setCurrentSection] = useState(0)

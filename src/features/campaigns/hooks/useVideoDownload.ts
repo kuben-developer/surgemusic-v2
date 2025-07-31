@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import JSZip from "jszip"
-import type { Doc } from "../../../../../convex/_generated/dataModel"
+import type { Doc } from "../../../../convex/_generated/dataModel"
 
 export function useVideoDownload() {
   const [downloadingVideos, setDownloadingVideos] = useState<{ [key: string]: boolean }>({})
