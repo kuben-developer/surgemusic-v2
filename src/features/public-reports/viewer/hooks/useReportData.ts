@@ -1,0 +1,1 @@
+export { useSharedReport as useReportData } from '../../shared/hooks/useSharedReport';
