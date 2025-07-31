@@ -229,7 +229,80 @@ When creating a new feature or sub-feature, follow these steps:
    export default ReportsPage;
    ```
 
-4. **Use barrel exports (index.ts)**
+5. **URL Route Patterns - Resource Hierarchy**
+   
+   **IMPORTANT**: Always follow RESTful resource hierarchy when designing routes. Sub-resources should come AFTER the parent resource ID.
+
+   **Correct Pattern**: `[resource]/[id]/[sub-resource]`
+   ```
+   ✅ campaign/[id]/analytics     # Analytics for a specific campaign
+   ✅ campaign/[id]/settings      # Settings for a specific campaign
+   ✅ campaign/[id]/collaborators # Collaborators for a specific campaign
+   ✅ report/[id]/edit            # Edit page for a specific report
+   ✅ user/[id]/profile          # Profile for a specific user
+   ✅ project/[id]/tasks          # Tasks for a specific project
+   ```
+
+   **Incorrect Pattern**: `[resource]/[sub-resource]/[id]`
+   ```
+   ❌ campaign/analytics/[id]     # Suggests analytics is separate from campaign
+   ❌ campaign/settings/[id]      # Breaks the natural hierarchy
+   ❌ report/edit/[id]            # Makes edit seem like a separate section
+   ❌ user/profile/[id]           # Implies profile is a separate section
+   ```
+
+   **Why This Pattern?**
+   - **Natural hierarchy**: The URL mirrors the data relationship (analytics belongs to a campaign)
+   - **RESTful design**: Follows REST principles where sub-resources are nested under parent resources
+   - **User mental model**: Users navigate from parent to child (Campaign → Analytics)
+   - **Breadcrumb clarity**: `Campaigns > Campaign Name > Analytics` is intuitive
+   - **Consistency**: All sub-resources follow the same predictable pattern
+   - **Better UX**: Users understand they're viewing a specific campaign's analytics, not a general analytics section
+
+   **Route Examples in App Directory**:
+   ```
+   app/(dashboard)/
+   ├── campaign/
+   │   ├── page.tsx                    # List all campaigns
+   │   ├── create/
+   │   │   └── page.tsx               # Create new campaign
+   │   └── [id]/
+   │       ├── page.tsx               # Campaign detail
+   │       ├── analytics/
+   │       │   └── page.tsx           # Campaign analytics
+   │       ├── settings/
+   │       │   └── page.tsx           # Campaign settings
+   │       └── videos/
+   │           └── page.tsx           # Campaign videos (if needed)
+   ├── report/
+   │   ├── page.tsx                   # List all reports
+   │   ├── create/
+   │   │   └── page.tsx              # Create new report
+   │   └── [id]/
+   │       ├── page.tsx              # Report detail
+   │       └── edit/
+   │           └── page.tsx          # Edit report
+   └── user/
+       └── [id]/
+           ├── page.tsx              # User profile
+           ├── settings/
+           │   └── page.tsx          # User settings
+           └── activity/
+               └── page.tsx          # User activity
+   ```
+
+   **Special Cases**:
+   - **Creation routes**: Use `/[resource]/create` (e.g., `/campaign/create`)
+   - **Comparison/Analytics across resources**: Use `/[resource]/analytics` without ID
+   - **Global search**: Use `/[resource]/search` for searching within that resource type
+   - **Bulk operations**: Use `/[resource]/bulk-[action]` (e.g., `/campaign/bulk-delete`)
+
+   **Real-world Examples Following This Pattern**:
+   - GitHub: `github.com/[owner]/[repo]/settings`, `github.com/[owner]/[repo]/insights`
+   - Stripe: `dashboard.stripe.com/customers/[id]/subscriptions`
+   - Linear: `linear.app/[team]/issue/[id]/activity`
+
+6. **Use barrel exports (index.ts)**
    ```typescript
    // features/reports/index.ts
    export { ReportsPage } from './ReportsPage';
@@ -237,7 +310,7 @@ When creating a new feature or sub-feature, follow these steps:
    export type { Report } from './types/report.types';
    ```
 
-5. **Shared code placement**
+7. **Shared code placement**
    - Within a feature: Use the `shared/` folder
    - Across features: Use `src/components/common/` or `src/hooks/`
    - UI components: Always in `src/components/ui/`
@@ -331,6 +404,22 @@ Examples of good sub-features:
 - `useCampaignData`: Fetch campaign with videos - Located in `features/campaigns/detail/hooks/`
 - `useVideoDownload`: Download videos as ZIP - Located in `features/campaigns/videos/hooks/`
 - `useVideoFiltering`: Filter and sort videos - Located in `features/campaigns/videos/hooks/`
+
+## Documentation Resources
+
+When working with the technologies in this project, use the Context7 MCP server to access the latest documentation:
+
+- **Convex**: `mcp__context7__search` with `search_name: "convex_dev"` (https://context7.com/context7/convex_dev)
+- **Next.js**: `mcp__context7__search` with `search_name: "nextjs"` (https://context7.com/context7/nextjs)
+- **shadcn/ui**: `mcp__context7__search` with `search_name: "ui_shadcn"` (https://context7.com/context7/ui_shadcn)
+- **Recharts**: `mcp__context7__search` with `search_name: "recharts"` (https://context7.com/recharts/recharts)
+
+Example usage:
+```
+Use mcp__context7__search with search_name: "convex_dev" and query: "useQuery hook"
+```
+
+This ensures you're always working with the most up-to-date documentation and best practices for each technology.
 
 ## Important Migration Context
 
