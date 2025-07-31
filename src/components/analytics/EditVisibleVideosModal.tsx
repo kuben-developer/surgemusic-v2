@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { VideoMetric } from "./TopContentItem";
+import type { VideoMetric } from "./types";
 import {
     Dialog,
     DialogContent,

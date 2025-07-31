@@ -1,11 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { ArrowUpRight } from "lucide-react";
 import React from "react";
+import type { GrowthData } from "./types";
 
-export interface GrowthData {
-    value: number;
-    isPositive: boolean;
-}
+export { type GrowthData };
 
 interface KpiCardProps {
     title: string;

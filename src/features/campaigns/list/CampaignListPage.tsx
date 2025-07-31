@@ -1,6 +1,6 @@
 'use client';
 
-import { FolderManagerDialog } from "@/components/common/folder-manager-dialog";
+import { FolderManagerDialog } from "../shared/components/folder-manager-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useQuery } from "convex/react";

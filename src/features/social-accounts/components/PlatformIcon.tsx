@@ -1,4 +1,4 @@
-import { TikTokIcon, InstagramIcon, YouTubeIcon } from '@/components/common/icons'
+import { TikTokIcon, InstagramIcon, YouTubeIcon } from '@/components/icons'
 
 interface PlatformIconProps {
   platform: string

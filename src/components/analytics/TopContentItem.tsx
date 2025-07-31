@@ -1,29 +1,7 @@
 import { ExternalLink, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
+import type { VideoMetric } from "./types";
 
-// Assuming VideoMetric type is defined elsewhere or passed/imported
-// For now, using 'any' as a placeholder if the type isn't easily importable
-// Ideally, define or import the actual VideoMetric type
-export interface VideoMetric {
-    id: string;
-    videoInfo: {
-        id: string;
-        postId: string | null;
-        videoUrl: string;
-        videoName: string;
-        videoType: string;
-        tiktokUrl: string;
-        createdAt: Date;
-        campaign: {
-            id: number;
-            campaignName: string;
-        };
-    };
-    views: number;
-    likes: number;
-    comments: number; // Add if needed later
-    shares: number; // Add if needed later
-    engagementRate: string;
-}
+export { type VideoMetric };
 
 
 interface TopContentItemProps {

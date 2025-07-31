@@ -1,7 +1,5 @@
 "use client"
 
-import { type LucideIcon } from "lucide-react"
-
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -9,18 +7,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-
-interface NavItem {
-  title: string
-  url: string
-  icon: LucideIcon
-  badge?: string
-}
-
-interface NavSection {
-  section: string
-  items: NavItem[]
-}
+import type { NavSection } from "../types/navigation.types"
 
 export function NavMain({ items }: { items: NavSection[] }) {
   return (

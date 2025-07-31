@@ -1,6 +1,6 @@
 "use client"
 import { useQuery, useAction } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreditsDialog } from "./credits-dialog";

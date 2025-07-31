@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopContentItem } from "./TopContentItem";
-import type { VideoMetric } from "./TopContentItem";
+import type { VideoMetric } from "./types";
 
 interface TopContentCardProps {
     videoMetrics: VideoMetric[];

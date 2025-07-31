@@ -1,19 +1,11 @@
 "use client"
 
-import {
-  BarChart3,
-  Calendar,
-  FileText,
-  Home,
-  LayoutGrid,
-  Link2,
-  CreditCard
-} from "lucide-react"
 import Image from "next/image"
 import * as React from "react"
 
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
+import { navigationData } from "../constants/navigation.constants"
 import {
   Sidebar,
   SidebarContent,
@@ -24,72 +16,6 @@ import {
 } from "@/components/ui/sidebar"
 import { useTheme } from "next-themes"
 
-// Sample data
-const data = {
-  navMain: [
-    {
-      section: "Create",
-      items: [
-        {
-          title: "Home",
-          url: "/",
-          icon: Home,
-        },
-        {
-          title: "My Campaigns",
-          url: "/campaign",
-          icon: LayoutGrid,
-        },
-        {
-          title: "Pricing",
-          url: "/pricing",
-          icon: CreditCard,
-        },
-      ],
-    },
-    {
-      section: "Manage",
-      items: [
-        {
-          title: "Social Accounts",
-          url: "/social-accounts",
-          icon: Link2,
-        },
-        {
-          title: "Reports",
-          url: "/reports",
-          icon: FileText,
-        },
-        {
-          title: "Analytics",
-          url: "/analytics",
-          icon: BarChart3,
-        },
-      ],
-    },
-    // {
-    //   section: "Post",
-    //   items: [
-    //     {
-    //       title: "Calendar",
-    //       url: "#",
-    //       icon: Calendar,
-    //       badge: "New",
-    //     },
-    //     {
-    //       title: "Analytics",
-    //       url: "#",
-    //       icon: BarChart3,
-    //     },
-    //     {
-    //       title: "Social accounts",
-    //       url: "#",
-    //       icon: Link2,
-    //     },
-    //   ],
-    // },
-  ],
-}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { resolvedTheme } = useTheme()
@@ -122,7 +48,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navigationData.navMain} />
       </SidebarContent>
       {/* <SidebarFooter>
         <NavUser />

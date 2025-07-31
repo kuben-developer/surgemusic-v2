@@ -18,7 +18,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTheme } from "next-themes"
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { ThemeSwitcher } from "@/components/common/theme-switcher";
 
 // Type for error handling
 type ErrorType = 'NOT_FOUND' | 'EXPIRED' | 'SERVER_ERROR' | 'NETWORK' | 'UNKNOWN';

@@ -13,44 +13,14 @@ import {
 } from "recharts";
 import { ArrowUpRight } from "lucide-react";
 import React from "react";
-import type { GrowthData } from "./KpiCard"; // Assuming GrowthData is exported from KpiCard
-
-// Define metric info structure
-interface MetricInfoData {
-    label: string;
-    icon: React.ReactNode;
-    color: string;
-    description: string;
-}
-
-// Explicitly define the keys for metricInfo
-type MetricKey = 'views' | 'likes' | 'comments' | 'shares';
-
-// Define daily data structure
-interface DailyData {
-    date: string;
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    [key: string]: number | string; // Allow indexing by string
-}
-
-// Define totals structure
-interface Totals {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    [key: string]: number; // Allow indexing by string
-}
+import type { GrowthData, MetricKey, MetricInfo, DailyData, Totals } from "./types";
 
 interface PerformanceChartCardProps {
     dailyData: DailyData[];
     totals: Totals;
     activeMetric: MetricKey;
     setActiveMetric: (metric: MetricKey) => void;
-    metricInfo: Record<MetricKey, MetricInfoData>; // Use MetricKey and MetricInfoData
+    metricInfo: Record<MetricKey, MetricInfo>; // Use MetricKey and MetricInfoData
     dateRange: string;
     viewsGrowth: GrowthData;
     likesGrowth: GrowthData;
@@ -258,4 +228,4 @@ export function PerformanceChartCard({
 }
 
 // Re-export types if needed
-export type { DailyData, MetricInfoData as MetricInfo, Totals, MetricKey }; 
+export type { DailyData, MetricInfo, Totals, MetricKey }; 

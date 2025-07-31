@@ -7,15 +7,7 @@ import {
     TrendingUp
 } from "lucide-react";
 import { KpiCard } from "./KpiCard";
-import type { GrowthData } from "./KpiCard";
-
-// Define Totals type
-interface Totals {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-}
+import type { GrowthData, Totals } from "./types";
 
 interface KpiMetricsGridProps {
     campaignsCount: number;

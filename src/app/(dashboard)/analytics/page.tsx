@@ -1,11 +1,3 @@
-'use client';
+import { AnalyticsPage } from '@/features/analytics';
 
-import AnalyticsClient from "./analytics-client"
-
-export default function AnalyticsPage() {
-  return (
-    <div className="container relative">
-      <AnalyticsClient />
-    </div>
-  )
-} 
+export default AnalyticsPage; 
