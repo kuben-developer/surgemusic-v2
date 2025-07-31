@@ -27,7 +27,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, ListChecks, Save } from "lucide-react";
 

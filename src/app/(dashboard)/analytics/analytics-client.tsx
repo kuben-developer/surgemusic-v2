@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { useQuery, useAction } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
+import { api } from "../../../convex/_generated/api"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import { useState, useMemo, useEffect } from "react"

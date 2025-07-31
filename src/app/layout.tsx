@@ -1,9 +1,8 @@
-import Sidebar from "@/components/custom-sidebar";
-import { Toaster } from "@/components/ui/sonner";
 import "@/styles/globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import LayoutWrapper from "@/components/common/layout-wrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,8 +34,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
-          <Sidebar>{children}</Sidebar>
-          <Toaster />
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
         </Providers>
       </body>
     </html>

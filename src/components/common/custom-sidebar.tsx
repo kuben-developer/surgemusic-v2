@@ -1,7 +1,7 @@
 "use client"
-import { AppSidebar } from "@/components/app-sidebar";
-import { CreditsDisplay } from "@/components/credits-display";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { AppSidebar } from "./app-sidebar";
+import { CreditsDisplay } from "./credits-display";
+import { ThemeSwitcher } from "./theme-switcher";
 import {
     SidebarInset,
     SidebarProvider,

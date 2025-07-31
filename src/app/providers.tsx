@@ -21,7 +21,7 @@ function ConvexClientProvider({ children }: { children: React.ReactNode }) {
 }
 
 const ThemeProvider = dynamic(
-  () => import("@/components/theme-provider").then((mod) => mod.ThemeProvider),
+  () => import("@/components/common/theme-provider").then((mod) => mod.ThemeProvider),
   { ssr: false }
 )
 
