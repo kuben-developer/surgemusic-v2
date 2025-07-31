@@ -26,7 +26,7 @@ export const getSharedReport = action({
       if (campaignIds.length === 0) {
         return {
           reportName: report.name,
-          reportCreatedAt: new Date(report._creationTime),
+          reportCreatedAt: report._creationTime,
           dailyData: [],
           totals: { views: 0, likes: 0, comments: 0, shares: 0 },
           avgEngagementRate: "0.00",
@@ -75,7 +75,7 @@ export const getSharedReport = action({
 
       return {
         reportName: report.name,
-        reportCreatedAt: new Date(report._creationTime),
+        reportCreatedAt: report._creationTime,
         dailyData: analyticsData.dailyData,
         totals: analyticsData.totals,
         avgEngagementRate: analyticsData.avgEngagementRate,

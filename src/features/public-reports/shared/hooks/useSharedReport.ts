@@ -1,6 +1,8 @@
+"use client"
+
 import { useState, useEffect } from 'react';
 import { useAction } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 import type { SharedReportData } from '../types';
 
 export const useSharedReport = (shareId: string, dateRange: string) => {
