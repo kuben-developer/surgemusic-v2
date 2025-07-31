@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -47,7 +46,7 @@ export function ProfileCard({
               variant="outline"
               size="sm"
               className="gap-1 h-7 text-xs"
-              onClick={() => onOpenManager(profile.profileKey || '')}
+              onClick={() => onOpenManager(profile.profileKey ?? '')}
               disabled={isGeneratingUrl}
             >
               {isGeneratingUrl ? (
@@ -88,7 +87,7 @@ export function ProfileCard({
               <Button
                 variant="link"
                 className="p-0 h-auto text-sm"
-                onClick={() => onOpenManager(profile.profileKey || '')}
+                onClick={() => onOpenManager(profile.profileKey ?? '')}
               >
                 Connect an account
               </Button>

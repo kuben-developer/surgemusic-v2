@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { useMutation } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
@@ -25,7 +27,7 @@ export function useProfileSync() {
     setCurrentCheckIndex(-1)
     
     const initialResults: ProfileCheckResult[] = validProfiles.map(profile => ({
-      profileName: profile.profileName!.split("|")[0] || "Unknown Profile",
+      profileName: profile.profileName.split("|")[0] ?? "Unknown Profile",
       message: "Queued",
       status: 'pending'
     }))
@@ -57,12 +59,12 @@ export function useProfileSync() {
                 ? { 
                     ...r, 
                     status: 'success' as const, 
-                    message: result?.profiles === 0 ? "Deleted" : "All Good"
+                    message: (result as any)?.profiles === 0 ? "Deleted" : "All Good"
                   }
                 : r
             )
           )
-        } catch (error) {
+        } catch {
           setProfileCheckResults(prev => 
             prev.map((r, idx) => 
               idx === overallIndex 
@@ -93,7 +95,6 @@ export function useProfileSync() {
     isSyncingInProgress,
     setProfileCheckResults,
     setCurrentCheckIndex,
-    setCompletedChecksCount,
-    setIsSyncingInProgress
+    setCompletedChecksCount
   }
 }

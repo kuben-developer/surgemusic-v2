@@ -8,11 +8,11 @@ interface PlatformIconProps {
 export function PlatformIcon({ platform, className }: PlatformIconProps) {
   switch (platform.toLowerCase()) {
     case "instagram":
-      return <InstagramIcon className={className || "w-5 h-5 text-pink-500"} />
+      return <InstagramIcon className={className ?? "w-5 h-5 text-pink-500"} />
     case "tiktok":
-      return <TikTokIcon className={className || "w-5 h-5 text-black dark:text-white"} />
+      return <TikTokIcon className={className ?? "w-5 h-5 text-black dark:text-white"} />
     case "youtube":
-      return <YouTubeIcon className={className || "w-5 h-5 text-red-600"} />
+      return <YouTubeIcon className={className ?? "w-5 h-5 text-red-600"} />
     default:
       return null
   }

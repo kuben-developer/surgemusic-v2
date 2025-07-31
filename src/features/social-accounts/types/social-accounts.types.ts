@@ -4,18 +4,16 @@ export type SocialAccount = {
   username: string
   userImage: string
   profileUrl: string
-  status: string
-  connectedAt: string
+  ayrshareProfileId: string
   _creationTime: number
 }
 
 export type AyrshareProfile = {
   _id: string
   profileName: string
-  totalAccounts: number
-  createdAt: string
   profileKey?: string
   _creationTime: number
+  userId: string
   socialAccounts: SocialAccount[]
 }
 

@@ -55,7 +55,7 @@ export function DeleteProfileDialog({
         <DialogHeader>
           <DialogTitle>Delete Profile</DialogTitle>
           <DialogDescription className="pt-1.5">
-            Are you sure you want to delete the profile "{profileDisplayName}"?
+            Are you sure you want to delete the profile &ldquo;{profileDisplayName}&rdquo;?
           </DialogDescription>
           {hasConnectedAccounts && (
             <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-800/50 text-xs">
@@ -67,7 +67,7 @@ export function DeleteProfileDialog({
                   size="sm"
                   className="w-full text-xs h-7"
                   onClick={() => {
-                    onOpenManager(profile.profileKey || '')
+                    onOpenManager(profile.profileKey ?? '')
                     onOpenChange(false)
                   }}
                 >

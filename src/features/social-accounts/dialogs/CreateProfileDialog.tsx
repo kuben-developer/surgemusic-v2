@@ -70,7 +70,7 @@ export function CreateProfileDialog({ isOpen, onOpenChange, onCreate }: CreatePr
               placeholder="Enter profile name..."
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !isCreating) {
-                  handleCreate()
+                  void handleCreate()
                 }
               }}
             />

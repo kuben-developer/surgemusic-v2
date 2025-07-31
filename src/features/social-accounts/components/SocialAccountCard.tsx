@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Badge } from "@/components/ui/badge"
 import { ExternalLink } from "lucide-react"
 import { PlatformIcon } from './PlatformIcon'
@@ -12,10 +13,12 @@ export function SocialAccountCard({ account }: SocialAccountCardProps) {
   return (
     <div className="bg-muted/30 rounded-md p-3 flex items-center gap-3">
       {account.userImage ? (
-        <img
+        <Image
           src={account.userImage}
           alt={`${account.username} avatar`}
-          className="w-10 h-10 rounded-full object-cover"
+          width={40}
+          height={40}
+          className="rounded-full object-cover"
         />
       ) : (
         <PlatformIcon platform={account.platform} />
@@ -35,7 +38,7 @@ export function SocialAccountCard({ account }: SocialAccountCardProps) {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Connected {new Date(account.connectedAt).toLocaleDateString()}
+          Connected {new Date(account._creationTime).toLocaleDateString()}
         </p>
       </div>
       <Badge className={`${getPlatformBadgeClass(account.platform)} text-xs px-2 py-0.5`}>

@@ -1,3 +1,5 @@
+"use client"
+
 import { useQuery } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 
@@ -6,8 +8,8 @@ export function useProfiles() {
   const isLoading = profiles === undefined
   
   return {
-    profiles: profiles || [],
+    profiles: profiles ?? [],
     isLoading,
-    profileCount: profiles?.length || 0
+    profileCount: profiles?.length ?? 0
   }
 }

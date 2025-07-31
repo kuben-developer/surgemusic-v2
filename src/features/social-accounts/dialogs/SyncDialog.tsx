@@ -68,8 +68,10 @@ export function SyncDialog({
 
   // Initialize ref arrays when results change
   useEffect(() => {
-    itemRefs.current = new Array(profileCheckResults.filter(r => r.message !== "Deleted").length).fill(null)
-    deletedItemRefs.current = new Array(profileCheckResults.filter(r => r.message === "Deleted").length).fill(null)
+    const activeCount = profileCheckResults.filter(r => r.message !== "Deleted").length
+    const deletedCount = profileCheckResults.filter(r => r.message === "Deleted").length
+    itemRefs.current = new Array(activeCount).fill(null) as (HTMLDivElement | null)[]
+    deletedItemRefs.current = new Array(deletedCount).fill(null) as (HTMLDivElement | null)[]
   }, [profileCheckResults])
 
   const handleClose = (open: boolean) => {

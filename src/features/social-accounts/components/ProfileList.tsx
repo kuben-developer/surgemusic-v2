@@ -41,7 +41,7 @@ export function ProfileList({
           onToggleExpand={onToggleExpand}
           onDelete={onDelete}
           onOpenManager={onOpenManager}
-          isGeneratingUrl={generatingUrls.has(profile.profileKey || '')}
+          isGeneratingUrl={generatingUrls.has(profile.profileKey ?? '')}
         />
       ))}
     </div>
