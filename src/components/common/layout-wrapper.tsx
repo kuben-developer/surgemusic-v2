@@ -12,7 +12,7 @@ export default function LayoutWrapper({
 }) {
   const pathname = usePathname();
   
-  const publicPaths = ['/public', '/sign-up', '/sign-in', '/report'];
+  const publicPaths = ['/public', '/sign-up', '/sign-in'];
   const isPublicRoute = publicPaths.some(path => pathname.startsWith(path));
 
   if (isPublicRoute) {

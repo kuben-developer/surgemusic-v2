@@ -55,16 +55,10 @@ import { EditVisibleVideosModal } from "@/components/analytics/EditVisibleVideos
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
 import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard";
-import type { MetricKey, MetricInfo, DailyData, Totals } from "@/components/analytics/PerformanceChartCard";
 import { TopContentCard } from "@/components/analytics/TopContentCard";
-import type { GrowthData } from "@/components/analytics/KpiCard";
+import type { GrowthData, Report, ReportAnalyticsData, VideoMetric, MetricKey, MetricInfo, DailyData, Totals } from "../../shared/types/report.types";
+import { calculateGrowth } from "../../shared/utils/report.utils";
 import { CommentsSection } from "@/components/analytics/CommentsSection";
-
-// Define the type for Campaign
-interface Campaign {
-    id: string;
-    campaignName: string;
-}
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -108,68 +102,7 @@ const metricInfo: Record<MetricKey, MetricInfo> = {
     }
 };
 
-// Helper function to calculate growth
-function calculateGrowth(data: any[], metricKey: string): GrowthData {
-    if (!data || data.length < 2) return { value: 0, isPositive: true };
 
-    const recent = data.slice(-7);
-    const previous = data.slice(-14, -7);
-
-    const recentSum = recent.reduce((sum, day) => sum + (day[metricKey] || 0), 0);
-    const previousSum = previous.reduce((sum, day) => sum + (day[metricKey] || 0), 0);
-
-    if (previousSum === 0) return { value: 0, isPositive: true };
-
-    const growth = ((recentSum - previousSum) / previousSum) * 100;
-    return {
-        value: Math.abs(Math.round(growth)),
-        isPositive: growth >= 0
-    };
-}
-
-// Define the type for the report
-interface Report {
-    _id: string;
-    name: string;
-    campaigns: {
-        _id: string;
-        campaignName: string;
-    }[];
-    hiddenVideoIds: string[];
-}
-
-// Define the analytics data type
-interface AnalyticsData {
-    dailyData: DailyData[];
-    totals: Totals;
-    avgEngagementRate: string;
-    videoMetrics: any[];
-    hiddenVideoIds: string[];
-    lastUpdatedAt: string | null;
-}
-
-// Define the top content metric type  
-interface TopContentMetric {
-    id: string;
-    videoInfo: {
-        id: string;
-        postId: string | null;
-        videoUrl: string;
-        videoName: string;
-        videoType: string;
-        tiktokUrl: string;
-        createdAt: Date;
-        campaign: {
-            id: number;
-            campaignName: string;
-        };
-    };
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    engagementRate: string;
-}
 
 // Loading skeleton component
 const LoadingSkeleton = () => (
@@ -506,7 +439,7 @@ export function ReportAnalyticsClient() {
                 onCampaignChange={handleCampaignChange}
                 onResetCampaigns={handleResetCampaigns}
                 allCampaigns={report.campaigns.map((c: any) => ({
-                    id: c._id,
+                    id: c.id,
                     campaignName: c.campaignName
                 }))}
                 dateRange={dateRange}
@@ -555,7 +488,7 @@ export function ReportAnalyticsClient() {
             {/* Comments Section */}
             <motion.div variants={fadeInUp}>
                 <CommentsSection 
-                    campaignIds={report.campaigns.map((c: any) => c._id)}
+                    campaignIds={report.campaigns.map((c: any) => c.id)}
                 />
             </motion.div>
 

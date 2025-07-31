@@ -27,7 +27,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, ListChecks, Save } from "lucide-react";
 
@@ -63,8 +63,9 @@ export function ReportForm({
 }: ReportFormProps) {
     
     // Fetch campaigns for selection
-    const campaigns = useQuery(api.campaigns.getAll);
-    const isLoadingCampaigns = campaigns === undefined;
+    const campaignsResult = useQuery(api.campaigns.getAll);
+    const isLoadingCampaigns = campaignsResult === undefined;
+    const campaigns = campaignsResult ?? [];
     const campaignsError = null; // Convex doesn't expose errors the same way
 
     const form = useForm<ReportFormValues>({
@@ -78,7 +79,7 @@ export function ReportForm({
 
     // Watch campaignIds for checkbox updates
     const selectedCampaignIds = form.watch("campaignIds", initialData.campaignIds ?? []);
-    const allCampaignIds = React.useMemo(() => campaigns?.map((c: Campaign) => c._id) ?? [], [campaigns]);
+    const allCampaignIds = React.useMemo(() => campaigns.map((c: Campaign) => c._id), [campaigns]);
 
     const selectAll = () => {
         form.setValue("campaignIds", allCampaignIds, { shouldValidate: true });
