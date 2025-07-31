@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import CampaignClient from "./campaign-client"
+import CampaignClient from "./components/CampaignClient"
 
 export default function CampaignDetailPage() {
     return (

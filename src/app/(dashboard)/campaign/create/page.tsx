@@ -1,3 +1,3 @@
-import { CampaignCreatePage } from '@/features/campaigns/pages/campaign-create';
+import { CampaignCreatePage } from '@/features/campaigns/create';
 
 export default CampaignCreatePage;

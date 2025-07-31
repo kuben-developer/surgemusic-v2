@@ -1,6 +1,6 @@
 "use client"
 
-import type { Doc, Id } from "../../../../../convex/_generated/dataModel"
+import type { Doc, Id } from "../../../../../../convex/_generated/dataModel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -38,8 +38,8 @@ import {
   Users
 } from "lucide-react"
 import { useRef, useState, useEffect } from "react"
-import { ScheduleDialog } from "./schedule-dialog"
-import { UnscheduleDialog } from "./unschedule-dialog"
+import { ScheduleDialog } from "../dialogs/ScheduleDialog"
+import { UnscheduleDialog } from "../dialogs/UnscheduleDialog"
 
 // Lazy loading video component
 const LazyVideo = ({ videoUrl, className }: { videoUrl: string, className: string }) => {
