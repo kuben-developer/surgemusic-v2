@@ -1,73 +1,144 @@
-import type { PricingPlan } from '../types/pricing.types';
+import type { PricingPlan, PlanName } from '../types/pricing.types';
+import { formatVideoGenerations, formatSongs } from '../utils/pricing.utils';
 
-export const monthlyPlans: PricingPlan[] = [
+// Base plan configuration without pricing or Stripe integration
+interface BasePlanConfig {
+  readonly name: PlanName;
+  readonly description: string;
+  readonly videoGenerations: number;
+  readonly songs: number;
+  readonly baseFeatures: readonly string[];
+}
+
+// Stripe price ID environment variables mapping
+const STRIPE_PRICE_IDS = {
+  monthly: {
+    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID!,
+    Professional: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID!,
+    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_MONTHLY_PRICE_ID!,
+  },
+  yearly: {
+    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID!,
+    Professional: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_YEARLY_PRICE_ID!,
+    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_YEARLY_PRICE_ID!,
+  },
+} as const;
+
+// Monthly pricing configuration
+const MONTHLY_PRICES: Record<PlanName, number> = {
+  Starter: 39,
+  Professional: 99,
+  Ultimate: 249,
+} as const;
+
+// Base plan configurations
+const BASE_PLANS: readonly BasePlanConfig[] = [
   {
     name: 'Starter',
-    price: 39,
     description: 'Enhanced features and daily videos for a month.',
     videoGenerations: 30,
     songs: 1,
-    features: [
-      '30 video generations',
-      '1 song',
+    baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
       'Purchase additional discounted credits',
       'Choice of US rap & UK rap theme content',
     ],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID!,
-    interval: 'month',
   },
   {
     name: 'Professional',
-    price: 99,
     description: 'Designed for viral growth and even more videos.',
     videoGenerations: 120,
     songs: 4,
-    features: [
-      '120 video generations',
-      '4 songs',
+    baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
       'Purchase additional discounted credits',
       'Choice of US rap & UK rap theme content',
     ],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID!,
-    interval: 'month',
   },
   {
     name: 'Ultimate',
-    price: 249,
     description: 'Take over TikTok and flood the FYP with your music.',
     videoGenerations: 360,
     songs: 12,
-    features: [
-      '360 video generations',
-      '12 songs',
+    baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
       'Purchase additional discounted credits',
       'Choice of US rap & UK rap theme content',
     ],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_MONTHLY_PRICE_ID!,
-    interval: 'month',
   },
-];
+] as const;
 
-export const yearlyPlans: PricingPlan[] = monthlyPlans.map(plan => ({
-  name: plan.name,
-  price: Math.floor(plan.price * 10),
-  description: plan.description,
-  videoGenerations: plan.videoGenerations * 12,
-  songs: plan.songs,
-  features: [
-    `${plan.videoGenerations * 12} video generations`,
-    ...plan.features.slice(1)
-  ],
-  interval: 'year',
-  priceId: plan.name === 'Starter'
-    ? process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID!
-    : plan.name === 'Professional'
-      ? process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_YEARLY_PRICE_ID!
-      : process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_YEARLY_PRICE_ID!,
-}));
+/**
+ * Creates a complete pricing plan from base configuration
+ */
+function createPricingPlan(
+  baseConfig: BasePlanConfig,
+  price: number,
+  interval: 'month' | 'year',
+  videoGenerations: number
+): PricingPlan {
+  const features = [
+    formatVideoGenerations(videoGenerations),
+    formatSongs(baseConfig.songs),
+    ...baseConfig.baseFeatures,
+  ];
+
+  return {
+    name: baseConfig.name,
+    price,
+    description: baseConfig.description,
+    videoGenerations,
+    songs: baseConfig.songs,
+    features,
+    priceId: STRIPE_PRICE_IDS[interval][baseConfig.name],
+    interval,
+  };
+}
+
+/**
+ * Generates monthly plans from base configuration
+ */
+function generateMonthlyPlans(): readonly PricingPlan[] {
+  return BASE_PLANS.map(baseConfig =>
+    createPricingPlan(
+      baseConfig,
+      MONTHLY_PRICES[baseConfig.name],
+      'month',
+      baseConfig.videoGenerations
+    )
+  );
+}
+
+/**
+ * Generates yearly plans with 20% discount
+ */
+function generateYearlyPlans(): readonly PricingPlan[] {
+  return BASE_PLANS.map(baseConfig => {
+    const monthlyPrice = MONTHLY_PRICES[baseConfig.name];
+    const yearlyPrice = Math.floor(monthlyPrice * 10); // 20% discount
+    const yearlyVideoGenerations = baseConfig.videoGenerations * 12;
+
+    return createPricingPlan(
+      baseConfig,
+      yearlyPrice,
+      'year',
+      yearlyVideoGenerations
+    );
+  });
+}
+
+// Export the generated plans
+export const monthlyPlans: readonly PricingPlan[] = generateMonthlyPlans();
+export const yearlyPlans: readonly PricingPlan[] = generateYearlyPlans();
+
+// Export individual plans for easy access
+export const STARTER_MONTHLY = monthlyPlans[0];
+export const PROFESSIONAL_MONTHLY = monthlyPlans[1];
+export const ULTIMATE_MONTHLY = monthlyPlans[2];
+
+export const STARTER_YEARLY = yearlyPlans[0];
+export const PROFESSIONAL_YEARLY = yearlyPlans[1];
+export const ULTIMATE_YEARLY = yearlyPlans[2];

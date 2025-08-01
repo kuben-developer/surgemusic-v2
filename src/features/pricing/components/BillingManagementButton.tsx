@@ -2,10 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { CreditCardIcon } from 'lucide-react';
-
-interface BillingManagementButtonProps {
-  onManageBilling: () => void;
-}
+import type { BillingManagementButtonProps } from '../types/pricing.types';
 
 export function BillingManagementButton({ onManageBilling }: BillingManagementButtonProps) {
   return (

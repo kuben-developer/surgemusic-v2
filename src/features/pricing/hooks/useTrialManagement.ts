@@ -2,34 +2,55 @@ import { useState } from 'react';
 import { useAction } from "convex/react";
 import { toast } from "sonner";
 import { api } from "../../../../convex/_generated/api";
+import type { UseTrialManagementReturn } from '../types/pricing.types';
 
-export function useTrialManagement() {
+/**
+ * Hook for managing trial subscriptions
+ */
+export function useTrialManagement(): UseTrialManagementReturn {
   const [convertedToPaidPlanLoading, setConvertedToPaidPlanLoading] = useState(false);
   const endTrialImmediatelyAction = useAction(api.stripe.endTrialImmediately);
   
-  const endTrialImmediately = async () => {
+  const endTrialImmediately = async (): Promise<boolean> => {
+    // Prevent multiple simultaneous requests
+    if (convertedToPaidPlanLoading) {
+      return false;
+    }
+
     try {
       setConvertedToPaidPlanLoading(true);
       const response = await endTrialImmediatelyAction();
+      
+      if (!response) {
+        throw new Error("No response received from server");
+      }
+      
       if (response.status === 'active') {
-        setConvertedToPaidPlanLoading(false);
-        toast.success("Trial Ended Successfully.", {
-          description: `Your paid plan is now active!`,
+        toast.success("Trial Ended Successfully", {
+          description: "Your paid plan is now active!",
         });
         return true;
       } else {
-        setConvertedToPaidPlanLoading(false);
-        toast.error('Payment Failed.', {
+        toast.error('Payment Failed', {
           description: 'Please contact support if this persists.',
         });
         return false;
       }
     } catch (error) {
-      setConvertedToPaidPlanLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast.error('Error ending trial', {
-        description: (error as Error).message,
+        description: errorMessage,
       });
+      
+      // Log error for debugging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Trial management error:', error);
+      }
+      
       return false;
+    } finally {
+      setConvertedToPaidPlanLoading(false);
     }
   };
 

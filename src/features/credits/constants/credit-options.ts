@@ -1,15 +1,7 @@
 import { Zap, Rocket, Diamond, Flame } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { CreditOption } from "../types/credits.types";
 
-export interface CreditOptionData {
-  credits: number;
-  price: number;
-  priceId: string;
-  icon: LucideIcon;
-  iconColor: string;
-}
-
-export const CREDIT_OPTIONS: CreditOptionData[] = [
+export const CREDIT_OPTIONS: CreditOption[] = [
   {
     credits: 30,
     price: 24,

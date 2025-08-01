@@ -12,7 +12,10 @@ export function useProfileActions() {
   const createProfile = async (profileName: string) => {
     try {
       await createProfileMutation({ profileName })
+      toast.success(`Profile "${profileName}" created successfully!`)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create profile'
+      toast.error(`Failed to create profile: ${errorMessage}`)
       throw error
     }
   }
@@ -20,7 +23,10 @@ export function useProfileActions() {
   const deleteProfile = async (profileName: string) => {
     try {
       await deleteProfileMutation({ profileName })
+      toast.success(`Profile "${profileName}" deleted successfully!`)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete profile'
+      toast.error(`Failed to delete profile: ${errorMessage}`)
       throw error
     }
   }
@@ -30,9 +36,12 @@ export function useProfileActions() {
       const data = await generateUrlMutation({ profileKey })
       if (data && 'url' in data && data.url) {
         window.open(data.url as string, '_blank')
+      } else {
+        toast.error('No manager URL received from server')
       }
     } catch (error) {
-      toast.error(`Failed to generate manager URL: ${(error as Error).message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      toast.error(`Failed to generate manager URL: ${errorMessage}`)
     }
   }
 

@@ -2,13 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Zap, Loader2 } from 'lucide-react';
-import type { PricingPlan } from '../types/pricing.types';
-
-interface TrialBannerProps {
-  currentPlan: PricingPlan | undefined;
-  onConvertToPaid: () => void;
-  isLoading: boolean;
-}
+import type { TrialBannerProps } from '../types/pricing.types';
 
 export function TrialBanner({ currentPlan, onConvertToPaid, isLoading }: TrialBannerProps) {
   return (

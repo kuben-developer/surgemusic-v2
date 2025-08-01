@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Users, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useProfiles } from './hooks/useProfiles'
 import { useProfileSync } from './hooks/useProfileSync'
 import { useProfileActions } from './hooks/useProfileActions'
+import { useExpandedProfiles } from './hooks/useExpandedProfiles'
 import { ProfileList } from './components/ProfileList'
+import { ProfileStats } from './components/ProfileStats'
 import { CreateProfileDialog } from './dialogs/CreateProfileDialog'
 import { DeleteProfileDialog } from './dialogs/DeleteProfileDialog'
 import { SyncDialog } from './dialogs/SyncDialog'
@@ -25,29 +27,15 @@ export function SocialAccountsPage() {
     setProfileCheckResults,
   } = useProfileSync()
 
-  const [expandedProfiles, setExpandedProfiles] = useState<string[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [deletingProfile, setDeletingProfile] = useState<ProfileWithAccounts | null>(null)
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false)
+  
+  const { expandedProfiles, toggleProfileExpansion } = useExpandedProfiles(profiles)
 
   const totalProfilesToSync = useMemo(() => {
     return profiles.filter(p => !!p.profileName).length
   }, [profiles])
-
-  // Set initially expanded profiles when data loads
-  useEffect(() => {
-    if (profiles.length > 0) {
-      setExpandedProfiles(profiles.map(profile => profile.profileName))
-    }
-  }, [profiles])
-
-  const toggleProfileExpansion = (profileName: string) => {
-    setExpandedProfiles(prev =>
-      prev.includes(profileName)
-        ? prev.filter(n => n !== profileName)
-        : [...prev, profileName]
-    )
-  }
 
   const handleStartSync = async () => {
     setIsSyncDialogOpen(true)
@@ -106,17 +94,7 @@ export function SocialAccountsPage() {
       <Separator className="my-4" />
 
       {/* Summary Stats */}
-      <div className="mb-6 rounded-lg bg-muted/30 p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-primary/10 p-2">
-            <Users className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-2xl font-semibold">{profiles.length}</p>
-            <p className="text-sm text-muted-foreground">Total Profiles</p>
-          </div>
-        </div>
-      </div>
+      <ProfileStats profileCount={profiles.length} />
 
       {/* Profile List */}
       {isLoading ? (

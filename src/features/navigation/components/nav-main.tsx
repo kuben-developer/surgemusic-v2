@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -7,9 +8,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import type { NavSection } from "../types/navigation.types"
+import type { NavMainProps } from "../types/navigation.types"
+import { validateNavSections } from "../utils/validation.utils"
 
-export function NavMain({ items }: { items: NavSection[] }) {
+export function NavMain({ items }: NavMainProps) {
+  if (!items || items.length === 0 || !validateNavSections(items)) {
+    return null
+  }
+
   return (
     <>
       {items.map((section) => (
@@ -19,15 +25,18 @@ export function NavMain({ items }: { items: NavSection[] }) {
             {section.items.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild tooltip={item.title}>
-                  <a href={item.url}>
-                    <item.icon />
+                  <Link href={item.url} aria-label={`Navigate to ${item.title}`}>
+                    <item.icon aria-hidden="true" />
                     <span>{item.title}</span>
                     {item.badge && (
-                      <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                      <span 
+                        className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
+                        aria-label={`${item.badge} notifications`}
+                      >
                         {item.badge}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

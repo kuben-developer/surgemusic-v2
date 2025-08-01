@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useMutation } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
-import type { ProfileCheckResult, ProfileWithAccounts } from '../types/social-accounts.types'
+import type { ProfileCheckResult, ProfileWithAccounts, CheckProfilesResult } from '../types/social-accounts.types'
 
 export function useProfileSync() {
   const checkProfilesMutation = useMutation(api.ayrshare.checkProfiles)
@@ -51,7 +51,7 @@ export function useProfileSync() {
         )
 
         try {
-          const result = await checkProfilesMutation({ profileName: profile.profileName })
+          const result = await checkProfilesMutation({ profileName: profile.profileName }) as CheckProfilesResult
           
           setProfileCheckResults(prev => 
             prev.map((r, idx) => 
@@ -59,7 +59,7 @@ export function useProfileSync() {
                 ? { 
                     ...r, 
                     status: 'success' as const, 
-                    message: (result as any)?.profiles === 0 ? "Deleted" : "All Good"
+                    message: result?.profiles === 0 ? "Deleted" : "All Good"
                   }
                 : r
             )

@@ -2,6 +2,12 @@
 
 import { useState } from 'react';
 import type { MetricKey } from '@/components/analytics/types';
+import { 
+  DEFAULT_DATE_RANGE,
+  DEFAULT_ACTIVE_METRIC,
+  DEFAULT_CURRENT_PAGE,
+  DEFAULT_ITEMS_PER_PAGE
+} from '../constants/filters.constants';
 
 interface UseAnalyticsFiltersReturn {
   // Campaign filters
@@ -26,29 +32,32 @@ interface UseAnalyticsFiltersReturn {
 
 export function useAnalyticsFilters(): UseAnalyticsFiltersReturn {
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState("30");
-  const [activeMetric, setActiveMetric] = useState<MetricKey>('views');
-  const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [dateRange, setDateRange] = useState(DEFAULT_DATE_RANGE);
+  const [activeMetric, setActiveMetric] = useState<MetricKey>(DEFAULT_ACTIVE_METRIC);
+  const [currentPage, setCurrentPage] = useState(DEFAULT_CURRENT_PAGE);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+
+  // Helper function to reset pagination - used when filters change
+  const resetPagination = () => setCurrentPage(DEFAULT_CURRENT_PAGE);
 
   const handleCampaignChange = (campaignId: string, isChecked: boolean) => {
     setSelectedCampaigns(prev => {
       const newSelection = isChecked
         ? [...prev, campaignId]
         : prev.filter(id => id !== campaignId);
-      setCurrentPage(0); // Reset pagination when filter changes
+      resetPagination();
       return newSelection;
     });
   };
 
   const handleResetCampaigns = () => {
     setSelectedCampaigns([]);
-    setCurrentPage(0);
+    resetPagination();
   };
 
   const handleDateRangeChange = (value: string) => {
     setDateRange(value);
-    setCurrentPage(0); // Reset pagination when filter changes
+    resetPagination();
   };
 
   return {

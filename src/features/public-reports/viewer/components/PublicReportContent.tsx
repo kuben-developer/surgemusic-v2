@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { motion } from "framer-motion";
-import { toast } from 'sonner';
 import type { PublicReportContentProps, MetricKey } from '../types';
 import { useReportData } from '../hooks/useReportData';
 import { useMetricCalculations } from '../hooks/useMetricCalculations';
 import { usePagination } from '../hooks/usePagination';
-import { ITEMS_PER_PAGE, VALID_SHARE_ID_REGEX } from '../constants/metrics.constants';
+import { useShareIdValidation } from '../hooks/useShareIdValidation';
+import { useReportNavigation } from '../hooks/useReportNavigation';
+import { ITEMS_PER_PAGE } from '../constants/metrics.constants';
 import { animationVariants } from '../constants/animations.constants';
+import { AnimatedReportLayout } from './AnimatedReportLayout';
 import { ReportHeader } from './ReportHeader';
 import { DateRangeSelector } from './DateRangeSelector';
 import { LoadingState } from './LoadingState';
@@ -21,19 +22,14 @@ import { CommentsView } from '../sections/CommentsView';
 
 
 export function PublicReportContent({ shareId }: PublicReportContentProps) {
-  const router = useRouter();
   const [dateRange, setDateRange] = useState<string>("30");
   const [retryCount, setRetryCount] = useState(0);
   const [activeMetric, setActiveMetric] = useState<MetricKey>("views");
   const { currentPage, setCurrentPage, itemsPerPage } = usePagination(ITEMS_PER_PAGE);
-
-  // Validate share ID format
-  useEffect(() => {
-    if (shareId && !VALID_SHARE_ID_REGEX.test(shareId)) {
-      toast.error("Invalid share ID format");
-      router.push('/public/reports');
-    }
-  }, [shareId, router]);
+  
+  // Custom hooks for validation and navigation
+  useShareIdValidation(shareId);
+  const { handleBack, handleRetry } = useReportNavigation();
 
   // Fetch report data
   const {
@@ -58,15 +54,11 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
     totalVideos
   } = useMetricCalculations(data);
 
-  // Handle retry
-  const handleRetry = () => {
+  // Handle retry with retry count tracking
+  const handleRetryWithCount = () => {
     setRetryCount(prev => prev + 1);
-    refetch();
-    toast.info("Retrying to fetch report data...");
+    handleRetry(refetch);
   };
-
-  // Handle navigation back
-  const handleBack = () => router.push('/public/reports');
 
   // Loading state
   if (isLoading || isRefetching) {
@@ -75,7 +67,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
 
   // Error state
   if (isError) {
-    return <ErrorState error={error} onRetry={handleRetry} retryCount={retryCount} />;
+    return <ErrorState error={error} onRetry={handleRetryWithCount} retryCount={retryCount} />;
   }
 
   // Empty data state
@@ -85,12 +77,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
 
   // Content state
   return (
-    <motion.div
-      className="pt-8 pb-16 space-y-8"
-      initial="initial"
-      animate="animate"
-      variants={animationVariants.staggerContainer}
-    >
+    <AnimatedReportLayout>
       {/* Report Header */}
       <motion.div variants={animationVariants.fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <ReportHeader 
@@ -143,6 +130,6 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       <motion.div variants={animationVariants.fadeInUp} className="border-t pt-6 text-center text-sm text-muted-foreground">
         <p>This report is shared in read-only mode. Contact the owner for more information.</p>
       </motion.div>
-    </motion.div>
+    </AnimatedReportLayout>
   );
 }

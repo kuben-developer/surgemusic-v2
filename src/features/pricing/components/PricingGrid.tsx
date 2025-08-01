@@ -1,18 +1,7 @@
 'use client';
 
 import { PricingCard } from './PricingCard';
-import type { PricingPlan } from '../types/pricing.types';
-
-interface PricingGridProps {
-  plans: PricingPlan[];
-  currentPlan: PricingPlan | undefined;
-  hasActivePlan: boolean;
-  isUserOnTrial: boolean;
-  isFirstTimeUser: boolean;
-  onSelectPlan: (plan: PricingPlan) => void;
-  onBuyNow: (plan: PricingPlan) => void;
-  onManageBilling: () => void;
-}
+import type { PricingGridProps } from '../types/pricing.types';
 
 export function PricingGrid({
   plans,

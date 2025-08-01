@@ -455,3 +455,265 @@ Currently no test framework is configured. When implementing tests:
 - Keep components focused and modular
 - Use barrel exports (index.ts) for clean public APIs
 - Place shared code in appropriate shared folders based on scope
+
+## Component and File Size Best Practices
+
+Based on our comprehensive refactoring, follow these guidelines to maintain code quality:
+
+### 1. File Size Guidelines
+- **Target**: Keep all files between 150-300 lines
+- **Maximum**: No file should exceed 300 lines
+- **Ideal**: Aim for 150-200 lines for optimal maintainability
+- **Minimum**: Very small files (< 50 lines) are fine for single-purpose utilities or components
+
+### 2. Component Decomposition Patterns
+
+When a component exceeds 200 lines, consider these refactoring patterns:
+
+#### Pattern 1: Extract Sub-components
+```typescript
+// Before: Large component with multiple sections
+export function VideoSection({ ... }) {
+  // 300+ lines with header, pagination, grid, etc.
+}
+
+// After: Decomposed into focused components
+export function VideoSection({ ... }) {
+  return (
+    <>
+      <VideoSectionHeader {...headerProps} />
+      <VideoPagination {...paginationProps} />
+      <VideoSectionContent {...contentProps} />
+    </>
+  );
+}
+```
+
+#### Pattern 2: Extract Custom Hooks
+```typescript
+// Before: Component with complex logic
+export function ScheduleDialog() {
+  // Complex state management
+  // API calls
+  // Validation logic
+  // UI rendering
+}
+
+// After: Logic extracted to hooks
+export function ScheduleDialog() {
+  const { state, actions } = useScheduleState();
+  const { calculate } = useScheduleCalculation();
+  const { submit, progress } = useScheduleSubmission();
+  
+  // Clean UI rendering only
+}
+```
+
+#### Pattern 3: Extract Utility Functions
+```typescript
+// Before: Component with inline calculations
+export function AnalyticsContent() {
+  // Complex data transformations inline
+  // Metric calculations in component
+}
+
+// After: Utilities extracted
+// utils/analytics.utils.ts
+export const transformAnalyticsData = (data) => { ... };
+export const calculateMetrics = (data) => { ... };
+
+// Component focuses on presentation
+export function AnalyticsContent() {
+  const transformed = transformAnalyticsData(data);
+  const metrics = calculateMetrics(transformed);
+}
+```
+
+### 3. Custom Hook Guidelines
+
+Create custom hooks when:
+- Logic is used in multiple components
+- Component has complex state management
+- You need to separate data fetching from UI
+- Business logic can be tested independently
+
+#### Hook Composition Pattern
+```typescript
+// Compose smaller hooks into larger ones
+export function useCampaignForm() {
+  const state = useCampaignFormState();
+  const validation = useCampaignFormValidation(state);
+  const navigation = useCampaignFormNavigation(state);
+  const submission = useCampaignFormSubmission(state);
+  
+  return {
+    ...state,
+    ...validation,
+    ...navigation,
+    ...submission
+  };
+}
+```
+
+### 4. Component Organization Best Practices
+
+#### Single Responsibility Principle
+Each component should have ONE clear purpose:
+- ❌ `ProfileCard` - Handles display, editing, deletion, and API calls
+- ✅ `ProfileCard` - Display only
+- ✅ `ProfileActions` - Action buttons
+- ✅ `ProfileHeader` - Header section
+- ✅ `useProfileActions` - API calls and business logic
+
+#### Props Interface Pattern
+Always define clear prop interfaces:
+```typescript
+interface VideoGridItemProps {
+  video: Doc<"generatedVideos">;
+  isDownloading: boolean;
+  onDownload: (url: string, name: string, id: string) => void;
+}
+```
+
+### 5. Folder Structure for Refactored Features
+
+When refactoring a large component, organize files like this:
+```
+components/
+├── VideoSection/
+│   ├── index.ts                    # Barrel export
+│   ├── VideoSection.tsx            # Main orchestrator (< 150 lines)
+│   ├── VideoSectionHeader.tsx      # Header component
+│   ├── VideoSectionContent.tsx     # Content area
+│   ├── VideoPagination.tsx         # Pagination logic
+│   └── VideoGridItem.tsx           # Individual item
+└── hooks/
+    ├── useVideoSection.ts          # Main hook
+    ├── useVideoPagination.ts       # Pagination logic
+    └── useVideoFiltering.ts        # Filtering logic
+```
+
+### 6. Type Safety Best Practices
+
+#### Avoid `any` at all costs
+```typescript
+// ❌ Bad
+const handleData = (data: any) => { ... };
+
+// ✅ Good
+interface DataResponse {
+  items: Array<{ id: string; name: string }>;
+  total: number;
+}
+const handleData = (data: DataResponse) => { ... };
+```
+
+#### Create specific types for component props
+```typescript
+// ❌ Bad: Inline types
+export function Component({ 
+  data, 
+  onSave 
+}: { 
+  data: any; 
+  onSave: Function;
+}) { ... }
+
+// ✅ Good: Named interfaces
+interface ComponentProps {
+  data: CampaignData;
+  onSave: (campaign: CampaignData) => Promise<void>;
+}
+export function Component({ data, onSave }: ComponentProps) { ... }
+```
+
+### 7. Performance Optimization Patterns
+
+#### Memoization for expensive operations
+```typescript
+const expensiveCalculation = useMemo(() => {
+  return calculateComplexMetrics(data);
+}, [data]);
+```
+
+#### Callback optimization
+```typescript
+const handleClick = useCallback((id: string) => {
+  // Handle click
+}, [dependency]);
+```
+
+### 8. Error Handling Standards
+
+Always implement comprehensive error handling:
+```typescript
+export function useDataFetch() {
+  const [error, setError] = useState<Error | null>(null);
+  
+  try {
+    // API call
+  } catch (err) {
+    setError(err instanceof Error ? err : new Error('Unknown error'));
+    toast.error('Failed to fetch data');
+  }
+  
+  return { data, error, isLoading };
+}
+```
+
+### 9. Constants and Magic Numbers
+
+Extract all magic numbers and repeated strings:
+```typescript
+// ❌ Bad
+if (items.length > 10) { ... }
+const isValid = status === 'active' || status === 'pending';
+
+// ✅ Good
+// constants/pagination.ts
+export const ITEMS_PER_PAGE = 10;
+
+// constants/status.ts
+export const ACTIVE_STATUSES = ['active', 'pending'] as const;
+
+// Usage
+if (items.length > ITEMS_PER_PAGE) { ... }
+const isValid = ACTIVE_STATUSES.includes(status);
+```
+
+### 10. Barrel Exports Best Practices
+
+Organize exports for clean public APIs:
+```typescript
+// features/reports/index.ts
+// Components
+export { ReportsPage } from './ReportsPage';
+export { ReportsList } from './components/ReportsList';
+
+// Hooks
+export { useReports } from './hooks/useReports';
+export { useReportActions } from './hooks/useReportActions';
+
+// Types
+export type { Report, ReportStatus } from './types/report.types';
+
+// Utils (only if needed externally)
+export { formatReportDate } from './utils/report.utils';
+
+// Constants (only if needed externally)
+export { REPORT_STATUSES } from './constants/report.constants';
+```
+
+### Code Review Checklist
+
+When reviewing code or creating new features, ensure:
+- [ ] No files exceed 300 lines
+- [ ] Components follow single responsibility principle
+- [ ] Complex logic is extracted to custom hooks
+- [ ] No `any` types are used
+- [ ] Props have proper TypeScript interfaces
+- [ ] Constants are extracted and named
+- [ ] Error handling is comprehensive
+- [ ] Barrel exports are organized
+- [ ] Performance optimizations are applied where needed
+- [ ] Folder structure follows feature-based architecture

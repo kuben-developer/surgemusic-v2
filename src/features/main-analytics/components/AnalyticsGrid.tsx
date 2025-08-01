@@ -1,10 +1,8 @@
-import { motion } from "framer-motion";
-import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
-import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard";
-import { TopContentCard } from "@/components/analytics/TopContentCard";
-import { CommentsSection } from "@/components/analytics/CommentsSection";
+import { KpiSection } from './sections/KpiSection';
+import { ChartsSection } from './sections/ChartsSection';
+import { CommentsSection } from './sections/CommentsSection';
 import type { MetricKey, VideoMetric } from '@/components/analytics/types';
-import { fadeInUp, metricInfo } from '../constants/metrics.constants';
+import { staggerContainer } from '../constants/metrics.constants';
 
 interface AnalyticsGridProps {
   // KPI Metrics props
@@ -66,53 +64,38 @@ export function AnalyticsGrid({
   campaigns
 }: AnalyticsGridProps) {
   return (
-    <>
-      {/* KPI Metrics Section */}
-      <motion.div variants={fadeInUp}>
-        <KpiMetricsGrid
-          campaignsCount={campaignCount}
-          totalVideos={totalVideos}
-          totals={totals}
-          viewsGrowth={viewsGrowth}
-          likesGrowth={likesGrowth}
-          commentsGrowth={commentsGrowth}
-          engagementGrowth={engagementGrowth}
-          avgEngagementRate={avgEngagementRate}
-        />
-      </motion.div>
+    <div className="space-y-8">
+      <KpiSection
+        campaignCount={campaignCount}
+        totalVideos={totalVideos}
+        totals={totals}
+        viewsGrowth={viewsGrowth}
+        likesGrowth={likesGrowth}
+        commentsGrowth={commentsGrowth}
+        engagementGrowth={engagementGrowth}
+        avgEngagementRate={avgEngagementRate}
+      />
 
-      {/* Charts and Top Content Section */}
-      <motion.div
-        variants={fadeInUp}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-      >
-        <PerformanceChartCard
-          dailyData={dailyData}
-          totals={totals}
-          activeMetric={activeMetric}
-          setActiveMetric={setActiveMetric}
-          metricInfo={metricInfo}
-          dateRange={dateRange}
-          viewsGrowth={viewsGrowth}
-          likesGrowth={likesGrowth}
-          commentsGrowth={commentsGrowth}
-          sharesGrowth={sharesGrowth}
-        />
+      <ChartsSection
+        dailyData={dailyData}
+        totals={totals}
+        activeMetric={activeMetric}
+        setActiveMetric={setActiveMetric}
+        dateRange={dateRange}
+        viewsGrowth={viewsGrowth}
+        likesGrowth={likesGrowth}
+        commentsGrowth={commentsGrowth}
+        sharesGrowth={sharesGrowth}
+        videoMetrics={videoMetrics}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+      />
 
-        <TopContentCard
-          videoMetrics={videoMetrics}
-          currentPage={currentPage}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
-      </motion.div>
-
-      {/* Comments Section */}
-      <motion.div variants={fadeInUp}>
-        <CommentsSection 
-          campaignIds={selectedCampaigns.length > 0 ? selectedCampaigns : campaigns.map((c: any) => c._id)}
-        />
-      </motion.div>
-    </>
+      <CommentsSection
+        selectedCampaigns={selectedCampaigns}
+        campaigns={campaigns}
+      />
+    </div>
   );
 }

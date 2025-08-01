@@ -2,6 +2,7 @@
 export { PublicReportViewerPage } from './PublicReportViewerPage';
 
 // Reusable components
+export { AnimatedReportLayout } from './components/AnimatedReportLayout';
 export { EmptyContentState } from './components/EmptyContentState';
 export { LoadingState } from './components/LoadingState';
 export { ErrorState } from './components/ErrorState';
@@ -11,6 +12,8 @@ export { DateRangeSelector } from './components/DateRangeSelector';
 export { useMetricCalculations } from './hooks/useMetricCalculations';
 export { usePagination } from './hooks/usePagination';
 export { useReportData } from './hooks/useReportData';
+export { useShareIdValidation } from './hooks/useShareIdValidation';
+export { useReportNavigation } from './hooks/useReportNavigation';
 
 // Constants for reuse
 export { animationVariants, animationDurations, easingCurves } from './constants/animations.constants';

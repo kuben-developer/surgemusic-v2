@@ -4,6 +4,10 @@ export { SocialAccountsPage } from './SocialAccountsPage'
 // Component exports
 export { ProfileCard } from './components/ProfileCard'
 export { ProfileList } from './components/ProfileList'
+export { ProfileHeader } from './components/ProfileHeader'
+export { ProfileActions } from './components/ProfileActions'
+export { ProfileContent } from './components/ProfileContent'
+export { ProfileStats } from './components/ProfileStats'
 export { SocialAccountCard } from './components/SocialAccountCard'
 export { PlatformIcon } from './components/PlatformIcon'
 export { SyncProgressBar } from './components/SyncProgressBar'
@@ -18,6 +22,7 @@ export { SyncDialog } from './dialogs/SyncDialog'
 export { useProfiles } from './hooks/useProfiles'
 export { useProfileActions } from './hooks/useProfileActions'
 export { useProfileSync } from './hooks/useProfileSync'
+export { useExpandedProfiles } from './hooks/useExpandedProfiles'
 export { useSyncDialog } from './hooks/useSyncDialog'
 
 // Constants and utils

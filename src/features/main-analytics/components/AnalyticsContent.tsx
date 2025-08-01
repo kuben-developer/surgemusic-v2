@@ -59,7 +59,12 @@ export function AnalyticsContent({
   }
 
   return (
-    <motion.div className="space-y-8" initial="initial" animate="animate" variants={staggerContainer}>
+    <motion.div 
+      className="space-y-8" 
+      initial="initial" 
+      animate="animate" 
+      variants={staggerContainer}
+    >
       <AnalyticsGrid
         campaignCount={transformedData.campaignCount}
         totalVideos={transformedData.totalVideos}

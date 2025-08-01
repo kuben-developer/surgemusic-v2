@@ -1,12 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { PricingInterval } from '../types/pricing.types';
-
-interface PricingToggleProps {
-  interval: PricingInterval;
-  onIntervalChange: (interval: PricingInterval) => void;
-}
+import { getIntervalDisplayName } from '../utils/pricing.utils';
+import type { PricingToggleProps } from '../types/pricing.types';
 
 export function PricingToggle({ interval, onIntervalChange }: PricingToggleProps) {
   return (
@@ -28,7 +24,7 @@ export function PricingToggle({ interval, onIntervalChange }: PricingToggleProps
             interval === 'year' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
           )}
         >
-          Yearly (Save 20%)
+          {getIntervalDisplayName('year')}
         </button>
       </div>
     </div>

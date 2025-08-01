@@ -23,10 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { FolderOpen, Loader2 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
-import { toast } from "sonner";
+import { useFolderManagerLogic } from "../hooks/useFolderManagerLogic";
 import {
   FolderSidebar,
   FolderHeader,
@@ -47,129 +44,42 @@ export function FolderManagerDialog({
   onOpenChange: controlledOnOpenChange 
 }: FolderManagerDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  // Campaign search and management state
-  const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
-  const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
     
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
-  // Fetch folders using Convex
-  const folders = useQuery(api.folders.list, open ? {} : "skip");
-  const isLoading = folders === undefined;
-
-  // Fetch all campaigns for search and assignment
-  const allCampaigns = useQuery(api.campaigns.getAll, open ? {} : "skip");
-  const campaignsLoading = allCampaigns === undefined;
-
-  // Fetch campaigns in the selected folder
-  const folderCampaigns = useQuery(
-    api.folders.getCampaigns, 
-    open && selectedFolderId ? { folderId: selectedFolderId as Id<"folders">, page: 1, limit: 100 } : "skip"
-  );
-  const folderCampaignsLoading = folderCampaigns === undefined;
-
-  // Convex mutations
-  const deleteFolderMutation = useMutation(api.folders.deleteFolder);
-  const addCampaignsMutation = useMutation(api.folders.addCampaigns);
-  const removeCampaignMutation = useMutation(api.folders.removeCampaign);
+  // Use the folder manager logic hook
+  const {
+    selectedFolderId,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    isDeleting,
+    campaignSearchQuery,
+    setCampaignSearchQuery,
+    selectedCampaignIds,
+    folders,
+    isLoading,
+    allCampaigns,
+    campaignsLoading,
+    folderCampaigns,
+    folderCampaignsLoading,
+    selectedFolder,
+    resetState,
+    handleFolderSelect,
+    handleDeleteFolder,
+    handleRemoveCampaign,
+    handleCampaignSelect,
+    handleSelectAllCampaigns,
+    handleBulkAddCampaigns,
+  } = useFolderManagerLogic({ open });
 
   // Reset selection when dialog closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setSelectedFolderId(null);
-      setShowDeleteDialog(false);
-      setCampaignSearchQuery("");
-      setSelectedCampaignIds(new Set());
+      resetState();
     }
     onOpenChange(newOpen);
-  };
-
-  const selectedFolder = folders?.find(folder => folder._id === selectedFolderId);
-
-  // Set folder selection
-  const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
-    setSelectedCampaignIds(new Set());
-  };
-
-  // Handle folder deletion
-  const handleDeleteFolder = async () => {
-    if (!selectedFolder) return;
-    
-    setIsDeleting(true);
-    try {
-      await deleteFolderMutation({ id: selectedFolder._id as Id<"folders"> });
-      setSelectedFolderId(null);
-      setShowDeleteDialog(false);
-      setIsDeleting(false);
-      toast.success("✅ Folder deleted successfully");
-    } catch (error) {
-      console.error("Failed to delete folder:", error);
-      setIsDeleting(false);
-      toast.error("❌ Failed to delete folder");
-    }
-  };
-
-  // Handle removing campaign from folder
-  const handleRemoveCampaign = async (campaignId: string) => {
-    if (!selectedFolderId) return;
-    
-    try {
-      await removeCampaignMutation({
-        folderId: selectedFolderId as Id<"folders">,
-        campaignId: campaignId as Id<"campaigns">,
-      });
-      toast.success("✅ Campaign removed successfully");
-    } catch (error) {
-      console.error("Failed to remove campaign from folder:", error);
-      toast.error("❌ Failed to remove campaign");
-    }
-  };
-
-  // Handle bulk campaign selection
-  const handleCampaignSelect = (campaignId: string, checked: boolean) => {
-    const newSelected = new Set(selectedCampaignIds);
-    if (checked) {
-      newSelected.add(campaignId);
-    } else {
-      newSelected.delete(campaignId);
-    }
-    setSelectedCampaignIds(newSelected);
-  };
-
-  // Handle select all campaigns
-  const handleSelectAllCampaigns = (checked: boolean) => {
-    if (checked && allCampaigns && folderCampaigns) {
-      // Filter available campaigns (exclude those already in folder)
-      const folderCampaignIds = new Set(folderCampaigns.campaigns?.map(c => c._id) || []);
-      const availableCampaigns = allCampaigns.filter(campaign => !folderCampaignIds.has(campaign._id));
-      setSelectedCampaignIds(new Set(availableCampaigns.map(c => c._id)));
-    } else {
-      setSelectedCampaignIds(new Set());
-    }
-  };
-
-  // Handle bulk add campaigns
-  const handleBulkAddCampaigns = async () => {
-    if (!selectedFolderId || selectedCampaignIds.size === 0) return;
-    
-    try {
-      await addCampaignsMutation({
-        folderId: selectedFolderId as Id<"folders">,
-        campaignIds: Array.from(selectedCampaignIds) as Id<"campaigns">[],
-      });
-      setSelectedCampaignIds(new Set());
-      toast.success("✅ Campaigns added successfully");
-    } catch (error) {
-      console.error("Failed to add campaigns:", error);
-      toast.error("❌ Failed to add campaigns");
-    }
   };
 
   return (

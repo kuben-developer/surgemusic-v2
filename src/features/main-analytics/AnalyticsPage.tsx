@@ -1,14 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { AnalyticsContent } from './components/AnalyticsContent';
 import { LoadingStates } from './components/LoadingStates';
 import { useAnalyticsData } from './hooks/useAnalyticsData';
 import { useAnalyticsFilters } from './hooks/useAnalyticsFilters';
 import { useAnalyticsRefresh } from './hooks/useAnalyticsRefresh';
+import { useCampaignData } from './hooks/useCampaignData';
 
 export function AnalyticsPage() {
   // Filters and pagination
@@ -26,8 +25,7 @@ export function AnalyticsPage() {
   } = useAnalyticsFilters();
 
   // Fetch campaigns data
-  const allCampaigns = useQuery(api.campaigns.getAll);
-  const isCampaignsLoading = allCampaigns === undefined;
+  const { allCampaigns, isCampaignsLoading, campaignCount } = useCampaignData();
 
   // Fetch analytics data
   const { data, isLoading: isAnalyticsLoading, error, refetch } = useAnalyticsData({ 
@@ -72,15 +70,12 @@ export function AnalyticsPage() {
             selectedCampaigns={selectedCampaigns}
             onCampaignChange={handleCampaignChange}
             onResetCampaigns={handleResetCampaigns}
-            allCampaigns={allCampaigns?.map(c => ({
-              id: c._id,
-              campaignName: c.campaignName
-            })) || []}
+            allCampaigns={allCampaigns}
             dateRange={dateRange}
             onDateRangeChange={handleDateRangeChange}
             onRefresh={refreshAnalytics}
             isRefreshing={isRefreshing}
-            campaignCount={allCampaigns?.length || 0}
+            campaignCount={campaignCount}
             lastUpdatedAt={data?.lastUpdatedAt ? new Date(data.lastUpdatedAt).getTime() : null}
           />
 
