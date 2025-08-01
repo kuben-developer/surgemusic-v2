@@ -7,10 +7,8 @@ import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 
 // Import components and hooks
-import { useReportAnalyticsData } from "../hooks/useReportAnalyticsData";
+import { useReportAnalytics } from "../hooks/useReportAnalytics";
 import { useReportActions } from "../hooks/useReportActions";
-import { useAnalyticsState } from "../hooks/useAnalyticsState";
-import { useReportAnalyticsState } from "../hooks/useReportAnalyticsState";
 import { ReportHeader } from "./ReportHeader";
 import { AnalyticsContent } from "./AnalyticsContent";
 import { AnalyticsDialogs } from "./AnalyticsDialogs";
@@ -20,37 +18,43 @@ import {
     NoCampaignsState 
 } from "./ReportLoadingStates";
 
-// Import utilities and constants
-import { calculateAllGrowthMetrics, processAnalyticsData } from "../utils/analytics.utils";
+// Import constants
 import { fadeInUp, staggerContainer } from "../constants/analytics.constants";
 
 export function ReportAnalyticsClient() {
     const params = useParams();
     const reportId = params.id as string;
-
-    // Custom hooks for state management
-    const analyticsState = useAnalyticsState();
     
     // Fetch report details
     const report = useQuery(api.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
     const isLoadingReport = report === undefined;
 
-    // Use custom hooks for analytics data and actions
-    const { analyticsData, isLoadingAnalytics, isRefreshing, refetchAnalytics, refreshAnalytics } = useReportAnalyticsData({
+    // Transform report data for the hook
+    const transformedReport = report ? {
+        name: report.name,
+        campaigns: report.campaigns.map(c => ({
+            id: c._id,
+            campaignName: c.campaignName
+        }))
+    } : null;
+
+    // Use consolidated analytics hook
+    const {
+        analyticsData,
+        growthData,
+        processedData,
+        state,
+        handlers,
+        isLoadingAnalytics,
+        refreshAnalytics,
+    } = useReportAnalytics({
         reportId,
-        dateRange: analyticsState.dateRange,
+        report: transformedReport!,
     });
 
     const reportActions = useReportActions({ 
         reportId, 
         reportName: report?.name 
-    });
-
-    // Prepare state and handlers for AnalyticsContent
-    const { state, handlers } = useReportAnalyticsState({
-        analyticsState,
-        refreshAnalytics,
-        isRefreshing,
     });
 
     // Loading state
@@ -62,10 +66,6 @@ export function ReportAnalyticsClient() {
     if (!report || !analyticsData) {
         return <ReportNotFound />;
     }
-
-    // Process analytics data
-    const processedData = processAnalyticsData(analyticsData);
-    const growthData = calculateAllGrowthMetrics(processedData.dailyData);
     
     const campaignCount = report?.campaigns.length || 0;
 
@@ -78,15 +78,6 @@ export function ReportAnalyticsClient() {
             />
         );
     }
-
-    // Transform report data
-    const transformedReport = {
-        name: report.name,
-        campaigns: report.campaigns.map(c => ({
-            id: c._id,
-            campaignName: c.campaignName
-        }))
-    };
 
     return (
         <motion.div
@@ -107,17 +98,18 @@ export function ReportAnalyticsClient() {
             </motion.div>
 
             <AnalyticsContent
-                report={transformedReport}
-                analyticsData={processedData}
+                report={transformedReport!}
+                analyticsData={analyticsData}
                 growthData={growthData}
+                processedData={processedData}
                 state={state}
                 handlers={handlers}
             />
 
             <AnalyticsDialogs
                 reportName={report.name}
-                allVideoMetrics={processedData.allVideoMetrics}
-                hiddenVideoIds={processedData.hiddenVideoIds}
+                allVideoMetrics={analyticsData.videoMetrics}
+                hiddenVideoIds={analyticsData.hiddenVideoIds}
                 isDeleteDialogOpen={reportActions.isDeleteDialogOpen}
                 onDeleteDialogChange={reportActions.setIsDeleteDialogOpen}
                 onDeleteConfirm={reportActions.handleDeleteReport}
@@ -129,7 +121,7 @@ export function ReportAnalyticsClient() {
                 isEditVideosModalOpen={reportActions.isEditVideosModalOpen}
                 onEditVideosModalChange={reportActions.setIsEditVideosModalOpen}
                 onSaveHiddenVideos={reportActions.handleSaveHiddenVideos}
-                refetchAnalytics={refetchAnalytics}
+                refetchAnalytics={refreshAnalytics}
             />
         </motion.div>
     );

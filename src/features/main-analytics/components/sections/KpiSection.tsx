@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
 import { fadeInUp } from '../../constants/metrics.constants';
-import type { BaseAnalyticsProps, GrowthMetrics } from '../../types/analytics.types';
+import type { BaseAnalyticsProps, GrowthMetrics } from '@/types/analytics.types';
 
 interface KpiSectionProps extends BaseAnalyticsProps, GrowthMetrics {}
 
@@ -20,6 +20,7 @@ export function KpiSection(props: KpiSectionProps) {
     viewsGrowth,
     likesGrowth,
     commentsGrowth,
+    sharesGrowth,
     engagementGrowth
   } = props;
   return (
@@ -31,6 +32,7 @@ export function KpiSection(props: KpiSectionProps) {
         viewsGrowth={viewsGrowth}
         likesGrowth={likesGrowth}
         commentsGrowth={commentsGrowth}
+        sharesGrowth={sharesGrowth}
         engagementGrowth={engagementGrowth}
         avgEngagementRate={avgEngagementRate}
       />

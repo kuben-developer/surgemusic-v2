@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { CommentsSection as AnalyticsCommentsSection } from "@/components/analytics/CommentsSection";
 import { fadeInUp } from '../../constants/metrics.constants';
-import type { CampaignFilterProps } from '../../types/analytics.types';
+import type { CampaignFilterProps } from '@/types/analytics.types';
 
 interface CommentsSectionProps extends CampaignFilterProps {}
 
@@ -16,7 +16,7 @@ export function CommentsSection(props: CommentsSectionProps) {
   // Determine campaign IDs to show comments for
   const campaignIds = selectedCampaigns.length > 0 
     ? selectedCampaigns 
-    : campaigns.map((c: any) => c._id);
+    : campaigns.map((campaign) => campaign._id).filter(Boolean);
 
   return (
     <motion.div variants={fadeInUp}>

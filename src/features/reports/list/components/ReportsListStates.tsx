@@ -6,7 +6,7 @@ import { Loader2, FileText, PlusCircle } from 'lucide-react';
 
 interface ReportsListStatesProps {
     isLoading: boolean;
-    error: any;
+    error: Error | null;
     isEmpty: boolean;
     onRetry?: () => void;
 }

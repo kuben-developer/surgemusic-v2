@@ -9,7 +9,7 @@ import { useState } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
 import { FolderNavigation } from "./components/FolderNavigation";
 import { CampaignGrid } from "./components/CampaignGrid";
-import { useCampaignData, type FolderData } from "./hooks/useCampaignData";
+import { useCampaignListData, type FolderData } from "./hooks/useCampaignData";
 
 export default function CampaignListPage() {
   // State management for folder and campaign data
@@ -23,7 +23,7 @@ export default function CampaignListPage() {
   const error = null; // Convex handles errors differently
 
   // Transform data and memoized data processing
-  const { processedData, dataSummary } = useCampaignData({
+  const { processedData, dataSummary } = useCampaignListData({
     folderData,
     selectedView,
     searchQuery,

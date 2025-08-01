@@ -3,7 +3,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Control, FieldValues, Path } from "react-hook-form";
+import type { Control, FieldValues, Path } from "react-hook-form";
 import type { Campaign } from "../types/report.types";
 
 interface CampaignSelectionListProps<T extends FieldValues> {

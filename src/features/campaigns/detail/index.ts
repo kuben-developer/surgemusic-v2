@@ -8,7 +8,7 @@ export { ProgressSection } from './components/ProgressSection';
 export { VideoSection } from './components/VideoSection';
 
 // Hooks
-export { useCampaignData } from './hooks/useCampaignData';
+export { useCampaignDetail } from './hooks/useCampaignData';
 export { useCampaignProgress } from './hooks/useCampaignProgress';
 export { useVideoDownload } from './hooks/useVideoDownload';
 

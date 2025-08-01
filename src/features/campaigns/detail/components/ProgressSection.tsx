@@ -1,3 +1,5 @@
+"use client";
+
 import { Progress } from "@/components/ui/progress";
 import { AlertCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";

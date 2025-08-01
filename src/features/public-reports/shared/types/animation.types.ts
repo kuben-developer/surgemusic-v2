@@ -27,10 +27,13 @@ export interface MotionVariants {
 // Loading animation states
 export type LoadingAnimationState = 'loading' | 'success' | 'error';
 
+// Valid animation property values
+export type AnimationValue = string | number | boolean | string[] | number[];
+
 // Page transition configuration
 export interface PageTransitionConfig {
-  initial: Record<string, any>;
-  animate: Record<string, any>;
-  exit?: Record<string, any>;
+  initial: Record<string, AnimationValue>;
+  animate: Record<string, AnimationValue>;
+  exit?: Record<string, AnimationValue>;
   transition: AnimationConfig;
 }

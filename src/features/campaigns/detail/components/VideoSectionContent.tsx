@@ -1,3 +1,5 @@
+"use client";
+
 import { FileVideo } from "lucide-react";
 import { motion } from "framer-motion";
 import { VideoTableView } from "@/features/campaigns/videos";

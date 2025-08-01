@@ -1,4 +1,4 @@
-import type { VideoMetric } from '@/components/analytics/types';
+import type { VideoMetric, DailyData, Totals, Campaign } from '@/types/analytics.types';
 
 /**
  * Utility functions for transforming analytics data
@@ -43,15 +43,23 @@ export function createDefaultTotals() {
 /**
  * Creates default analytics transform result
  */
-export function createDefaultTransformResult() {
+export function createDefaultTransformResult(): {
+  mappedVideoMetrics: VideoMetric[];
+  campaignCount: number;
+  totalVideos: number;
+  totals: Totals & { totalVideos: number };
+  dailyData: DailyData[];
+  avgEngagementRate: string;
+  campaigns: Campaign[];
+} {
   return {
-    mappedVideoMetrics: [],
+    mappedVideoMetrics: [] as VideoMetric[],
     campaignCount: 0,
     totalVideos: 0,
     totals: createDefaultTotals(),
-    dailyData: [],
+    dailyData: [] as DailyData[],
     avgEngagementRate: "0",
-    campaigns: []
+    campaigns: [] as Campaign[]
   };
 }
 

@@ -1,4 +1,4 @@
-import type { MetricKey, ReportCampaign, VideoMetric, GrowthData } from "../../shared/types/report.types";
+import type { MetricKey, ReportCampaign, VideoMetric, GrowthData, DailyData } from "../../shared/types/report.types";
 
 export interface AnalyticsContentReport {
     name: string;
@@ -6,7 +6,7 @@ export interface AnalyticsContentReport {
 }
 
 export interface AnalyticsContentData {
-    dailyData: any[];
+    dailyData: DailyData[];
     avgEngagementRate: string;
     videoMetrics: VideoMetric[];
     hiddenVideoIds: string[];

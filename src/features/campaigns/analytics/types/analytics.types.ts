@@ -1,40 +1,6 @@
-export interface AnalyticsData {
-  totals: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-  };
-  dailyData: DailyMetric[];
-  avgEngagementRate: string;
-  lastUpdatedAt?: string;
-  videoMetrics: VideoMetric[];
-}
+// Re-export shared types for backward compatibility
+export * from '@/types/analytics.types';
 
-export interface DailyMetric {
-  date: string;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-}
-
-export interface VideoMetric {
-  id: string;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-}
-
-export interface GrowthMetric {
-  value: number;
-  isPositive: boolean;
-}
-
-export interface MetricInfo {
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-  description: string;
-}
+// Legacy aliases for backward compatibility
+export type DailyMetric = import('@/types/analytics.types').DailyData;
+export type GrowthMetric = import('@/types/analytics.types').GrowthData;

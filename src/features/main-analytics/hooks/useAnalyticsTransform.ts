@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import type { VideoMetric } from '@/components/analytics/types';
-import type { AnalyticsData } from '../types/analytics.types';
+import type { VideoMetric, DailyData, Totals, AnalyticsData, Campaign } from '@/types/analytics.types';
 import { 
   transformVideoMetrics, 
   createDefaultTotals, 
@@ -11,16 +10,10 @@ interface UseAnalyticsTransformReturn {
   mappedVideoMetrics: VideoMetric[];
   campaignCount: number;
   totalVideos: number;
-  totals: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    totalVideos: number;
-  };
-  dailyData: any[];
+  totals: Totals & { totalVideos: number };
+  dailyData: DailyData[];
   avgEngagementRate: string;
-  campaigns: any[];
+  campaigns: Campaign[];
 }
 
 /**

@@ -43,7 +43,7 @@ interface UseCampaignDataProps {
   searchQuery: string;
 }
 
-export function useCampaignData({ folderData, selectedView, searchQuery }: UseCampaignDataProps) {
+export function useCampaignListData({ folderData, selectedView, searchQuery }: UseCampaignDataProps) {
   return useMemo<{
     processedData: {
       folders: FolderData["folders"];

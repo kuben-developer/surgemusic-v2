@@ -9,7 +9,7 @@ import type {
   ChartDataProps,
   TopContentProps,
   CampaignFilterProps
-} from '../types/analytics.types';
+} from '@/types/analytics.types';
 
 interface AnalyticsGridProps extends 
   BaseAnalyticsProps,
@@ -22,45 +22,71 @@ interface AnalyticsGridProps extends
  * Main analytics grid component that orchestrates all analytics sections
  */
 export function AnalyticsGrid(props: AnalyticsGridProps) {
-  // Compose KPI props
-  const kpiProps = {
-    campaignCount: props.campaignCount,
-    totalVideos: props.totalVideos,
-    totals: props.totals,
-    avgEngagementRate: props.avgEngagementRate,
-    viewsGrowth: props.viewsGrowth,
-    likesGrowth: props.likesGrowth,
-    commentsGrowth: props.commentsGrowth,
-    engagementGrowth: props.engagementGrowth
-  };
+  const {
+    // Base analytics props
+    campaignCount,
+    totalVideos,
+    totals,
+    avgEngagementRate,
+    
+    // Growth metrics
+    viewsGrowth,
+    likesGrowth,
+    commentsGrowth,
+    sharesGrowth,
+    engagementGrowth,
+    
+    // Chart data props
+    dailyData,
+    activeMetric,
+    setActiveMetric,
+    dateRange,
+    
+    // Top content/pagination props
+    videoMetrics,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    
+    // Campaign filter props
+    selectedCampaigns,
+    campaigns
+  } = props;
 
-  // Compose chart props
-  const chartProps = {
-    dailyData: props.dailyData,
-    totals: props.totals,
-    activeMetric: props.activeMetric,
-    setActiveMetric: props.setActiveMetric,
-    dateRange: props.dateRange,
-    viewsGrowth: props.viewsGrowth,
-    likesGrowth: props.likesGrowth,
-    commentsGrowth: props.commentsGrowth,
-    sharesGrowth: props.sharesGrowth,
-    videoMetrics: props.videoMetrics,
-    currentPage: props.currentPage,
-    setCurrentPage: props.setCurrentPage,
-    itemsPerPage: props.itemsPerPage
-  };
-
-  // Compose comments props
-  const commentsProps = {
-    selectedCampaigns: props.selectedCampaigns,
-    campaigns: props.campaigns
-  };
   return (
     <div className="space-y-8">
-      <KpiSection {...kpiProps} />
-      <ChartsSection {...chartProps} />
-      <CommentsSection {...commentsProps} />
+      <KpiSection 
+        campaignCount={campaignCount}
+        totalVideos={totalVideos}
+        totals={totals}
+        avgEngagementRate={avgEngagementRate}
+        viewsGrowth={viewsGrowth}
+        likesGrowth={likesGrowth}
+        commentsGrowth={commentsGrowth}
+        sharesGrowth={sharesGrowth}
+        engagementGrowth={engagementGrowth}
+      />
+      
+      <ChartsSection 
+        dailyData={dailyData}
+        totals={totals}
+        activeMetric={activeMetric}
+        setActiveMetric={setActiveMetric}
+        dateRange={dateRange}
+        viewsGrowth={viewsGrowth}
+        likesGrowth={likesGrowth}
+        commentsGrowth={commentsGrowth}
+        sharesGrowth={sharesGrowth}
+        videoMetrics={videoMetrics}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+      />
+      
+      <CommentsSection 
+        selectedCampaigns={selectedCampaigns}
+        campaigns={campaigns}
+      />
     </div>
   );
 }

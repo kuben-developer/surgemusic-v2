@@ -1,6 +1,5 @@
 'use client';
 
-import { AlertCircle, Ban, Clock, Link2Off, Server } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,35 +10,16 @@ import {
   isRecoverableError, 
   getErrorRecoveryMessage 
 } from '../utils/error-handling.utils';
+import { getErrorUIConfig, getRetryButtonText } from '../utils/error-ui.utils';
+import { MAX_RETRIES } from '../constants/metrics.constants';
 
 export function ErrorState({ error, onRetry, retryCount }: ErrorStateProps) {
   const router = useRouter();
   const errorType = getErrorType(error);
   const canRetry = isRecoverableError(errorType);
-  const maxRetries = 3;
 
-  let icon = <AlertCircle className="h-6 w-6" />;
-  let title = "Error";
-  let description = getErrorRecoveryMessage(errorType);
-
-  switch (errorType) {
-    case 'NOT_FOUND':
-      icon = <Ban className="h-6 w-6" />;
-      title = "Report Not Found";
-      break;
-    case 'EXPIRED':
-      icon = <Clock className="h-6 w-6" />;
-      title = "Share Link Expired";
-      break;
-    case 'NETWORK':
-      icon = <Link2Off className="h-6 w-6" />;
-      title = "Network Error";
-      break;
-    case 'SERVER_ERROR':
-      icon = <Server className="h-6 w-6" />;
-      title = "Server Error";
-      break;
-  }
+  const { icon, title } = getErrorUIConfig(errorType);
+  const description = getErrorRecoveryMessage(errorType);
 
   return (
     <div className="container max-w-xl mx-auto py-8">
@@ -62,9 +42,9 @@ export function ErrorState({ error, onRetry, retryCount }: ErrorStateProps) {
             {canRetry && (
               <Button
                 onClick={onRetry}
-                disabled={retryCount >= maxRetries}
+                disabled={retryCount >= MAX_RETRIES}
               >
-                {retryCount >= maxRetries ? "Too Many Retries" : `Try Again ${retryCount > 0 ? `(${retryCount}/${maxRetries})` : ''}`}
+                {getRetryButtonText(retryCount, MAX_RETRIES)}
               </Button>
             )}
           </div>

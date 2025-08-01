@@ -1,8 +1,7 @@
 'use client';
 
 import { motion } from "framer-motion";
-import type { MetricKey } from '@/components/analytics/types';
-import type { AnalyticsData } from '../types/analytics.types';
+import type { MetricKey, AnalyticsData } from '@/types/analytics.types';
 import { staggerContainer } from '../constants/metrics.constants';
 import { useAnalyticsTransform } from '../hooks/useAnalyticsTransform';
 import { useMetricCalculations } from '../hooks/useMetricCalculations';
@@ -41,7 +40,10 @@ export function AnalyticsContent({
   const transformedData = useAnalyticsTransform(data);
   
   // Calculate metric growth values using custom hook
-  const metricCalculations = useMetricCalculations(transformedData.dailyData);
+  const metricCalculations = useMetricCalculations({
+    dailyData: transformedData.dailyData,
+    videoMetrics: transformedData.mappedVideoMetrics
+  });
 
   // Loading state
   if (isLoading && !data) {

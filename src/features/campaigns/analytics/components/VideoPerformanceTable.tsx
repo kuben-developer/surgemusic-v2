@@ -28,9 +28,8 @@ export function VideoPerformanceTable({
   // Map videos with their analytics data and sort by views
   const videosWithMetrics = generatedVideos
     .map((video) => {
-      const videoMetric = videoMetrics.find((m: any) => 
-        m.id === (video.tiktokUpload?.post?.id || video.instagramUpload?.post?.id || video.youtubeUpload?.post?.id)
-      ) || {
+      const videoId = video.tiktokUpload?.post?.id || video.instagramUpload?.post?.id || video.youtubeUpload?.post?.id;
+      const videoMetric = videoMetrics.find((m) => m.id === videoId) || {
         views: 0,
         likes: 0,
         comments: 0,

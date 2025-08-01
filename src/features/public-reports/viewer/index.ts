@@ -16,8 +16,14 @@ export { useShareIdValidation } from './hooks/useShareIdValidation';
 export { useReportNavigation } from './hooks/useReportNavigation';
 
 // Constants for reuse
-export { animationVariants, animationDurations, easingCurves } from './constants/animations.constants';
-export { ITEMS_PER_PAGE, VALID_SHARE_ID_REGEX } from './constants/metrics.constants';
+export { 
+  animationVariants, 
+  animationDurations, 
+  easingCurves, 
+  ITEMS_PER_PAGE, 
+  MAX_RETRIES, 
+  VALID_SHARE_ID_REGEX 
+} from './constants';
 
 // Utility functions
 export { 

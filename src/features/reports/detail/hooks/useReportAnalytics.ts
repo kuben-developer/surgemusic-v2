@@ -1,37 +1,140 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
-import type { ReportAnalyticsData } from '../../shared/types/report.types';
+import { useMemo } from "react";
+import { useReportAnalyticsData } from "./useReportAnalyticsData";
+import { useAnalyticsState } from "./useAnalyticsState";
+import type { 
+  AnalyticsContentReport,
+  AnalyticsContentData,
+  AnalyticsContentGrowth,
+  AnalyticsContentState,
+  AnalyticsContentHandlers 
+} from "../types/analytics-content.types";
+import type { VideoMetric } from "../../shared/types/report.types";
 
-export function useReportAnalytics(reportId: string | null, dateRange: string) {
-    const getReportAnalytics = useAction(api.analytics.getReportAnalytics);
-    const [analyticsData, setAnalyticsData] = useState<ReportAnalyticsData | null>(null);
-    const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
+interface UseReportAnalyticsProps {
+  reportId: string | null;
+  report: AnalyticsContentReport;
+}
+
+interface ProcessedAnalyticsData {
+  visibleVideoMetrics: VideoMetric[];
+  totalVideos: number;
+  campaignCount: number;
+  transformedCampaigns: Array<{ id: string; campaignName: string }>;
+  campaignIds: string[];
+}
+
+interface UseReportAnalyticsReturn {
+  // Data
+  analyticsData: AnalyticsContentData | null;
+  growthData: AnalyticsContentGrowth | null;
+  processedData: ProcessedAnalyticsData;
+  
+  // State
+  state: AnalyticsContentState;
+  handlers: AnalyticsContentHandlers;
+  
+  // Loading states
+  isLoadingAnalytics: boolean;
+  
+  // Actions
+  refreshAnalytics: () => Promise<void>;
+}
+
+export function useReportAnalytics({ 
+  reportId, 
+  report 
+}: UseReportAnalyticsProps): UseReportAnalyticsReturn {
+  
+  // Analytics state management (date range, active metric, pagination, etc.)
+  const analyticsState = useAnalyticsState();
+  
+  // Data fetching
+  const {
+    analyticsData,
+    growthData,
+    isLoadingAnalytics,
+    isRefreshing,
+    refreshAnalytics,
+  } = useReportAnalyticsData({
+    reportId,
+    dateRange: analyticsState.dateRange,
+  });
+
+  // Process data for components
+  const processedData = useMemo((): ProcessedAnalyticsData => {
+    if (!analyticsData) {
+      return {
+        visibleVideoMetrics: [],
+        totalVideos: 0,
+        campaignCount: 0,
+        transformedCampaigns: [],
+        campaignIds: [],
+      };
+    }
+
+    const { videoMetrics, hiddenVideoIds } = analyticsData;
     
-    const refetchAnalytics = async () => {
-        if (!reportId) return;
-        setIsLoadingAnalytics(true);
-        try {
-            const data = await getReportAnalytics({ 
-                id: reportId as Id<"reports">, 
-                days: parseInt(dateRange) 
-            });
-            setAnalyticsData(data);
-        } finally {
-            setIsLoadingAnalytics(false);
-        }
-    };
-    
-    useEffect(() => {
-        void refetchAnalytics();
-    }, [reportId, dateRange, refetchAnalytics]);
+    // Filter out hidden videos from videoMetrics for display
+    const visibleVideoMetrics = videoMetrics.filter(
+      (vm: VideoMetric) => !hiddenVideoIds.includes(vm.videoInfo.id)
+    );
+
+    const totalVideos = visibleVideoMetrics.length;
+    const campaignCount = report.campaigns.length || 0;
+
+    // Transform campaigns for header
+    const transformedCampaigns = report.campaigns.map(c => ({
+      id: c.id,
+      campaignName: c.campaignName
+    }));
+
+    // Transform campaign IDs for comments section
+    const campaignIds = report.campaigns.map(c => c.id);
 
     return {
-        analyticsData,
-        isLoadingAnalytics,
-        refetchAnalytics
+      visibleVideoMetrics,
+      totalVideos,
+      campaignCount,
+      transformedCampaigns,
+      campaignIds,
     };
+  }, [report, analyticsData]);
+
+  // Create state and handlers for AnalyticsContent component
+  const state: AnalyticsContentState = {
+    dateRange: analyticsState.dateRange,
+    activeMetric: analyticsState.activeMetric,
+    currentPage: analyticsState.currentPage,
+    selectedCampaigns: analyticsState.selectedCampaigns,
+    itemsPerPage: analyticsState.itemsPerPage,
+    isRefreshing,
+  };
+
+  const handlers: AnalyticsContentHandlers = {
+    onDateRangeChange: analyticsState.handleDateRangeChange,
+    onCampaignChange: analyticsState.handleCampaignChange,
+    onResetCampaigns: analyticsState.handleResetCampaigns,
+    onRefresh: refreshAnalytics,
+    onActiveMetricChange: analyticsState.setActiveMetric,
+    onPageChange: analyticsState.setCurrentPage,
+  };
+
+  return {
+    // Data
+    analyticsData: analyticsData as AnalyticsContentData | null,
+    growthData: growthData as AnalyticsContentGrowth | null,
+    processedData,
+    
+    // State
+    state,
+    handlers,
+    
+    // Loading
+    isLoadingAnalytics,
+    
+    // Actions
+    refreshAnalytics,
+  };
 }

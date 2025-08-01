@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { useVideoFiltering } from "@/features/campaigns/videos";
 import { VideoSectionHeader } from "./VideoSectionHeader";

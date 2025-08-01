@@ -5,7 +5,6 @@ import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
 import { CommentsSection } from "@/components/analytics/CommentsSection";
 import { AnalyticsChartsSection } from "./AnalyticsChartsSection";
-import { useAnalyticsContentData } from "../hooks/useAnalyticsContentData";
 import { fadeInUp, metricInfo } from "../constants/analytics.constants";
 import type { 
     AnalyticsContentReport,
@@ -15,10 +14,18 @@ import type {
     AnalyticsContentHandlers 
 } from "../types/analytics-content.types";
 
+interface ProcessedAnalyticsData {
+    totalVideos: number;
+    campaignCount: number;
+    transformedCampaigns: Array<{ id: string; campaignName: string }>;
+    campaignIds: string[];
+}
+
 interface AnalyticsContentProps {
     report: AnalyticsContentReport;
     analyticsData: AnalyticsContentData;
     growthData: AnalyticsContentGrowth;
+    processedData: ProcessedAnalyticsData;
     state: AnalyticsContentState;
     handlers: AnalyticsContentHandlers;
 }
@@ -27,6 +34,7 @@ export function AnalyticsContent({
     report,
     analyticsData,
     growthData,
+    processedData,
     state,
     handlers,
 }: AnalyticsContentProps) {
@@ -49,17 +57,12 @@ export function AnalyticsContent({
         onPageChange,
     } = handlers;
 
-    // Use custom hook to process data
     const {
         totalVideos,
         campaignCount,
         transformedCampaigns,
         campaignIds,
-    } = useAnalyticsContentData({
-        report,
-        analyticsData,
-        growthData,
-    });
+    } = processedData;
 
     return (
         <>

@@ -14,10 +14,7 @@ export { CommentsSection } from './components/sections/CommentsSection';
 
 // Hooks - State Management
 export { useAnalyticsState } from './hooks/useAnalyticsState';
-export { useAnalyticsFilters } from './hooks/useAnalyticsFilters'; // Legacy - use useAnalyticsState instead
-export { useFilterState } from './hooks/useFilterState';
-export { usePagination } from './hooks/usePagination';
-export { useMetricSelection } from './hooks/useMetricSelection';
+export type { AnalyticsState, AnalyticsActions } from './hooks/useAnalyticsState';
 
 // Hooks - Data & Calculations
 export { useAnalyticsData } from './hooks/useAnalyticsData';
@@ -26,7 +23,7 @@ export { useAnalyticsTransform } from './hooks/useAnalyticsTransform';
 export { useMetricCalculations } from './hooks/useMetricCalculations';
 export { useCampaignData } from './hooks/useCampaignData';
 
-// Types used by other features
+// Types re-exported from shared analytics types
 export type { 
   AnalyticsData, 
   Campaign,
@@ -36,7 +33,7 @@ export type {
   PaginationProps,
   CampaignFilterProps,
   TopContentProps
-} from './types/analytics.types';
+} from '@/types/analytics.types';
 
 // Constants
 export { metricInfo, fadeInUp, staggerContainer } from './constants/metrics.constants';
@@ -50,7 +47,7 @@ export {
 } from './constants/filters.constants';
 
 // Utilities used by multiple features
-export { calculateGrowth } from './utils/analytics.utils';
+export { calculateGrowth, processAnalyticsData } from './utils/analytics.utils';
 export { 
   transformVideoMetrics, 
   createDefaultTotals, 

@@ -10,14 +10,14 @@ import type {
     AnalyticsContentState,
     AnalyticsContentHandlers 
 } from "../types/analytics-content.types";
-import type { VideoMetric } from "../../shared/types/report.types";
+import type { VideoMetric, MetricInfo } from "../../shared/types/report.types";
 
 interface AnalyticsChartsSectionProps {
     data: AnalyticsContentData;
     growth: AnalyticsContentGrowth;
     state: Pick<AnalyticsContentState, 'activeMetric' | 'currentPage' | 'itemsPerPage' | 'dateRange'>;
     handlers: Pick<AnalyticsContentHandlers, 'onActiveMetricChange' | 'onPageChange'>;
-    metricInfo: any;
+    metricInfo: Record<string, MetricInfo>;
 }
 
 export function AnalyticsChartsSection({

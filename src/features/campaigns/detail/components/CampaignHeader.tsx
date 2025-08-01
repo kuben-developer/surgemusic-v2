@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Zap, Music, User, Tag, Calendar, BarChart2, ChevronRight } from "lucide-react";

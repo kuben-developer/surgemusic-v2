@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Control, FieldValues, Path } from "react-hook-form";
+import type { Control, FieldValues, Path } from "react-hook-form";
 import type { Campaign } from "../types/report.types";
 import { CampaignSelectionHeader } from "./CampaignSelectionHeader";
 import { CampaignSelectionStates } from "./CampaignSelectionStates";
