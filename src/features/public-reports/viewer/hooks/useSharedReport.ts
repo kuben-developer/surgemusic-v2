@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { SharedReportData } from '../types';
+import type { SharedReportData, PublicReportError } from '../types';
 
 export const useSharedReport = (shareId: string, dateRange: string) => {
   const getSharedReport = useAction(api.public.getSharedReport);
   const [data, setData] = useState<SharedReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<PublicReportError | null>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
 
@@ -28,7 +28,13 @@ export const useSharedReport = (shareId: string, dateRange: string) => {
       setData(result);
     } catch (err) {
       setIsError(true);
-      setError(err);
+      // Convert unknown error to our typed error interface
+      const typedError: PublicReportError = {
+        message: err instanceof Error ? err.message : 'Unknown error occurred',
+        name: err instanceof Error ? err.name : 'Error',
+        cause: err
+      };
+      setError(typedError);
     } finally {
       setIsLoading(false);
       setIsFetching(false);

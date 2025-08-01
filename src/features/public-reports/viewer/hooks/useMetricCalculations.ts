@@ -2,31 +2,29 @@ import { useMemo } from 'react';
 import type { SharedReportData, MetricKey, GrowthResult } from '../types';
 import { calculateGrowth } from '../utils/metric-calculations';
 
+const DEFAULT_GROWTH: GrowthResult = { value: 0, isPositive: true };
+
 export const useMetricCalculations = (data: SharedReportData | null) => {
-  const viewsGrowth = useMemo(() => 
-    data?.dailyData ? calculateGrowth(data.dailyData, 'views') : { value: 0, isPositive: true },
-    [data?.dailyData]
-  );
+  // Calculate all growth metrics in a single useMemo to avoid multiple recalculations
+  const growthMetrics = useMemo(() => {
+    if (!data?.dailyData) {
+      return {
+        viewsGrowth: DEFAULT_GROWTH,
+        likesGrowth: DEFAULT_GROWTH,
+        commentsGrowth: DEFAULT_GROWTH,
+        sharesGrowth: DEFAULT_GROWTH,
+        engagementGrowth: DEFAULT_GROWTH
+      };
+    }
 
-  const likesGrowth = useMemo(() => 
-    data?.dailyData ? calculateGrowth(data.dailyData, 'likes') : { value: 0, isPositive: true },
-    [data?.dailyData]
-  );
-
-  const commentsGrowth = useMemo(() => 
-    data?.dailyData ? calculateGrowth(data.dailyData, 'comments') : { value: 0, isPositive: true },
-    [data?.dailyData]
-  );
-
-  const sharesGrowth = useMemo(() => 
-    data?.dailyData ? calculateGrowth(data.dailyData, 'shares') : { value: 0, isPositive: true },
-    [data?.dailyData]
-  );
-
-  const engagementGrowth = useMemo(() => 
-    data?.dailyData ? calculateGrowth(data.dailyData, 'engagement') : { value: 0, isPositive: true },
-    [data?.dailyData]
-  );
+    return {
+      viewsGrowth: calculateGrowth(data.dailyData, 'views'),
+      likesGrowth: calculateGrowth(data.dailyData, 'likes'),
+      commentsGrowth: calculateGrowth(data.dailyData, 'comments'),
+      sharesGrowth: calculateGrowth(data.dailyData, 'shares'),
+      engagementGrowth: calculateGrowth(data.dailyData, 'engagement')
+    };
+  }, [data?.dailyData]);
 
   const visibleVideoMetrics = useMemo(() => {
     const filtered = data?.videoMetrics?.filter(
@@ -57,20 +55,16 @@ export const useMetricCalculations = (data: SharedReportData | null) => {
     }));
   }, [data?.videoMetrics, data?.hiddenVideoIds]);
 
-  const campaignCount = useMemo(() => 
-    data?.campaigns?.length || 0,
-    [data?.campaigns]
-  );
+  // Simple calculations that don't need separate useMemo
+  const campaignCount = data?.campaigns?.length || 0;
+  const totals = data?.totals;
+  const totalVideos = data?.totals?.totalVideos;
 
   return {
-    viewsGrowth,
-    likesGrowth,
-    commentsGrowth,
-    sharesGrowth,
-    engagementGrowth,
+    ...growthMetrics,
     visibleVideoMetrics,
     campaignCount,
-    totals: data?.totals,
-    totalVideos: data?.totals?.totalVideos
+    totals,
+    totalVideos
   };
 };

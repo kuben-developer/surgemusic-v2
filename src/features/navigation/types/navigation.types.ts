@@ -11,3 +11,8 @@ export interface NavSection {
   section: string
   items: NavItem[]
 }
+
+export interface NavigationData {
+  navMain: NavSection[]
+  projects: NavItem[]
+}

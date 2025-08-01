@@ -1,5 +1,7 @@
 export const SUPPORTED_PLATFORMS = ['TikTok', 'Instagram', 'YouTube'] as const
 
+export const PLATFORMS = SUPPORTED_PLATFORMS
+
 export type SupportedPlatform = typeof SUPPORTED_PLATFORMS[number]
 
 export const PLATFORM_COLORS = {

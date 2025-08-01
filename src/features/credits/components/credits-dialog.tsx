@@ -9,42 +9,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Zap, Rocket, Diamond, Flame, Loader2, Info, ArrowRight } from "lucide-react";
+import { Loader2, Info, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { CREDIT_OPTIONS } from "../constants/credit-options";
+import { useCredits } from "../hooks/useCredits";
 
-interface CreditOption {
-  credits: number;
-  price: number;
-  priceId: string;
-  icon: React.ReactElement;
-}
-
-const creditOptions: CreditOption[] = [
-  {
-    credits: 30,
-    price: 24,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_CREDITS_30_PRICE_ID!,
-    icon: <Flame className="w-5 h-5 text-yellow-500" />,
-  },
-  {
-    credits: 60,
-    price: 42,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_CREDITS_60_PRICE_ID!,
-    icon: <Zap className="w-5 h-5 text-blue-500" />,
-  },
-  {
-    credits: 90,
-    price: 59,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_CREDITS_90_PRICE_ID!,
-    icon: <Rocket className="w-5 h-5 text-green-500" />,
-  },
-  {
-    credits: 120,
-    price: 79,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_CREDITS_120_PRICE_ID!,
-    icon: <Diamond className="w-5 h-5 text-purple-500" />,
-  },
-];
 
 interface CreditsDialogProps {
   onSelectCredits: (priceId: string) => void;
@@ -53,7 +22,7 @@ interface CreditsDialogProps {
 
 export function CreditsDialog({ onSelectCredits, hasSubscription }: CreditsDialogProps) {
   const [open, setOpen] = useState(false);
-  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+  const { loadingPriceId, handleSelectCredits } = useCredits();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +68,7 @@ export function CreditsDialog({ onSelectCredits, hasSubscription }: CreditsDialo
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-          {creditOptions.map((option) => (
+          {CREDIT_OPTIONS.map((option) => (
             <div
               key={option.credits}
               className="flex flex-col items-center justify-between p-6 rounded-lg border bg-card text-card-foreground shadow-sm"
@@ -107,7 +76,7 @@ export function CreditsDialog({ onSelectCredits, hasSubscription }: CreditsDialo
               <div className="flex flex-col items-center space-y-2">
                 <div className="flex items-center space-x-2">
                   <span className="text-xl font-bold">{option.credits} Credits</span>
-                  {option.icon}
+                  <option.icon className={`w-5 h-5 ${option.iconColor}`} />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Generate {option.credits} additional videos
@@ -117,10 +86,7 @@ export function CreditsDialog({ onSelectCredits, hasSubscription }: CreditsDialo
                 <div className="text-3xl font-bold text-center">${option.price}</div>
                 <Button
                   className="w-full"
-                  onClick={() => {
-                    setLoadingPriceId(option.priceId);
-                    onSelectCredits(option.priceId);
-                  }}
+                  onClick={() => handleSelectCredits(option.priceId, onSelectCredits)}
                   disabled={!hasSubscription || loadingPriceId === option.priceId}
                 >
                   {loadingPriceId === option.priceId ? (

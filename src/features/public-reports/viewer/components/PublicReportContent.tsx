@@ -9,6 +9,7 @@ import { useReportData } from '../hooks/useReportData';
 import { useMetricCalculations } from '../hooks/useMetricCalculations';
 import { usePagination } from '../hooks/usePagination';
 import { ITEMS_PER_PAGE, VALID_SHARE_ID_REGEX } from '../constants/metrics.constants';
+import { animationVariants } from '../constants/animations.constants';
 import { ReportHeader } from './ReportHeader';
 import { DateRangeSelector } from './DateRangeSelector';
 import { LoadingState } from './LoadingState';
@@ -18,19 +19,6 @@ import { PerformanceSummary } from '../sections/PerformanceSummary';
 import { PerformanceCharts } from '../sections/PerformanceCharts';
 import { CommentsView } from '../sections/CommentsView';
 
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 }
-};
 
 export function PublicReportContent({ shareId }: PublicReportContentProps) {
   const router = useRouter();
@@ -101,10 +89,10 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       className="pt-8 pb-16 space-y-8"
       initial="initial"
       animate="animate"
-      variants={staggerContainer}
+      variants={animationVariants.staggerContainer}
     >
       {/* Report Header */}
-      <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+      <motion.div variants={animationVariants.fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <ReportHeader 
           reportName={data.reportName} 
           reportCreatedAt={data.reportCreatedAt}
@@ -152,7 +140,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       />
 
       {/* Report Footer */}
-      <motion.div variants={fadeInUp} className="border-t pt-6 text-center text-sm text-muted-foreground">
+      <motion.div variants={animationVariants.fadeInUp} className="border-t pt-6 text-center text-sm text-muted-foreground">
         <p>This report is shared in read-only mode. Contact the owner for more information.</p>
       </motion.div>
     </motion.div>

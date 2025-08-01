@@ -20,6 +20,8 @@ const COLORS = [
   'text-cyan-500',
 ] as const
 
+const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)]
+
 interface CampaignCardProps {
   campaign: {
     _id: Id<"campaigns">
@@ -34,19 +36,14 @@ interface CampaignCardProps {
     isCompleted: boolean
     createdAt?: number
   }
-  index: number
 }
 
-export function CampaignCard({ campaign, index }: CampaignCardProps) {
+export function CampaignCard({ campaign }: CampaignCardProps) {
   const router = useRouter()
-  const colorIndex = index % COLORS.length
-  const color = COLORS[colorIndex]
+  const color = getRandomColor()
   
   return (
-    <Card
-      key={`campaign-${campaign._id}-${index}`}
-      className="group relative overflow-hidden border-primary/10 bg-card/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
-    >
+    <Card className="group relative overflow-hidden border-primary/10 bg-card/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
       <CardContent className="p-0">
         <div className="relative aspect-[3/4] bg-muted/30">
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60 z-10" />

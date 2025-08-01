@@ -69,3 +69,23 @@ export type MetricInfo = {
     color: string;
     description: string;
 };
+
+export type Campaign = {
+    _id: string;
+    campaignName: string;
+    songName: string;
+    artistName: string;
+    campaignCoverImageUrl: string | null;
+    videoCount: number;
+    genre: string;
+    themes: string[];
+    isCompleted: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    status?: string;
+};
+
+export type ReportCampaign = {
+    id: string;
+    campaignName: string;
+};

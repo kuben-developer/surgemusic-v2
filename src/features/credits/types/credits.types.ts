@@ -4,6 +4,13 @@ export interface CreditPackage {
   priceId: string
 }
 
+export interface CreditOption {
+  credits: number
+  price: number
+  priceId: string
+  icon: React.ReactElement
+}
+
 export interface User {
   _id: string
   userId: string

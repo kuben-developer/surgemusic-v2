@@ -4,6 +4,15 @@ import type { Totals } from '@/components/analytics/types';
 // Error types for public reports
 export type PublicReportErrorType = 'NOT_FOUND' | 'EXPIRED' | 'SERVER_ERROR' | 'NETWORK' | 'UNKNOWN';
 
+// Proper error interface to replace 'any' type
+export interface PublicReportError {
+  message?: string;
+  code?: string | number;
+  status?: number;
+  name?: string;
+  cause?: unknown;
+}
+
 // Metric keys used in charts and calculations
 export type MetricKey = 'views' | 'likes' | 'comments' | 'shares';
 
@@ -102,7 +111,7 @@ export interface LoadingStateProps {
 }
 
 export interface ErrorStateProps {
-  error: any;
+  error: PublicReportError | null;
   onRetry: () => void;
   retryCount: number;
 }

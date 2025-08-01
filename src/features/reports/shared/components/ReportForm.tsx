@@ -17,22 +17,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { useQuery } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, ListChecks, Save } from "lucide-react";
+import { FileText, Save } from "lucide-react";
+
+// Import new components and hooks
+import { useCampaignSelection } from "../hooks/useCampaignSelection";
+import { CampaignSelectionCard } from "./CampaignSelectionCard";
 
 // Define the Zod schema for the form
-// Campaign IDs are optional initially, can be handled by specific create/update schemas if needed
 const reportFormSchema = z.object({
     name: z.string().min(1, { message: "Report name cannot be empty." }),
     campaignIds: z.array(z.string()).refine((value) => value.some((item) => item), {
@@ -42,16 +33,10 @@ const reportFormSchema = z.object({
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
 
-interface Campaign {
-    _id: string;
-    campaignName: string;
-    // Add other fields as needed
-}
-
 interface ReportFormProps {
-    onSubmit: (values: ReportFormValues) => Promise<void>; // Function to handle actual API call
-    initialData?: Partial<ReportFormValues & { campaignIds: string[] }>; // Ensure campaignIds is string[]
-    isLoading?: boolean;                               // To disable button during submission
+    onSubmit: (values: ReportFormValues) => Promise<void>;
+    initialData?: Partial<ReportFormValues & { campaignIds: string[] }>;
+    isLoading?: boolean;
     submitButtonText?: string;
 }
 
@@ -62,15 +47,18 @@ export function ReportForm({
     submitButtonText = "Save Report"
 }: ReportFormProps) {
     
-    // Fetch campaigns for selection
-    const campaignsResult = useQuery(api.campaigns.getAll);
-    const isLoadingCampaigns = campaignsResult === undefined;
-    const campaigns = campaignsResult ?? [];
-    const campaignsError = null; // Convex doesn't expose errors the same way
+    // Use custom hook for campaign selection
+    const {
+        campaigns,
+        isLoadingCampaigns,
+        campaignsError,
+        allCampaignIds,
+        selectAll,
+        clearAll,
+    } = useCampaignSelection();
 
     const form = useForm<ReportFormValues>({
         resolver: zodResolver(reportFormSchema),
-        // Ensure defaultValues for campaignIds is an array
         defaultValues: { 
             name: initialData.name ?? "", 
             campaignIds: initialData.campaignIds ?? [] 
@@ -79,32 +67,28 @@ export function ReportForm({
 
     // Watch campaignIds for checkbox updates
     const selectedCampaignIds = form.watch("campaignIds", initialData.campaignIds ?? []);
-    const allCampaignIds = React.useMemo(() => campaigns.map((c: Campaign) => c._id), [campaigns]);
 
-    const selectAll = () => {
-        form.setValue("campaignIds", allCampaignIds, { shouldValidate: true });
+    const handleSelectAll = () => {
+        selectAll(form.setValue);
     };
 
-    const clearAll = () => {
-        form.setValue("campaignIds", [], { shouldValidate: true });
+    const handleClearAll = () => {
+        clearAll(form.setValue);
     };
 
     // Reset form if initialData changes (e.g., on edit page load)
     React.useEffect(() => {
-        // Only reset if not currently loading and initial data is actually provided
         if (!isLoading && initialData.name !== undefined) {
             form.reset({
                 name: initialData.name,
                 campaignIds: initialData.campaignIds ?? []
             });
         }
-        // Add isLoading to dependency array to re-evaluate when loading state changes
     }, [initialData, form, isLoading]);
 
     // Wrapper for the onSubmit prop to handle form state and potential errors
     const handleFormSubmit = async (values: ReportFormValues) => {
         try {
-            // campaignIds is now guaranteed by zod schema to be string[]
             await onSubmit(values);
         } catch (error) {
             console.error("Form submission error:", error);
@@ -135,113 +119,23 @@ export function ReportForm({
                     )}
                 />
 
-                {/* --- Campaign Selection --- */}
-                <FormField
+                {/* Campaign Selection */}
+                <CampaignSelectionCard
                     control={form.control}
-                    name="campaignIds"
-                    render={() => (
-                        <FormItem>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center">
-                                        <ListChecks className="mr-2 h-5 w-5 text-green-600" />
-                                        Select Campaigns
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Choose the campaigns to include in this report. At least one campaign must be selected.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {isLoadingCampaigns && (
-                                        <div className="space-y-2">
-                                            <Skeleton className="h-6 w-full" />
-                                            <Skeleton className="h-6 w-full" />
-                                            <Skeleton className="h-6 w-2/3" />
-                                        </div>
-                                    )}
-                                    {campaignsError && (
-                                        <p className="text-sm font-medium text-destructive">
-                                            Error loading campaigns
-                                        </p>
-                                    )}
-                                    {campaigns && campaigns.length === 0 && !isLoadingCampaigns && (
-                                         <div className="p-4 border rounded-md bg-muted text-muted-foreground text-center">
-                                            No campaigns found. Please create a campaign first.
-                                        </div>
-                                    )}
-                                    {campaigns && campaigns.length > 0 && (
-                                        <>
-                                            <div className="mb-4 flex justify-between items-center">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={selectAll}
-                                                    disabled={isLoadingCampaigns || selectedCampaignIds.length === allCampaignIds.length}
-                                                    className="text-xs"
-                                                >
-                                                    Select All
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={clearAll}
-                                                    disabled={isLoadingCampaigns || selectedCampaignIds.length === 0}
-                                                    className="text-xs"
-                                                >
-                                                    Clear Selection
-                                                </Button>
-                                            </div>
-                                            <ScrollArea className="h-60 w-full rounded-md border">
-                                                <div className="p-4">
-                                                    {campaigns.map((campaign: Campaign) => (
-                                                        <FormField
-                                                            key={campaign._id}
-                                                            control={form.control}
-                                                            name="campaignIds"
-                                                            render={({ field }) => {
-                                                                return (
-                                                                    <FormItem
-                                                                        key={campaign._id}
-                                                                        className="flex flex-row items-center space-x-3 space-y-0 py-2 border-b last:border-b-0"
-                                                                    >
-                                                                        <FormControl>
-                                                                            <Checkbox
-                                                                                checked={field.value?.includes(campaign._id)}
-                                                                                onCheckedChange={(checked) => {
-                                                                                    const currentIds = field.value ?? [];
-                                                                                    return checked
-                                                                                        ? field.onChange([...currentIds, campaign._id])
-                                                                                        : field.onChange(
-                                                                                            currentIds.filter(
-                                                                                                (value) => value !== campaign._id
-                                                                                            )
-                                                                                        );
-                                                                                }}
-                                                                            />
-                                                                        </FormControl>
-                                                                        <FormLabel className="font-normal flex-1 cursor-pointer">
-                                                                            {campaign.campaignName}
-                                                                        </FormLabel>
-                                                                    </FormItem>
-                                                                );
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
-                                        </>
-                                    )}
-                                    <FormMessage className="pt-2" />
-                                </CardContent>
-                            </Card>
-                        </FormItem>
-                    )}
+                    campaigns={campaigns}
+                    isLoadingCampaigns={isLoadingCampaigns}
+                    campaignsError={campaignsError}
+                    selectedCampaignIds={selectedCampaignIds}
+                    allCampaignIds={allCampaignIds}
+                    onSelectAll={handleSelectAll}
+                    onClearAll={handleClearAll}
                 />
-                 {/* --- End Campaign Selection --- */}
 
-                <Button type="submit" disabled={isLoading || isLoadingCampaigns || (campaigns && campaigns.length === 0)} className="flex items-center gap-2">
+                <Button 
+                    type="submit" 
+                    disabled={isLoading || isLoadingCampaigns || (campaigns && campaigns.length === 0)} 
+                    className="flex items-center gap-2"
+                >
                     {isLoading ? (
                         <>
                             <span className="animate-spin h-4 w-4 border-b-2 border-current rounded-full inline-block"></span>
@@ -257,4 +151,4 @@ export function ReportForm({
             </form>
         </Form>
     );
-} 
+}
