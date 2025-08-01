@@ -382,25 +382,104 @@ Examples of good sub-features:
 - `create/` - Multi-step form with many components
 - `analytics/` - Separate concern with its own data and visualizations
 
-### 4. Authentication Flow
+### 4. Hooks vs Utilities - IMPORTANT Distinction
+
+**Critical**: The `hooks/` folder should ONLY contain React hooks. Many developers mistakenly place utility functions in hooks folders because they have names starting with "use". This is incorrect and should be avoided.
+
+#### What belongs in `hooks/` folders:
+- **React Hooks**: Functions that use React hooks (`useState`, `useEffect`, `useMemo`, `useCallback`, `useRef`, etc.)
+- **Custom Hooks**: Functions that compose other hooks and follow React's rules of hooks
+- **Convex Hooks**: Functions that use Convex hooks (`useQuery`, `useMutation`)
+
+Examples of correct hook files:
+```typescript
+// ✅ Correct: Uses React hooks
+export function useVideoFiltering(videos: Video[]) {
+  const [filter, setFilter] = useState("");
+  const filtered = useMemo(() => 
+    videos.filter(v => v.name.includes(filter)), 
+    [videos, filter]
+  );
+  return { filtered, setFilter };
+}
+
+// ✅ Correct: Uses Convex hooks
+export function useCampaignData(id: string) {
+  const campaign = useQuery(api.campaigns.get, { id });
+  const videos = useQuery(api.videos.list, { campaignId: id });
+  return { campaign, videos };
+}
+```
+
+#### What belongs in `utils/` folders:
+- **Utility Functions**: Pure functions that perform calculations or transformations
+- **Helper Functions**: Functions that don't use React hooks
+- **Generators**: Iterator functions and generators
+- **Data Transformers**: Functions that format or transform data
+
+Examples of files that should be in utils:
+```typescript
+// ❌ WRONG: hooks/useScheduleIterators.ts
+// ✅ CORRECT: utils/schedule-iterators.utils.ts
+export function createCyclicIterator<T>(items: T[]) {
+  return (function* () {
+    let index = 0;
+    while (true) {
+      yield items[index % items.length];
+      index++;
+    }
+  })();
+}
+
+// ❌ WRONG: hooks/useScheduleTracker.ts  
+// ✅ CORRECT: utils/schedule-tracker.utils.ts
+export function createScheduledTracker() {
+  return {
+    tiktok: new Set<string>(),
+    instagram: new Set<string>(),
+    youtube: new Set<string>(),
+  };
+}
+
+// ❌ WRONG: hooks/useFormatDate.ts
+// ✅ CORRECT: utils/date.utils.ts
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString();
+}
+```
+
+#### Naming Conventions:
+- **Hooks**: Must start with `use` and follow camelCase (e.g., `useVideoDownload`, `useCampaignForm`)
+- **Utils**: Should describe what they do, with `.utils.ts` suffix (e.g., `date.utils.ts`, `validation.utils.ts`)
+
+#### Quick Decision Guide:
+Ask yourself these questions:
+1. Does this function use `useState`, `useEffect`, or other React hooks? → Put in `hooks/`
+2. Does this function need to follow React's rules of hooks? → Put in `hooks/`
+3. Is this a pure function that just transforms data? → Put in `utils/`
+4. Could this function be used outside of React components? → Put in `utils/`
+
+Remember: Just because a function name starts with "use" doesn't make it a React hook!
+
+### 5. Authentication Flow
 - Clerk handles authentication with middleware protection
 - Private routes require authentication via middleware
 - User data synced to Convex via webhook on signup
 
-### 5. Campaign Video Generation Flow
+### 6. Campaign Video Generation Flow
 1. User creates campaign with details (song, themes, video count)
 2. Data sent to Make.com webhook for processing
 3. Videos generated and uploaded to UploadThing
 4. Webhook updates Convex with video URLs
 5. Users can schedule posts to social platforms via Ayrshare
 
-### 6. State Management Patterns
+### 7. State Management Patterns
 - Use Convex real-time queries for data fetching
 - Loading state: check if query result is `undefined`
 - Error handling: wrap mutations in try-catch blocks
 - Toast notifications: use `sonner` (not shadcn toast)
 
-### 7. Common Hooks and Their Locations
+### 8. Common Hooks and Their Locations
 - `useCampaignData`: Fetch campaign with videos - Located in `features/campaigns/detail/hooks/`
 - `useVideoDownload`: Download videos as ZIP - Located in `features/campaigns/videos/hooks/`
 - `useVideoFiltering`: Filter and sort videos - Located in `features/campaigns/videos/hooks/`

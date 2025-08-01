@@ -1,12 +1,12 @@
 import type { ScheduleData, SelectedVideo } from "../types/schedule.types";
-import { createCyclicIterator, createDateIterator } from "./useScheduleIterators";
+import { createCyclicIterator, createDateIterator } from "../utils/schedule-iterators.utils";
 import { 
   createScheduledTracker, 
   updateScheduledTracker, 
   findBestVideoForScheduling, 
   getPlatformsToSchedule 
-} from "./useScheduleTracker";
-import { getSocialAccountIds, createScheduleData } from "./useScheduleGeneration";
+} from "../utils/schedule-tracker.utils";
+import { getSocialAccountIds, createScheduleData } from "../utils/schedule-generation.utils";
 
 interface Profile {
   profileKey: string;
