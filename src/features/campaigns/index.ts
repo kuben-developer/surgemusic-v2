@@ -4,8 +4,6 @@ export { CampaignDetailPage } from './detail';
 export { CampaignCreatePage } from './create';
 export { CampaignAnalyticsPage } from './analytics';
 
-// Shared components for use by other features
-export { CampaignHeader, CampaignProgress } from './shared';
 
 // Hooks that might be used by other features
 export { useCampaignData, useCampaignProgress } from './detail';

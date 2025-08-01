@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { SharedReportData, MetricKey, GrowthResult } from '../../shared/types';
+import type { SharedReportData, MetricKey, GrowthResult } from '../types';
 import { calculateGrowth } from '../utils/metric-calculations';
 
 export const useMetricCalculations = (data: SharedReportData | null) => {

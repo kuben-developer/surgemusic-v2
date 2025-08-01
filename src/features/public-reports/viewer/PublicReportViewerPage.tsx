@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { PublicReportHeader } from '../shared/components/PublicReportHeader';
+import { PublicReportHeader } from './components/PublicReportHeader';
 import { PublicReportContent } from './components/PublicReportContent';
 
 export function PublicReportViewerPage() {

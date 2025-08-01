@@ -1,5 +1,5 @@
 import { RefreshCw } from 'lucide-react';
-import type { LoadingStateProps } from '../../shared/types';
+import type { LoadingStateProps } from '../types';
 
 export function LoadingState({ isRefetching = false }: LoadingStateProps) {
   return (

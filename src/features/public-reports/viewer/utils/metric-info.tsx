@@ -1,5 +1,5 @@
 import { Eye, Heart, MessageSquare, Share2 } from 'lucide-react';
-import type { MetricKey, MetricInfo } from '../../shared/types';
+import type { MetricKey, MetricInfo } from '../types';
 
 export const metricInfo: Record<MetricKey, MetricInfo> = {
   views: {

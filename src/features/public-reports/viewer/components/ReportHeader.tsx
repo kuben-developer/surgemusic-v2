@@ -1,4 +1,4 @@
-import type { ReportHeaderProps } from '../../shared/types';
+import type { ReportHeaderProps } from '../types';
 import { formatReportDate } from '../utils/date-formatting.utils';
 
 export function ReportHeader({ reportName, reportCreatedAt }: ReportHeaderProps) {

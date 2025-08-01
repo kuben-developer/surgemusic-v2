@@ -3,7 +3,7 @@ import { PerformanceChartCard } from '@/components/analytics/PerformanceChartCar
 import { TopContentCard } from '@/components/analytics/TopContentCard';
 import { Card } from '@/components/ui/card';
 import { Eye } from 'lucide-react';
-import type { MetricKey, GrowthResult } from '../../shared/types';
+import type { MetricKey, GrowthResult } from '../types';
 import type { DailyData, Totals, VideoMetric } from '@/components/analytics/types';
 import { metricInfo } from '../utils/metric-info';
 

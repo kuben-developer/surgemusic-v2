@@ -1,4 +1,4 @@
-import type { MetricKey, GrowthResult, DailyDataPoint } from '../../shared/types';
+import type { MetricKey, GrowthResult, DailyDataPoint } from '../types';
 
 export const calculateGrowth = (
   data: DailyDataPoint[], 

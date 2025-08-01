@@ -3,8 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
-import type { ErrorStateProps } from '../../shared/types';
-import { getErrorType } from '../../shared/utils/error-handling.utils';
+import type { ErrorStateProps } from '../types';
+import { getErrorType } from '../utils/error-handling.utils';
 
 export function ErrorState({ error, onRetry, retryCount }: ErrorStateProps) {
   const router = useRouter();

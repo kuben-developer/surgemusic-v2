@@ -2,7 +2,7 @@ import { AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { EmptyStateProps } from '../../shared/types';
+import type { EmptyStateProps } from '../types';
 
 export function EmptyState({ onBack }: EmptyStateProps) {
   return (

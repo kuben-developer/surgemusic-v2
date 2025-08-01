@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { KpiMetricsGrid } from '@/components/analytics/KpiMetricsGrid';
-import type { GrowthResult } from '../../shared/types';
+import type { GrowthResult } from '../types';
 import type { Totals } from '@/components/analytics/types';
 
 interface PerformanceSummaryProps {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from "framer-motion";
 import { toast } from 'sonner';
-import type { PublicReportContentProps, MetricKey } from '../../shared/types';
+import type { PublicReportContentProps, MetricKey } from '../types';
 import { useReportData } from '../hooks/useReportData';
 import { useMetricCalculations } from '../hooks/useMetricCalculations';
 import { usePagination } from '../hooks/usePagination';
