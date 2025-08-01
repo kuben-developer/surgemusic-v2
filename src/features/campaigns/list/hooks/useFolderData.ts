@@ -2,19 +2,24 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel";
 
 interface UseFolderDataProps {
   isOpen: boolean;
   selectedFolderId: string | null;
 }
 
+interface FolderCampaignsData {
+  folder: Doc<"folders">;
+  campaigns: Doc<"campaigns">[];
+}
+
 interface UseFolderDataReturn {
-  folders: any[] | undefined;
+  folders: Doc<"folders">[] | undefined;
   isLoading: boolean;
-  allCampaigns: any[] | undefined;
+  allCampaigns: Doc<"campaigns">[] | undefined;
   campaignsLoading: boolean;
-  folderCampaigns: any;
+  folderCampaigns: FolderCampaignsData | undefined;
   folderCampaignsLoading: boolean;
 }
 

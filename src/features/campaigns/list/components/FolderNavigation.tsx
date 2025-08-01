@@ -1,7 +1,7 @@
 "use client"
 
 import { Folder, FolderOpen } from "lucide-react";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel";
 
 interface FolderItem {
   id: Id<"folders">;
@@ -9,9 +9,11 @@ interface FolderItem {
   campaignCount: number;
 }
 
-interface ProcessedCampaign {
-  _id: string;
-  [key: string]: any;
+interface ProcessedCampaign extends Doc<"campaigns"> {
+  isCompleted: boolean;
+  id?: string;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 interface FolderNavigationProps {

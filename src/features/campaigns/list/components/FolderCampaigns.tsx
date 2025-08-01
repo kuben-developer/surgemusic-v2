@@ -6,9 +6,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Archive, Music, X } from "lucide-react";
 import Image from "next/image";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
+
+interface FolderCampaignsData {
+  folder: Doc<"folders">;
+  campaigns: Doc<"campaigns">[];
+}
 
 interface FolderCampaignsProps {
-  folderCampaigns?: any;
+  folderCampaigns?: FolderCampaignsData;
   folderCampaignsLoading: boolean;
   onRemoveCampaign: (campaignId: string) => Promise<void>;
 }
@@ -18,7 +24,7 @@ function FolderCampaignCard({
   campaign, 
   onRemove 
 }: { 
-  campaign: any; 
+  campaign: Doc<"campaigns">; 
   onRemove: () => void;
 }) {
   return (
@@ -94,7 +100,7 @@ export function FolderCampaigns({
                 </div>
               ))
             ) : folderCampaigns?.campaigns && folderCampaigns.campaigns.length > 0 ? (
-              folderCampaigns.campaigns.map((campaign: any) => (
+              folderCampaigns.campaigns.map((campaign) => (
                 <FolderCampaignCard
                   key={campaign._id}
                   campaign={campaign}

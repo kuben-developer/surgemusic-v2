@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 interface UseFolderModifyProps {
-  folders?: any[];
+  folders?: Doc<"folders">[];
   validateFolderName: (name: string) => string | null;
   isDuplicateName: (name: string, excludeId?: string) => boolean;
 }
@@ -25,7 +25,7 @@ export function useFolderModify({ folders, validateFolderName, isDuplicateName }
   const updateFolderMutation = useMutation(api.folders.update);
   const deleteFolderMutation = useMutation(api.folders.deleteFolder);
 
-  const handleRenameFolder = async (selectedFolder: any) => {
+  const handleRenameFolder = async (selectedFolder: Doc<"folders">) => {
     if (!selectedFolder) return;
 
     const validationError = validateFolderName(renameFolderName);
@@ -46,7 +46,7 @@ export function useFolderModify({ folders, validateFolderName, isDuplicateName }
     setIsRenaming(true);
     try {
       await updateFolderMutation({ 
-        id: selectedFolder._id as Id<"folders">, 
+        id: selectedFolder._id, 
         name: renameFolderName.trim() 
       });
       setRenameFolderName("");
@@ -60,12 +60,12 @@ export function useFolderModify({ folders, validateFolderName, isDuplicateName }
     }
   };
 
-  const handleDeleteFolder = async (selectedFolder: any) => {
+  const handleDeleteFolder = async (selectedFolder: Doc<"folders">) => {
     if (!selectedFolder) return;
     
     setIsDeleting(true);
     try {
-      await deleteFolderMutation({ id: selectedFolder._id as Id<"folders"> });
+      await deleteFolderMutation({ id: selectedFolder._id });
       setShowDeleteDialog(false);
       setIsDeleting(false);
       toast.success("Folder deleted successfully");

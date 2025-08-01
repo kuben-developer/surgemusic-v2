@@ -14,6 +14,7 @@ export { useVideoDownload } from './hooks/useVideoDownload';
 export { useUnscheduleLogic } from './hooks/useUnscheduleLogic';
 export { useScheduleCalculation } from './hooks/useScheduleCalculation';
 export { useVideoTableActions } from './hooks/useVideoTableActions';
+export { useScheduleDialogState } from './hooks/useScheduleDialogState';
 
 // Utils
 export { 
@@ -22,6 +23,7 @@ export {
   generateVideoCaption,
   type VideoStatusFlags 
 } from './utils/video-status.utils';
+export { validateStep, getStepValidationMessage, validateScheduleReadiness } from './utils/schedule-validation.utils';
 
 // Types
 export type { SelectedVideo, Step, TimeSlot, Platform, ScheduleData, SchedulingProgress } from './types/schedule.types';

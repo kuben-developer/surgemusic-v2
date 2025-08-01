@@ -1,10 +1,11 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import type { Doc } from "convex/_generated/dataModel";
 
 interface UnscheduleVideoHeaderProps {
   selectedVideos: string[];
-  scheduledVideos?: any[];
+  scheduledVideos?: Doc<"generatedVideos">[];
   isUnscheduling: boolean;
   onToggleSelectAll: () => void;
 }

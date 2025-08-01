@@ -1,20 +1,13 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { TableCell, TableRow } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar, Download, Loader2 } from "lucide-react";
-import { LazyVideo } from "./LazyVideo";
-import { PlatformStatusBadge } from "./PlatformStatusBadge";
+import { useVideoRowData } from "./useVideoRowData";
+import { VideoRowSelection } from "./VideoRowSelection";
+import { VideoInfo, VideoTypeBadge } from "./VideoInfo";
+import { PlatformActions } from "./PlatformActions";
+import { ScheduledDate } from "./ScheduledDate";
+import { VideoActions } from "./VideoActions";
 import type { Doc } from "../../../../../../convex/_generated/dataModel";
 
 interface VideoTableRowProps {
@@ -34,16 +27,7 @@ export function VideoTableRow({
   onToggleSelect,
   onDownload,
 }: VideoTableRowProps) {
-  
-  // Get the scheduled date (first available from any platform)
-  const getScheduledDate = () => {
-    const scheduledAt = video.tiktokUpload?.scheduledAt || 
-                      video.instagramUpload?.scheduledAt || 
-                      video.youtubeUpload?.scheduledAt;
-    return scheduledAt ? new Date(scheduledAt) : null;
-  };
-
-  const scheduledDate = getScheduledDate();
+  const { scheduledDate, hasAnyPlatformUploads, displayName } = useVideoRowData({ video });
 
   return (
     <TableRow 
@@ -66,109 +50,39 @@ export function VideoTableRow({
       }}
     >
       <TableCell>
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={(checked) => {
-            // Get the current event to check for shift key
-            const event = window.event as MouseEvent | undefined;
-            onToggleSelect(String(video._id), event);
-          }}
-          onClick={(e) => {
-            // Prevent default checkbox behavior to handle shift-click ourselves
-            if (e.shiftKey) {
-              e.preventDefault();
-              onToggleSelect(String(video._id), e);
-            }
-          }}
-          aria-label={`Select ${video.video.name}`}
-          disabled={isScheduled}
+        <VideoRowSelection
+          video={video}
+          isSelected={isSelected}
+          isScheduled={isScheduled}
+          onToggleSelect={onToggleSelect}
         />
       </TableCell>
       
       <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="relative h-12 w-7 overflow-hidden rounded-md bg-muted/20 flex-shrink-0">
-            <LazyVideo
-              videoUrl={video.video.url}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="flex-grow min-w-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="font-medium truncate max-w-[150px]">
-                    {video.video.name.replace(/\.[^/.]+$/, "")}
-                  </p>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{video.video.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
+        <VideoInfo video={video} displayName={displayName} />
       </TableCell>
       
       <TableCell>
-        <Badge variant="outline" className="bg-muted/30 border-primary/10">
-          {video.video.type}
-        </Badge>
+        <VideoTypeBadge videoType={video.video.type} />
       </TableCell>
       
       <TableCell>
-        <div className="flex flex-col gap-2">
-          {(['tiktok', 'instagram', 'youtube'] as const).map(platform => (
-            <PlatformStatusBadge
-              key={platform}
-              platform={platform}
-              video={video}
-            />
-          )).filter(Boolean)}
-          
-          {/* Show message if no platforms scheduled */}
-          {!video.tiktokUpload && !video.instagramUpload && !video.youtubeUpload && (
-            <span className="text-xs text-muted-foreground">Not scheduled</span>
-          )}
-        </div>
+        <PlatformActions
+          video={video}
+          hasAnyPlatformUploads={hasAnyPlatformUploads}
+        />
       </TableCell>
       
       <TableCell>
-        {scheduledDate ? (
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="font-medium">
-                {format(scheduledDate, "MMM d, yyyy")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {format(scheduledDate, "h:mm a")}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )}
+        <ScheduledDate scheduledDate={scheduledDate} />
       </TableCell>
       
       <TableCell>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDownload(video.video.url, video.video.name, String(video._id));
-          }}
-          disabled={downloadingVideos[String(video._id)]}
-          title="Download video"
-        >
-          {downloadingVideos[String(video._id)] ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-        </Button>
+        <VideoActions
+          video={video}
+          downloadingVideos={downloadingVideos}
+          onDownload={onDownload}
+        />
       </TableCell>
     </TableRow>
   );

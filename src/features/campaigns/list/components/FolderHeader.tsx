@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Folder, Edit, Trash2, Check, X, Loader2 } from "lucide-react";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface FolderHeaderProps {
-  selectedFolder?: any;
+  selectedFolder?: Doc<"folders">;
   folderCampaignsCount: number;
   
   // Rename state

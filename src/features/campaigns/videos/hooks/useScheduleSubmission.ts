@@ -2,7 +2,7 @@
 
 import { useAction } from "convex/react";
 import { toast } from "sonner";
-import { api } from "../../../../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 import type { ScheduleData, SchedulingProgress } from "../types/schedule.types";
 
 interface UseScheduleSubmissionProps {

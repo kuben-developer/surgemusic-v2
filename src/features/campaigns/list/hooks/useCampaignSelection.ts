@@ -1,10 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
+
+interface FolderCampaignsData {
+  folder: Doc<"folders">;
+  campaigns: Doc<"campaigns">[];
+}
 
 interface UseCampaignSelectionProps {
-  allCampaigns?: any[];
-  folderCampaigns?: any;
+  allCampaigns?: Doc<"campaigns">[];
+  folderCampaigns?: FolderCampaignsData;
   selectedFolderId: string | null;
 }
 
@@ -18,7 +24,7 @@ interface UseCampaignSelectionReturn {
   setSelectedCampaignIds: (ids: Set<string>) => void;
   
   // Filtered campaigns
-  filteredAvailableCampaigns: any[];
+  filteredAvailableCampaigns: Doc<"campaigns">[];
   
   // Selection handlers
   handleCampaignSelect: (campaignId: string, checked: boolean) => void;
@@ -53,7 +59,7 @@ export function useCampaignSelection({
     
     // Exclude campaigns already in the selected folder
     if (selectedFolderId && folderCampaigns?.campaigns) {
-      const folderCampaignIds = new Set(folderCampaigns.campaigns.map((c: any) => c._id));
+      const folderCampaignIds = new Set(folderCampaigns.campaigns.map(c => c._id));
       filtered = filtered.filter(campaign => !folderCampaignIds.has(campaign._id));
     }
     

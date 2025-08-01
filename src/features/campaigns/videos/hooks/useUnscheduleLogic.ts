@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 interface UnscheduleResult {
   postId: string;
   success: boolean;
   error?: string;
+}
+
+interface UnscheduleResponse {
+  message: string;
+  results: UnscheduleResult[];
 }
 
 export function useUnscheduleLogic() {
@@ -19,13 +25,20 @@ export function useUnscheduleLogic() {
 
   const unschedulePost = useMutation(api.ayrshare.unschedulePost);
 
-  const toggleSelectAll = (scheduledVideos?: any[]) => {
+  const toggleSelectAll = (scheduledVideos?: Doc<"generatedVideos">[]) => {
     if (!scheduledVideos) return;
     
     if (selectedVideos.length === scheduledVideos.length) {
       setSelectedVideos([]);
     } else {
-      setSelectedVideos(scheduledVideos.map(v => v.postId));
+      // Extract post IDs from the various upload fields (tiktok, instagram, youtube)
+      const postIds: string[] = [];
+      scheduledVideos.forEach(video => {
+        if (video.tiktokUpload?.post.id) postIds.push(video.tiktokUpload.post.id);
+        if (video.instagramUpload?.post.id) postIds.push(video.instagramUpload.post.id);
+        if (video.youtubeUpload?.post.id) postIds.push(video.youtubeUpload.post.id);
+      });
+      setSelectedVideos(postIds);
     }
   };
 
@@ -48,12 +61,12 @@ export function useUnscheduleLogic() {
     setUnscheduleResults([]);
 
     try {
-      const result = await unschedulePost({ postIds: selectedVideos });
+      const result = await unschedulePost({ postIds: selectedVideos }) as UnscheduleResponse;
       
       setUnschedulingProgress(100);
       
-      if ('results' in result && Array.isArray((result as any).results)) {
-        setUnscheduleResults((result as any).results);
+      if (result.results && Array.isArray(result.results)) {
+        setUnscheduleResults(result.results);
       }
 
       toast.success(result.message || "Unscheduling complete");
@@ -62,8 +75,8 @@ export function useUnscheduleLogic() {
         onComplete();
       }
 
-      const failureCount = 'results' in result && Array.isArray((result as any).results) 
-        ? (result as any).results.filter((r: any) => !r.success).length 
+      const failureCount = result.results 
+        ? result.results.filter(r => !r.success).length 
         : 0;
         
       if (failureCount === 0 && onClose) {

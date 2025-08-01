@@ -1,5 +1,7 @@
+import type { Doc } from "convex/_generated/dataModel";
+
 export interface FolderActionsProps {
-  folders?: any[];
+  folders?: Doc<"folders">[];
 }
 
 export interface FolderActionsReturn {
@@ -17,13 +19,13 @@ export interface FolderActionsReturn {
   renameFolderName: string;
   setRenameFolderName: (name: string) => void;
   isRenaming: boolean;
-  handleRenameFolder: (selectedFolder: any) => Promise<void>;
+  handleRenameFolder: (selectedFolder: Doc<"folders">) => Promise<void>;
   
   // Delete folder state
   showDeleteDialog: boolean;
   setShowDeleteDialog: (show: boolean) => void;
   isDeleting: boolean;
-  handleDeleteFolder: (selectedFolder: any) => Promise<void>;
+  handleDeleteFolder: (selectedFolder: Doc<"folders">) => Promise<void>;
   
   // Campaign actions
   handleAddCampaign: (campaignId: string, selectedFolderId: string) => Promise<void>;

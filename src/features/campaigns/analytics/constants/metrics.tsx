@@ -1,4 +1,5 @@
-import { Eye, Heart, MessageSquare, Share2 } from "lucide-react";
+import React from "react";
+import { BarChart2, TrendingUp, Eye, Heart, MessageSquare, Share2 } from "lucide-react";
 import type { MetricInfo } from "../types/analytics.types";
 
 // Metric info for consistent styling and icons
@@ -28,6 +29,89 @@ export const METRIC_INFO: Record<string, MetricInfo> = {
     description: "Content redistribution"
   }
 };
+
+// KPI Metric configurations for the KPIMetrics component
+export interface KPIMetricConfig {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  bgColor: string;
+  iconColor: string;
+  getValue: (data: KPIMetricData) => string | number;
+  getGrowth?: (data: KPIMetricData) => { value: number; isPositive: boolean } | null;
+}
+
+export interface KPIMetricData {
+  totals: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+  avgEngagementRate: string;
+  generatedVideos?: Array<unknown>;
+  viewsGrowth?: { value: number; isPositive: boolean };
+  likesGrowth?: { value: number; isPositive: boolean };
+  commentsGrowth?: { value: number; isPositive: boolean };
+  sharesGrowth?: { value: number; isPositive: boolean };
+  engagementGrowth?: { value: number; isPositive: boolean };
+}
+
+export const KPI_METRICS: KPIMetricConfig[] = [
+  {
+    key: "posts",
+    label: "Total Posts",
+    icon: <BarChart2 className="h-4 w-4" />,
+    bgColor: "bg-violet-100 dark:bg-violet-900/20",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    getValue: (data) => data.generatedVideos?.length || 0,
+  },
+  {
+    key: "views",
+    label: "Total Views",
+    icon: <div className="h-4 w-4">👁️</div>,
+    bgColor: "bg-green-100 dark:bg-green-900/20",
+    iconColor: "text-green-600 dark:text-green-400",
+    getValue: (data) => data.totals.views.toLocaleString(),
+    getGrowth: (data) => data.viewsGrowth,
+  },
+  {
+    key: "likes",
+    label: "Total Likes",
+    icon: <div className="h-4 w-4">❤️</div>,
+    bgColor: "bg-orange-100 dark:bg-orange-900/20",
+    iconColor: "text-orange-600 dark:text-orange-400",
+    getValue: (data) => data.totals.likes.toLocaleString(),
+    getGrowth: (data) => data.likesGrowth,
+  },
+  {
+    key: "comments",
+    label: "Comments",
+    icon: <div className="h-4 w-4">💬</div>,
+    bgColor: "bg-red-100 dark:bg-red-900/20",
+    iconColor: "text-red-600 dark:text-red-400",
+    getValue: (data) => data.totals.comments.toLocaleString(),
+    getGrowth: (data) => data.commentsGrowth,
+  },
+  {
+    key: "shares",
+    label: "Total Shares",
+    icon: <div className="h-4 w-4">🔄</div>,
+    bgColor: "bg-blue-100 dark:bg-blue-900/20",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    getValue: (data) => data.totals.shares.toLocaleString(),
+    getGrowth: (data) => data.sharesGrowth,
+  },
+  {
+    key: "engagement",
+    label: "Eng. Rate",
+    icon: <TrendingUp className="h-4 w-4" />,
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
+    getValue: (data) => `${data.avgEngagementRate}%`,
+    getGrowth: (data) => data.engagementGrowth,
+  },
+];
 
 // Animation variants
 export const fadeInUp = {
