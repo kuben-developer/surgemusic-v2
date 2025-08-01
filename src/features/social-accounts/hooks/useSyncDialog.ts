@@ -1,3 +1,5 @@
+"use client"
+
 import { useRef, useEffect } from "react";
 import { toast } from "sonner";
 import type { ProfileCheckResult } from '../types/social-accounts.types';

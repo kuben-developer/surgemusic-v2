@@ -1,3 +1,5 @@
+"use client"
+
 import { cn } from "@/lib/utils";
 import { Users, Calendar as CalendarIcon, Clock, CheckCircle2 } from "lucide-react";
 import type { Step, StepConfig } from "../types/schedule.types";

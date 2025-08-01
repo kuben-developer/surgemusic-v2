@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 

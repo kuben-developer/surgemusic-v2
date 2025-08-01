@@ -1,3 +1,5 @@
+"use client"
+
 interface SyncProgressBarProps {
   completedChecksCount: number;
   totalProfilesToSync: number;

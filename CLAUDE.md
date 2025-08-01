@@ -456,6 +456,86 @@ Currently no test framework is configured. When implementing tests:
 - Use barrel exports (index.ts) for clean public APIs
 - Place shared code in appropriate shared folders based on scope
 
+## Client Components and "use client" Directive
+
+### When to Use "use client"
+
+**IMPORTANT**: We prioritize client-side rendering by default in this application for better interactivity and user experience. Always add the "use client" directive at the top of files (before any imports) when:
+
+1. **Using React Hooks**: Any file that uses `useState`, `useEffect`, `useContext`, `useMemo`, `useCallback`, `useRef`, etc.
+2. **Event Handlers**: Components with user interactions like `onClick`, `onChange`, `onSubmit`, etc.
+3. **Browser APIs**: Code that uses `window`, `document`, `localStorage`, `navigator`, etc.
+4. **Interactive Components**: Any component that responds to user input or has dynamic behavior
+5. **Animation Libraries**: Components using framer-motion or other client-side animation libraries
+6. **Third-party Client Libraries**: Components using libraries that require client-side execution
+
+### When NOT to Use "use client"
+
+Only omit the directive for:
+- Pure utility functions (`.utils.ts` files)
+- Type definitions (`.types.ts` files)
+- Constants files (`.constants.ts` files)
+- Barrel exports (`index.ts` files)
+- Server-only components that explicitly need server-side rendering
+
+### Examples
+
+```typescript
+// ✅ Good - Interactive component with event handlers
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+export function InteractiveCard() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <Button onClick={() => setCount(count + 1)}>
+      Clicked {count} times
+    </Button>
+  );
+}
+```
+
+```typescript
+// ✅ Good - Hook file using React hooks
+"use client";
+
+import { useState, useEffect } from "react";
+
+export function useDataFetch() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    // Fetch logic
+  }, []);
+  
+  return data;
+}
+```
+
+```typescript
+// ❌ Bad - Utility file (no "use client" needed)
+// No "use client" here!
+
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString();
+}
+```
+
+### Best Practices
+
+1. **Default to Client Components**: When in doubt, add "use client". It's better to have unnecessary client components than missing directives that cause errors.
+
+2. **Hook Files**: Even though hook files are imported by client components, add "use client" to hook files that use React hooks for clarity and consistency.
+
+3. **Component Libraries**: All components in our UI library should have "use client" since they're interactive by nature.
+
+4. **Performance Consideration**: While we prioritize client-side rendering, identify truly static content that can benefit from server-side rendering (like static marketing pages).
+
+5. **Migration Path**: When creating new features or refactoring existing ones, ensure all interactive components have the "use client" directive.
+
 ## Component and File Size Best Practices
 
 Based on our comprehensive refactoring, follow these guidelines to maintain code quality:

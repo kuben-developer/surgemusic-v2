@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react";
 import { useAction } from "convex/react";
 import { toast } from "sonner";

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import type { MetricKey } from "../../shared/types/report.types";
 import { ITEMS_PER_PAGE } from "../constants/analytics.constants";

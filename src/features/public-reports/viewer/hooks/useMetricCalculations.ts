@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo } from 'react';
 import type { SharedReportData, MetricKey, GrowthResult } from '../types';
 import { calculateGrowth } from '../utils/metric-calculations';

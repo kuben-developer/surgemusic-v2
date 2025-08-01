@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from "framer-motion";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
 import { fadeInUp } from '../../constants/metrics.constants';

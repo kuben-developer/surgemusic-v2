@@ -1,3 +1,5 @@
+"use client"
+
 import { TikTokIcon, InstagramIcon, YouTubeIcon } from '@/components/icons'
 
 interface PlatformIconProps {

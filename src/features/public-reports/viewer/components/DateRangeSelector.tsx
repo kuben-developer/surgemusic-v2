@@ -1,3 +1,5 @@
+'use client';
+
 import type { DateRangeSelectorProps } from '../types';
 
 export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {

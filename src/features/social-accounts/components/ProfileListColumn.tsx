@@ -1,3 +1,5 @@
+"use client"
+
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import type { ProfileCheckResult } from '../types/social-accounts.types';
 

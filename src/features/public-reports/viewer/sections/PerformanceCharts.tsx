@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from "framer-motion";
 import { PerformanceChartCard } from '@/components/analytics/PerformanceChartCard';
 import { TopContentCard } from '@/components/analytics/TopContentCard';

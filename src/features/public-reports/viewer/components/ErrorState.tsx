@@ -1,3 +1,5 @@
+'use client';
+
 import { AlertCircle, Ban, Clock, Link2Off, Server } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

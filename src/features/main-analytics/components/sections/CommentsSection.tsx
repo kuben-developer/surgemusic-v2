@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from "framer-motion";
 import { CommentsSection as AnalyticsCommentsSection } from "@/components/analytics/CommentsSection";
 import { fadeInUp } from '../../constants/metrics.constants';

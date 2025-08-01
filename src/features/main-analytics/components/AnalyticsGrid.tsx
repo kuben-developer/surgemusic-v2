@@ -1,3 +1,5 @@
+'use client';
+
 import { KpiSection } from './sections/KpiSection';
 import { ChartsSection } from './sections/ChartsSection';
 import { CommentsSection } from './sections/CommentsSection';
