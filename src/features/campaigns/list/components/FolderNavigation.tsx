@@ -9,16 +9,9 @@ interface FolderItem {
   campaignCount: number;
 }
 
-interface ProcessedCampaign extends Doc<"campaigns"> {
-  isCompleted: boolean;
-  id?: string;
-  createdAt?: number;
-  updatedAt?: number;
-}
-
 interface FolderNavigationProps {
   folders: FolderItem[];
-  allCampaigns: ProcessedCampaign[];
+  allCampaigns: Doc<"campaigns">[];
   selectedView: 'all' | string;
   onViewChange: (view: 'all' | string) => void;
 }

@@ -8,23 +8,10 @@ export interface FolderData {
   folders: {
     id: Id<"folders">;
     name: string;
-    createdAt: number;
-    updatedAt: number;
     campaigns: Doc<"campaigns">[];
     campaignCount: number;
   }[];
-  unorganizedCampaigns: (Doc<"campaigns"> & {
-    id: Id<"campaigns">;
-    createdAt: number;
-    updatedAt: number;
-  })[];
-}
-
-export interface ProcessedCampaign extends Doc<"campaigns"> {
-  isCompleted: boolean;
-  id?: Id<"campaigns">;
-  createdAt?: number;
-  updatedAt?: number;
+  unorganizedCampaigns: Doc<"campaigns">[];
 }
 
 export interface DataSummary {
@@ -41,14 +28,16 @@ interface UseCampaignDataProps {
   folderData: FolderData | undefined;
   selectedView: 'all' | string;
   searchQuery: string;
+  statusFilter: "all" | "pending" | "completed" | "failed";
+  dateFilter: "all" | "today" | "week" | "month" | "year";
 }
 
-export function useCampaignListData({ folderData, selectedView, searchQuery }: UseCampaignDataProps) {
+export function useCampaignListData({ folderData, selectedView, searchQuery, statusFilter, dateFilter }: UseCampaignDataProps) {
   return useMemo<{
     processedData: {
       folders: FolderData["folders"];
-      allCampaigns: ProcessedCampaign[];
-      filteredCampaigns: ProcessedCampaign[];
+      allCampaigns: Doc<"campaigns">[];
+      filteredCampaigns: Doc<"campaigns">[];
       unorganizedCampaigns: FolderData["unorganizedCampaigns"];
     };
     dataSummary: DataSummary | null;
@@ -60,7 +49,7 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
 
     // Combine all campaigns from folders and unorganized campaigns
     // Use a Map to ensure uniqueness by campaign ID
-    const campaignMap = new Map<Id<"campaigns">, ProcessedCampaign>();
+    const campaignMap = new Map<Id<"campaigns">, Doc<"campaigns">>();
     let duplicateCount = 0;
     
     // Add campaigns from folders
@@ -69,14 +58,14 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
         if (campaignMap.has(campaign._id)) {
           duplicateCount++;
         }
-        campaignMap.set(campaign._id, { ...campaign, isCompleted: campaign.status === 'completed' });
+        campaignMap.set(campaign._id, campaign);
       });
     });
     
     // Add unorganized campaigns (won't overwrite if already exists)
     folderData.unorganizedCampaigns.forEach(campaign => {
       if (!campaignMap.has(campaign._id)) {
-        campaignMap.set(campaign._id, { ...campaign, isCompleted: campaign.status === 'completed' });
+        campaignMap.set(campaign._id, campaign);
       } else {
         duplicateCount++;
       }
@@ -89,11 +78,11 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
     
     // Sort all campaigns chronologically (newest first)
     const allCampaigns = Array.from(campaignMap.values()).sort((a, b) => 
-      new Date(b.createdAt || b._creationTime).getTime() - new Date(a.createdAt || a._creationTime).getTime()
+      b._creationTime - a._creationTime
     );
 
     // Create data summary directly from raw data
-    const completedCampaigns = allCampaigns.filter(campaign => campaign.isCompleted).length;
+    const completedCampaigns = allCampaigns.filter(campaign => campaign.status === 'completed').length;
     const summary = {
       totalFolders: folderData.folders.length,
       totalCampaigns: allCampaigns.length,
@@ -107,11 +96,11 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
     };
 
     // Filter campaigns based on selected view and search query
-    let filteredCampaigns: ProcessedCampaign[] = allCampaigns;
+    let filteredCampaigns: Doc<"campaigns">[] = allCampaigns;
 
     if (selectedView !== 'all') {
       const selectedFolder = folderData.folders.find(folder => folder.id === selectedView);
-      filteredCampaigns = selectedFolder ? selectedFolder.campaigns.map(c => ({ ...c, isCompleted: c.status === 'completed' })) : [];
+      filteredCampaigns = selectedFolder ? selectedFolder.campaigns : [];
     }
 
     if (searchQuery.trim()) {
@@ -124,9 +113,40 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
       );
     }
 
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filteredCampaigns = filteredCampaigns.filter(campaign => campaign.status === statusFilter);
+    }
+
+    // Apply date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filteredCampaigns = filteredCampaigns.filter(campaign => {
+        const campaignDate = new Date(campaign._creationTime);
+        
+        switch (dateFilter) {
+          case 'today':
+            return campaignDate >= today;
+          case 'week':
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return campaignDate >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+            return campaignDate >= monthAgo;
+          case 'year':
+            const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+            return campaignDate >= yearAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
     // Ensure filtered campaigns are also sorted chronologically (newest first)
     filteredCampaigns = filteredCampaigns.sort((a, b) => 
-      new Date(b.createdAt || b._creationTime).getTime() - new Date(a.createdAt || a._creationTime).getTime()
+      b._creationTime - a._creationTime
     );
 
     return {
@@ -138,5 +158,5 @@ export function useCampaignListData({ folderData, selectedView, searchQuery }: U
       },
       dataSummary: summary
     };
-  }, [folderData, selectedView, searchQuery]);
+  }, [folderData, selectedView, searchQuery, statusFilter, dateFilter]);
 }

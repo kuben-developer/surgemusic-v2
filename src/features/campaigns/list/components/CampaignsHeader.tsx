@@ -10,6 +10,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ViewToggle, type ViewMode } from "@/features/campaigns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DataSummary {
   totalFolders: number;
@@ -28,6 +35,10 @@ interface CampaignsHeaderProps {
   onManageFolders: () => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  statusFilter: "all" | "pending" | "completed" | "failed";
+  onStatusFilterChange: (status: "all" | "pending" | "completed" | "failed") => void;
+  dateFilter: "all" | "today" | "week" | "month" | "year";
+  onDateFilterChange: (date: "all" | "today" | "week" | "month" | "year") => void;
 }
 
 export function CampaignsHeader({
@@ -37,6 +48,10 @@ export function CampaignsHeader({
   onManageFolders,
   viewMode,
   setViewMode,
+  statusFilter,
+  onStatusFilterChange,
+  dateFilter,
+  onDateFilterChange,
 }: CampaignsHeaderProps) {
   return (
     <div className="space-y-8">
@@ -84,8 +99,8 @@ export function CampaignsHeader({
         </div>
       </div>
 
-      {/* Search Bar and View Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      {/* Search Bar, Filters and View Toggle */}
+      <div className="space-y-4">
         <Input
           type="text"
           placeholder="Search campaigns..."
@@ -93,7 +108,35 @@ export function CampaignsHeader({
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full max-w-md"
         />
-        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+        
+        <div className="flex flex-wrap items-center gap-4">
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={dateFilter} onValueChange={onDateFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+        </div>
       </div>
     </div>
   );

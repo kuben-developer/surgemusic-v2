@@ -12,10 +12,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Music, Film, Shapes } from "lucide-react";
 import Image from "next/image";
-import type { ProcessedCampaign } from "../hooks/useCampaignData";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface CampaignTableViewProps {
-  campaigns: ProcessedCampaign[];
+  campaigns: Doc<"campaigns">[];
   searchQuery: string;
 }
 
@@ -137,11 +137,15 @@ export function CampaignTableView({ campaigns, searchQuery }: CampaignTableViewP
                   <div className="flex items-center gap-2">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        campaign.isCompleted ? "bg-green-600" : "bg-orange-400 animate-pulse"
+                        campaign.status === 'completed' ? 'bg-green-600' : 
+                        campaign.status === 'failed' ? 'bg-red-600' : 
+                        'bg-orange-400 animate-pulse'
                       }`}
                     />
                     <span className="text-sm">
-                      {campaign.isCompleted ? "Completed" : "In Progress"}
+                      {campaign.status === 'completed' ? 'Completed' : 
+                       campaign.status === 'failed' ? 'Failed' : 
+                       'In Progress'}
                     </span>
                   </div>
                 </TableCell>

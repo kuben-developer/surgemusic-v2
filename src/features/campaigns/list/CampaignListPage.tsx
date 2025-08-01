@@ -19,6 +19,8 @@ export default function CampaignListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [folderManagerOpen, setFolderManagerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "failed">('all');
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">('all');
 
   // Fetch folder and campaign data using Convex
   const folderData = useQuery(api.campaigns.getAllWithFolders);
@@ -30,6 +32,8 @@ export default function CampaignListPage() {
     folderData,
     selectedView,
     searchQuery,
+    statusFilter,
+    dateFilter,
   });
 
   // Loading state
@@ -66,6 +70,10 @@ export default function CampaignListPage() {
         onManageFolders={() => setFolderManagerOpen(true)}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        dateFilter={dateFilter}
+        onDateFilterChange={setDateFilter}
       />
 
       {/* Folder Navigation */}

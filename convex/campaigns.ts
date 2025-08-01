@@ -246,8 +246,6 @@ export const getAllWithFolders = query({
       return {
         id: folder._id,
         name: folder.name,
-        createdAt: folder._creationTime,
-        updatedAt: folder._creationTime,
         campaigns: folderCampaigns,
         campaignCount: folderCampaigns.length,
       };
@@ -255,17 +253,11 @@ export const getAllWithFolders = query({
 
     // Get unorganized campaigns (not in any folder)
     const unorganizedCampaigns = allCampaigns
-      .filter(c => !campaignIdsInFolders.has(c._id))
-      .map(c => ({
-        ...c,
-        id: c._id,
-        createdAt: c._creationTime,
-        updatedAt: c._creationTime,
-      }));
+      .filter(c => !campaignIdsInFolders.has(c._id));
 
     return {
-      folders: foldersWithCampaigns.sort((a, b) => b.createdAt - a.createdAt),
-      unorganizedCampaigns: unorganizedCampaigns.sort((a, b) => b.createdAt - a.createdAt),
+      folders: foldersWithCampaigns,
+      unorganizedCampaigns: unorganizedCampaigns.sort((a, b) => b._creationTime - a._creationTime),
     };
   },
 });

@@ -33,8 +33,7 @@ interface CampaignCardProps {
     themes?: string[]
     videoCount: number
     _creationTime: number
-    isCompleted: boolean
-    createdAt?: number
+    status: "pending" | "completed" | "failed"
   }
 }
 
@@ -96,11 +95,17 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
           </div>
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <div className={`w-2 h-2 rounded-full ${campaign.isCompleted ? 'bg-green-600' : 'bg-orange-400 animate-pulse'}`} />
-              {campaign.isCompleted ? 'Completed' : 'In Progress'}
+              <div className={`w-2 h-2 rounded-full ${
+                campaign.status === 'completed' ? 'bg-green-600' : 
+                campaign.status === 'failed' ? 'bg-red-600' : 
+                'bg-orange-400 animate-pulse'
+              }`} />
+              {campaign.status === 'completed' ? 'Completed' : 
+               campaign.status === 'failed' ? 'Failed' : 
+               'In Progress'}
             </div>
             <div className="text-muted-foreground">
-              {new Date(campaign.createdAt || campaign._creationTime).toLocaleDateString('en-GB', {
+              {new Date(campaign._creationTime).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short'
               })}
