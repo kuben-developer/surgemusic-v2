@@ -1,28 +1,19 @@
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
-import { ArrowLeft, Calendar, RefreshCcw } from "lucide-react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import { useState } from "react"
-import { useQuery } from "convex/react"
-import { api } from "../../../../../convex/_generated/api"
-import type { Id } from "../../../../../convex/_generated/dataModel"
-import { KPIMetrics } from "./KPIMetrics"
-import { MetricsChart } from "./MetricsChart"
-import { VideoPerformanceTable } from "./VideoPerformanceTable"
-import { useAnalyticsData } from "../hooks/useAnalyticsData"
-import { fadeInUp, staggerContainer } from "../constants/metrics"
+import { motion } from "framer-motion";
+import { useParams } from "next/navigation";
+import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
+import { KPIMetrics } from "./KPIMetrics";
+import { MetricsChart } from "./MetricsChart";
+import { VideoPerformanceTable } from "./VideoPerformanceTable";
+import { AnalyticsHeader } from "./AnalyticsHeader";
+import { CampaignInfoSection } from "./CampaignInfoSection";
+import { useAnalyticsData } from "../hooks/useAnalyticsData";
+import { fadeInUp, staggerContainer } from "../constants/metrics";
+import { processAnalyticsData, calculateGrowthMetrics, calculateEngagementGrowth } from "../utils/analytics-calculations";
 
 export default function AnalyticsClient() {
     const params = useParams()
@@ -76,33 +67,24 @@ export default function AnalyticsClient() {
         )
     }
 
-    // Extract data from analytics with proper defaults
-    const totals = analyticsData?.totals || { views: 0, likes: 0, comments: 0, shares: 0 }
-    const dailyData = analyticsData?.dailyData || []
-    const avgEngagementRate = analyticsData?.avgEngagementRate || '0'
-    const lastUpdatedAt = analyticsData?.lastUpdatedAt
-    const videoMetrics = analyticsData?.videoMetrics || []
+    // Process analytics data with defaults
+    const {
+        totals,
+        dailyData,
+        avgEngagementRate,
+        lastUpdatedAt,
+        videoMetrics
+    } = processAnalyticsData(analyticsData);
 
     // Calculate growth metrics
-    const viewsGrowth = calculateGrowth(dailyData, 'views')
-    const likesGrowth = calculateGrowth(dailyData, 'likes')
-    const commentsGrowth = calculateGrowth(dailyData, 'comments')
-    const sharesGrowth = calculateGrowth(dailyData, 'shares')
-    const engagementGrowth = calculateGrowth(dailyData.map((day: any) => ({
-        ...day,
-        engagement: ((day.likes + day.comments + day.shares) / Math.max(day.views, 1)) * 100
-    })), 'engagement')
+    const viewsGrowth = calculateGrowthMetrics(dailyData, 'views');
+    const likesGrowth = calculateGrowthMetrics(dailyData, 'likes');
+    const commentsGrowth = calculateGrowthMetrics(dailyData, 'comments');
+    const sharesGrowth = calculateGrowthMetrics(dailyData, 'shares');
+    const engagementGrowth = calculateEngagementGrowth(dailyData);
 
     return (
         <div className="container max-w-7xl mx-auto py-12 px-4">
-            {lastUpdatedAt && (
-                <div className="flex mb-6 mr-1 items-center justify-end text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500/70 animate-pulse" />
-                        Updated {new Date(lastUpdatedAt).toLocaleString()}
-                    </span>
-                </div>
-            )}
             <motion.div
                 className="space-y-8"
                 initial="initial"
@@ -110,71 +92,20 @@ export default function AnalyticsClient() {
                 variants={staggerContainer}
             >
                 {/* Navigation and controls */}
-                <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Link href={`/campaign/${campaignId}`}>
-                            <Button variant="ghost" size="icon" className="rounded-full">
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                        </Link>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Analytics Dashboard
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <Select value={dateRange} onValueChange={handleDateRangeChange}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Select date range" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="7">Last 7 days</SelectItem>
-                                <SelectItem value="15">Last 15 days</SelectItem>
-                                <SelectItem value="30">Last 30 days</SelectItem>
-                                <SelectItem value="60">Last 60 days</SelectItem>
-                                <SelectItem value="90">Last 90 days</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <Button
-                            variant="outline"
-                            onClick={refreshAnalytics}
-                            disabled={isRefreshing}
-                            className="gap-2"
-                        >
-                            <RefreshCcw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                            Refresh Analytics
-                        </Button>
-                    </div>
-                </motion.div>
+                <AnalyticsHeader
+                    campaignId={campaignId}
+                    dateRange={dateRange}
+                    isRefreshing={isRefreshing}
+                    lastUpdatedAt={lastUpdatedAt}
+                    onDateRangeChange={handleDateRangeChange}
+                    onRefresh={refreshAnalytics}
+                />
 
                 {/* Campaign header */}
-                <motion.section
-                    variants={fadeInUp}
-                    className="relative overflow-hidden rounded-2xl p-8 shadow-xl border border-primary/10"
-                >
-                    <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
-                    <div className="relative space-y-4">
-                        <div className="flex flex-col gap-2">
-                            <Badge variant="outline" className="w-fit bg-primary/10 text-primary border-primary/30 px-3 py-1">
-                                Campaign Performance
-                            </Badge>
-                            <h2 className="text-3xl font-bold">{campaign.campaignName}</h2>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Calendar className="h-4 w-4" />
-                                <span>
-                                    Created on {new Date(campaign._creationTime).toLocaleDateString('en-US', {
-                                        month: 'long',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    })}
-                                </span>
-                                <span>•</span>
-                                <span>{generatedVideos?.length || 0} videos</span>
-                            </div>
-                        </div>
-                    </div>
-                </motion.section>
+                <CampaignInfoSection
+                    campaign={campaign}
+                    generatedVideosCount={generatedVideos?.length || 0}
+                />
 
                 {/* KPI Metrics */}
                 <KPIMetrics

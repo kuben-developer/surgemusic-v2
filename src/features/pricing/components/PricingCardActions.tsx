@@ -34,6 +34,10 @@ export function PricingCardActions({
     return 'Buy Now';
   };
 
+  const getMainButtonVariant = () => {
+    return isCurrentPlan ? 'secondary' : 'default';
+  };
+
   const handleMainButtonClick = (): void => {
     if (isCurrentPlan) {
       onManageBilling();
@@ -55,6 +59,7 @@ export function PricingCardActions({
       )}
       <Button
         className="w-full"
+        variant={getMainButtonVariant()}
         onClick={handleMainButtonClick}
         disabled={plan.priceId === ''}
       >

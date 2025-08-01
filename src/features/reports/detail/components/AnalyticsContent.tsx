@@ -3,101 +3,63 @@
 import { motion } from "framer-motion";
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
-import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard";
-import { TopContentCard } from "@/components/analytics/TopContentCard";
 import { CommentsSection } from "@/components/analytics/CommentsSection";
-import type { MetricKey, ReportCampaign, VideoMetric, GrowthData } from "../../shared/types/report.types";
+import { AnalyticsChartsSection } from "./AnalyticsChartsSection";
+import { useAnalyticsContentData } from "../hooks/useAnalyticsContentData";
 import { fadeInUp, metricInfo } from "../constants/analytics.constants";
+import type { 
+    AnalyticsContentReport,
+    AnalyticsContentData,
+    AnalyticsContentGrowth,
+    AnalyticsContentState,
+    AnalyticsContentHandlers 
+} from "../types/analytics-content.types";
 
 interface AnalyticsContentProps {
-    // Report data
-    report: {
-        name: string;
-        campaigns: ReportCampaign[];
-    };
-    
-    // Analytics data
-    analyticsData: {
-        dailyData: any[];
-        avgEngagementRate: string;
-        videoMetrics: VideoMetric[];
-        hiddenVideoIds: string[];
-        lastUpdatedAt?: string;
-        totals: {
-            views: number;
-            likes: number;
-            comments: number;
-            shares: number;
-        };
-    };
-    
-    // Growth calculations
-    growthData: {
-        viewsGrowth: GrowthData;
-        likesGrowth: GrowthData;
-        commentsGrowth: GrowthData;
-        sharesGrowth: GrowthData;
-        engagementGrowth: GrowthData;
-    };
-    
-    // State and handlers
-    dateRange: string;
-    activeMetric: MetricKey;
-    currentPage: number;
-    selectedCampaigns: string[];
-    itemsPerPage: number;
-    isRefreshing: boolean;
-    
-    // Event handlers
-    onDateRangeChange: (value: string) => void;
-    onCampaignChange: (campaignId: string, isChecked: boolean) => void;
-    onResetCampaigns: () => void;
-    onRefresh: () => void;
-    onActiveMetricChange: (metric: MetricKey) => void;
-    onPageChange: (page: number) => void;
+    report: AnalyticsContentReport;
+    analyticsData: AnalyticsContentData;
+    growthData: AnalyticsContentGrowth;
+    state: AnalyticsContentState;
+    handlers: AnalyticsContentHandlers;
 }
 
 export function AnalyticsContent({
     report,
     analyticsData,
     growthData,
-    dateRange,
-    activeMetric,
-    currentPage,
-    selectedCampaigns,
-    itemsPerPage,
-    isRefreshing,
-    onDateRangeChange,
-    onCampaignChange,
-    onResetCampaigns,
-    onRefresh,
-    onActiveMetricChange,
-    onPageChange,
+    state,
+    handlers,
 }: AnalyticsContentProps) {
+    const { totals, avgEngagementRate, lastUpdatedAt } = analyticsData;
+    const { viewsGrowth, likesGrowth, commentsGrowth, sharesGrowth, engagementGrowth } = growthData;
     const { 
-        dailyData, 
-        avgEngagementRate, 
-        videoMetrics, 
-        hiddenVideoIds, 
-        lastUpdatedAt, 
-        totals 
-    } = analyticsData;
-    
+        dateRange, 
+        activeMetric, 
+        currentPage, 
+        selectedCampaigns, 
+        itemsPerPage, 
+        isRefreshing 
+    } = state;
     const {
-        viewsGrowth,
-        likesGrowth,
-        commentsGrowth,
-        sharesGrowth,
-        engagementGrowth,
-    } = growthData;
+        onDateRangeChange,
+        onCampaignChange,
+        onResetCampaigns,
+        onRefresh,
+        onActiveMetricChange,
+        onPageChange,
+    } = handlers;
 
-    // Filter out hidden videos from videoMetrics for display
-    const visibleVideoMetrics = videoMetrics.filter(
-        (vm: VideoMetric) => !hiddenVideoIds.includes(vm.videoInfo.id)
-    );
-
-    const totalVideos = visibleVideoMetrics.length;
-    const campaignCount = report.campaigns.length || 0;
+    // Use custom hook to process data
+    const {
+        totalVideos,
+        campaignCount,
+        transformedCampaigns,
+        campaignIds,
+    } = useAnalyticsContentData({
+        report,
+        analyticsData,
+        growthData,
+    });
 
     return (
         <>
@@ -105,10 +67,7 @@ export function AnalyticsContent({
                 selectedCampaigns={selectedCampaigns}
                 onCampaignChange={onCampaignChange}
                 onResetCampaigns={onResetCampaigns}
-                allCampaigns={report.campaigns.map((c: ReportCampaign) => ({
-                    id: c.id,
-                    campaignName: c.campaignName
-                }))}
+                allCampaigns={transformedCampaigns}
                 dateRange={dateRange}
                 onDateRangeChange={onDateRangeChange}
                 onRefresh={onRefresh}
@@ -130,33 +89,16 @@ export function AnalyticsContent({
                 engagementGrowth={engagementGrowth.value}
             />
 
-            <motion.div variants={fadeInUp} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <PerformanceChartCard
-                    dailyData={dailyData}
-                    totals={totals}
-                    activeMetric={activeMetric}
-                    setActiveMetric={onActiveMetricChange}
-                    metricInfo={metricInfo}
-                    dateRange={dateRange}
-                    viewsGrowth={viewsGrowth.value}
-                    likesGrowth={likesGrowth.value}
-                    commentsGrowth={commentsGrowth.value}
-                    sharesGrowth={sharesGrowth.value}
-                />
+            <AnalyticsChartsSection
+                data={analyticsData}
+                growth={growthData}
+                state={{ activeMetric, currentPage, itemsPerPage, dateRange }}
+                handlers={{ onActiveMetricChange, onPageChange }}
+                metricInfo={metricInfo}
+            />
 
-                <TopContentCard
-                    videoMetrics={visibleVideoMetrics}
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={onPageChange}
-                />
-            </motion.div>
-
-            {/* Comments Section */}
             <motion.div variants={fadeInUp}>
-                <CommentsSection 
-                    campaignIds={report.campaigns.map((c: ReportCampaign) => c.id)}
-                />
+                <CommentsSection campaignIds={campaignIds} />
             </motion.div>
         </>
     );

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -20,7 +22,9 @@ export function usePricingPlans(): UsePricingPlansReturn {
         setInterval(isYearlyPlan ? 'year' : 'month');
       } catch (error) {
         // Fallback to monthly if there's any error
-        console.warn('Error determining subscription interval:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error determining subscription interval:', error);
+        }
         setInterval('month');
       }
     }

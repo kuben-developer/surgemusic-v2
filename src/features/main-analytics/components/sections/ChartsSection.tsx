@@ -3,53 +3,42 @@
 import { motion } from "framer-motion";
 import { PerformanceChartCard } from "@/components/analytics/PerformanceChartCard";
 import { TopContentCard } from "@/components/analytics/TopContentCard";
-import type { MetricKey, VideoMetric } from '@/components/analytics/types';
 import { fadeInUp, metricInfo } from '../../constants/metrics.constants';
+import type { 
+  ChartDataProps, 
+  TopContentProps,
+  GrowthMetrics 
+} from '../../types/analytics.types';
+import type { Totals } from '@/components/analytics/types';
 
-interface ChartsSectionProps {
-  // Chart props
-  dailyData: any[];
-  totals: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    totalVideos: number;
-  };
-  activeMetric: MetricKey;
-  setActiveMetric: (metric: MetricKey) => void;
-  dateRange: string;
-  viewsGrowth: { value: number; isPositive: boolean };
-  likesGrowth: { value: number; isPositive: boolean };
-  commentsGrowth: { value: number; isPositive: boolean };
-  sharesGrowth: { value: number; isPositive: boolean };
-
-  // Top content props
-  videoMetrics: VideoMetric[];
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-  itemsPerPage: number;
+interface ChartsSectionProps extends ChartDataProps, TopContentProps {
+  totals: Totals & { totalVideos: number };
+  viewsGrowth: GrowthMetrics['viewsGrowth'];
+  likesGrowth: GrowthMetrics['likesGrowth'];
+  commentsGrowth: GrowthMetrics['commentsGrowth'];
+  sharesGrowth: GrowthMetrics['sharesGrowth'];
 }
 
 /**
  * Charts and top content section component
  * Displays performance charts and top performing content
  */
-export function ChartsSection({
-  dailyData,
-  totals,
-  activeMetric,
-  setActiveMetric,
-  dateRange,
-  viewsGrowth,
-  likesGrowth,
-  commentsGrowth,
-  sharesGrowth,
-  videoMetrics,
-  currentPage,
-  setCurrentPage,
-  itemsPerPage
-}: ChartsSectionProps) {
+export function ChartsSection(props: ChartsSectionProps) {
+  const {
+    dailyData,
+    totals,
+    activeMetric,
+    setActiveMetric,
+    dateRange,
+    viewsGrowth,
+    likesGrowth,
+    commentsGrowth,
+    sharesGrowth,
+    videoMetrics,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage
+  } = props;
   return (
     <motion.div
       variants={fadeInUp}

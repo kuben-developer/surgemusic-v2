@@ -48,5 +48,6 @@ export type DeleteProfileDialogState = {
 export type CheckProfilesResult = {
   profiles?: number
   message?: string
-  [key: string]: any
+  status?: string
+  error?: string
 }

@@ -1,18 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from "framer-motion";
-import type { PublicReportContentProps, MetricKey } from '../types';
+import type { PublicReportContentProps } from '../types';
 import { useReportData } from '../hooks/useReportData';
 import { useMetricCalculations } from '../hooks/useMetricCalculations';
-import { usePagination } from '../hooks/usePagination';
-import { useShareIdValidation } from '../hooks/useShareIdValidation';
-import { useReportNavigation } from '../hooks/useReportNavigation';
-import { ITEMS_PER_PAGE } from '../constants/metrics.constants';
-import { animationVariants } from '../constants/animations.constants';
+import { usePublicReportState } from '../hooks/usePublicReportState';
 import { AnimatedReportLayout } from './AnimatedReportLayout';
-import { ReportHeader } from './ReportHeader';
-import { DateRangeSelector } from './DateRangeSelector';
+import { ReportHeaderWithDateRange } from './ReportHeaderWithDateRange';
+import { ReportFooter } from './ReportFooter';
 import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { EmptyState } from './EmptyState';
@@ -22,14 +16,19 @@ import { CommentsView } from '../sections/CommentsView';
 
 
 export function PublicReportContent({ shareId }: PublicReportContentProps) {
-  const [dateRange, setDateRange] = useState<string>("30");
-  const [retryCount, setRetryCount] = useState(0);
-  const [activeMetric, setActiveMetric] = useState<MetricKey>("views");
-  const { currentPage, setCurrentPage, itemsPerPage } = usePagination(ITEMS_PER_PAGE);
-  
-  // Custom hooks for validation and navigation
-  useShareIdValidation(shareId);
-  const { handleBack, handleRetry } = useReportNavigation();
+  // Consolidated state management
+  const {
+    dateRange,
+    retryCount,
+    activeMetric,
+    currentPage,
+    itemsPerPage,
+    setActiveMetric,
+    setCurrentPage,
+    handleDateRangeChange,
+    handleBack,
+    handleRetryWithCount
+  } = usePublicReportState(shareId);
 
   // Fetch report data
   const {
@@ -54,12 +53,6 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
     totalVideos
   } = useMetricCalculations(data);
 
-  // Handle retry with retry count tracking
-  const handleRetryWithCount = () => {
-    setRetryCount(prev => prev + 1);
-    handleRetry(refetch);
-  };
-
   // Loading state
   if (isLoading || isRefetching) {
     return <LoadingState isRefetching={isRefetching} />;
@@ -67,7 +60,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
 
   // Error state
   if (isError) {
-    return <ErrorState error={error} onRetry={handleRetryWithCount} retryCount={retryCount} />;
+    return <ErrorState error={error} onRetry={() => handleRetryWithCount(refetch)} retryCount={retryCount} />;
   }
 
   // Empty data state
@@ -78,17 +71,13 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
   // Content state
   return (
     <AnimatedReportLayout>
-      {/* Report Header */}
-      <motion.div variants={animationVariants.fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <ReportHeader 
-          reportName={data.reportName} 
-          reportCreatedAt={data.reportCreatedAt}
-        />
-        <DateRangeSelector 
-          value={dateRange} 
-          onChange={setDateRange}
-        />
-      </motion.div>
+      {/* Report Header with Date Range */}
+      <ReportHeaderWithDateRange
+        reportName={data.reportName}
+        reportCreatedAt={data.reportCreatedAt}
+        dateRange={dateRange}
+        onDateRangeChange={handleDateRangeChange}
+      />
 
       {/* Performance Summary */}
       <PerformanceSummary
@@ -127,9 +116,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       />
 
       {/* Report Footer */}
-      <motion.div variants={animationVariants.fadeInUp} className="border-t pt-6 text-center text-sm text-muted-foreground">
-        <p>This report is shared in read-only mode. Contact the owner for more information.</p>
-      </motion.div>
+      <ReportFooter />
     </AnimatedReportLayout>
   );
 }

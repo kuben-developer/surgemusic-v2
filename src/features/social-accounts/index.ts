@@ -26,12 +26,24 @@ export { useExpandedProfiles } from './hooks/useExpandedProfiles'
 export { useSyncDialog } from './hooks/useSyncDialog'
 
 // Constants and utils
-export { PLATFORMS } from './constants/platforms'
-export { getPlatformIcon, getPlatformColor } from './utils/platform.utils'
+export { PLATFORMS, PLATFORM_STYLES, PLATFORM_NAMES } from './constants/platforms'
+export { 
+  getPlatformIcon, 
+  getPlatformColor, 
+  getPlatformBadgeClass,
+  formatPlatformName,
+  isPlatformSupported
+} from './utils/platform.utils'
 
 // Types
 export type { 
   SocialAccount, 
   ProfileWithAccounts, 
-  ProfileCheckResult 
+  ProfileCheckResult,
+  CheckProfilesResult
 } from './types/social-accounts.types'
+export type { 
+  SupportedPlatform,
+  PlatformKey,
+  PlatformName
+} from './constants/platforms'

@@ -7,3 +7,5 @@ export { LoadingState } from './LoadingState';
 export { PublicReportContent } from './PublicReportContent';
 export { PublicReportHeader } from './PublicReportHeader';
 export { ReportHeader } from './ReportHeader';
+export { ReportHeaderWithDateRange } from './ReportHeaderWithDateRange';
+export { ReportFooter } from './ReportFooter';

@@ -40,20 +40,24 @@ export function PricingPage() {
   };
 
   const handleBuyNow = (plan: PricingPlan) => {
-    if (plan.priceId) {
-      void createCheckoutSession({
-        priceId: plan.priceId,
-      });
+    if (!plan.priceId || plan.priceId.trim() === '') {
+      console.error('Invalid plan selected for purchase:', plan.name);
+      return;
     }
+    void createCheckoutSession({
+      priceId: plan.priceId,
+    });
   };
 
   const handleStartTrial = (plan: PricingPlan) => {
-    if (plan.priceId) {
-      void createCheckoutSession({
-        priceId: plan.priceId,
-        trial: true
-      });
+    if (!plan.priceId || plan.priceId.trim() === '') {
+      console.error('Invalid plan selected for trial:', plan.name);
+      return;
     }
+    void createCheckoutSession({
+      priceId: plan.priceId,
+      trial: true
+    });
   };
 
   const handleConvertToPaid = async () => {

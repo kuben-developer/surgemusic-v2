@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,10 +17,11 @@ import {
   VideoTableRow, 
   useVideoSelection 
 } from "./table";
+import { filterVideosByStatus, generateVideoCaption } from "../utils/video-status.utils";
+import { useVideoTableActions } from "../hooks/useVideoTableActions";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
-// Use the actual Doc type from Convex
-type VideoData = Doc<"generatedVideos">;
+type VideoData = Doc<"generatedVideos">;;
 
 interface VideoTableViewProps {
   videos: VideoData[];
@@ -51,9 +52,8 @@ export function VideoTableView({
 }: VideoTableViewProps) {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isUnscheduleDialogOpen, setIsUnscheduleDialogOpen] = useState(false);
-  const [isDownloadingSelected, setIsDownloadingSelected] = useState(false);
 
-  // Use the custom hook for video selection logic
+  // Use custom hooks for video logic
   const {
     selectedVideos,
     isVideoScheduled,
@@ -63,78 +63,22 @@ export function VideoTableView({
     clearSelection,
   } = useVideoSelection(videos);
 
-  // Filter videos based on status
-  const filteredVideos = videos.filter(video => {
-    if (statusFilter === "all") return true;
+  const {
+    isDownloadingSelected,
+    handleDownloadSelected,
+  } = useVideoTableActions({ videos, handleDownloadVideo, handleDownloadAll });
 
-    if (statusFilter === "posted") {
-      return video.tiktokUpload?.status?.isPosted || video.instagramUpload?.status?.isPosted || video.youtubeUpload?.status?.isPosted;
-    }
-
-    if (statusFilter === "failed") {
-      return video.tiktokUpload?.status?.isFailed || video.instagramUpload?.status?.isFailed || video.youtubeUpload?.status?.isFailed;
-    }
-
-    if (statusFilter === "scheduled") {
-      const isScheduled = (video.tiktokUpload?.scheduledAt !== null && video.tiktokUpload?.scheduledAt !== undefined) ||
-                         (video.instagramUpload?.scheduledAt !== null && video.instagramUpload?.scheduledAt !== undefined) ||
-                         (video.youtubeUpload?.scheduledAt !== null && video.youtubeUpload?.scheduledAt !== undefined);
-      const isPosted = video.tiktokUpload?.status?.isPosted || video.instagramUpload?.status?.isPosted || video.youtubeUpload?.status?.isPosted;
-      const isFailed = video.tiktokUpload?.status?.isFailed || video.instagramUpload?.status?.isFailed || video.youtubeUpload?.status?.isFailed;
-      return isScheduled && !isPosted && !isFailed;
-    }
-
-    if (statusFilter === "unscheduled") {
-      const isScheduled = (video.tiktokUpload?.scheduledAt !== null && video.tiktokUpload?.scheduledAt !== undefined) ||
-                         (video.instagramUpload?.scheduledAt !== null && video.instagramUpload?.scheduledAt !== undefined) ||
-                         (video.youtubeUpload?.scheduledAt !== null && video.youtubeUpload?.scheduledAt !== undefined);
-      const isPosted = video.tiktokUpload?.status?.isPosted || video.instagramUpload?.status?.isPosted || video.youtubeUpload?.status?.isPosted;
-      const isFailed = video.tiktokUpload?.status?.isFailed || video.instagramUpload?.status?.isFailed || video.youtubeUpload?.status?.isFailed;
-      return !isScheduled && !isPosted && !isFailed;
-    }
-
-    return true;
-  });
+  // Filter videos based on status using utility function
+  const filteredVideos = filterVideosByStatus(videos, statusFilter);
 
   const sortedVideos = getSortedVideos(filteredVideos);
 
-  // Generate caption for a video
-  const generateCaption = () => {
-    return `${songName} by ${artistName} #${genre}`;
-  };
+  // Generate caption for videos
+  const videoCaption = generateVideoCaption(songName, artistName, genre);
 
   // Handle schedule button click
   const handleScheduleClick = () => {
     setIsScheduleDialogOpen(true);
-  };
-
-  // Handle download selected videos
-  const handleDownloadSelected = async () => {
-    if (selectedVideos.length === 0) return;
-
-    setIsDownloadingSelected(true);
-
-    try {
-      // Get the selected video objects
-      const videosToDownload = videos.filter(video =>
-        selectedVideos.includes(String(video._id))
-      );
-
-      // If there's only one video, download it directly
-      if (videosToDownload.length === 1) {
-        const video = videosToDownload[0];
-        if (video && video.video.url && video.video.name) {
-          await handleDownloadVideo(video.video.url, video.video.name, String(video._id));
-        }
-      } else {
-        // Download all selected videos as a zip file
-        await handleDownloadAll(videosToDownload);
-      }
-    } catch (error) {
-      console.error("Error downloading selected videos:", error);
-    } finally {
-      setIsDownloadingSelected(false);
-    }
   };
 
   return (
@@ -151,10 +95,10 @@ export function VideoTableView({
         isDownloadingSelected={isDownloadingSelected}
         onScheduleDialogChange={setIsScheduleDialogOpen}
         onUnscheduleDialogChange={setIsUnscheduleDialogOpen}
-        onDownloadSelected={handleDownloadSelected}
+        onDownloadSelected={() => handleDownloadSelected(selectedVideos)}
         onClearSelection={clearSelection}
         onScheduleClick={handleScheduleClick}
-        generateCaption={generateCaption}
+        generateCaption={() => videoCaption}
       />
 
       {/* Table */}

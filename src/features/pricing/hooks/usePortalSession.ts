@@ -1,3 +1,5 @@
+'use client';
+
 import { useAction } from "convex/react";
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner";

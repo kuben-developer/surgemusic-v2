@@ -1,3 +1,5 @@
+import type { Doc } from '../../../../convex/_generated/dataModel';
+
 // Core types
 export type PricingInterval = 'month' | 'year';
 
@@ -62,7 +64,7 @@ export interface PricingToggleProps {
 
 // Hook return types
 export interface UsePricingPlansReturn {
-  readonly user: any; // TODO: Replace with proper User type from Convex
+  readonly user: Doc<"users"> | undefined;
   readonly isLoading: boolean;
   readonly interval: PricingInterval;
   readonly setInterval: (interval: PricingInterval) => void;

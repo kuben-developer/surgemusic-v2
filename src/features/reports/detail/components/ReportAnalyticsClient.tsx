@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { useReportAnalyticsData } from "../hooks/useReportAnalyticsData";
 import { useReportActions } from "../hooks/useReportActions";
 import { useAnalyticsState } from "../hooks/useAnalyticsState";
+import { useReportAnalyticsState } from "../hooks/useReportAnalyticsState";
 import { ReportHeader } from "./ReportHeader";
 import { AnalyticsContent } from "./AnalyticsContent";
 import { AnalyticsDialogs } from "./AnalyticsDialogs";
@@ -45,6 +46,13 @@ export function ReportAnalyticsClient() {
         reportName: report?.name 
     });
 
+    // Prepare state and handlers for AnalyticsContent
+    const { state, handlers } = useReportAnalyticsState({
+        analyticsState,
+        refreshAnalytics,
+        isRefreshing,
+    });
+
     // Loading state
     if (isLoadingReport || isLoadingAnalytics) {
         return <LoadingSkeleton />;
@@ -71,6 +79,15 @@ export function ReportAnalyticsClient() {
         );
     }
 
+    // Transform report data
+    const transformedReport = {
+        name: report.name,
+        campaigns: report.campaigns.map(c => ({
+            id: c._id,
+            campaignName: c.campaignName
+        }))
+    };
+
     return (
         <motion.div
             initial="initial"
@@ -90,27 +107,11 @@ export function ReportAnalyticsClient() {
             </motion.div>
 
             <AnalyticsContent
-                report={{
-                    name: report.name,
-                    campaigns: report.campaigns.map(c => ({
-                        id: c._id,
-                        campaignName: c.campaignName
-                    }))
-                }}
+                report={transformedReport}
                 analyticsData={processedData}
                 growthData={growthData}
-                dateRange={analyticsState.dateRange}
-                activeMetric={analyticsState.activeMetric}
-                currentPage={analyticsState.currentPage}
-                selectedCampaigns={analyticsState.selectedCampaigns}
-                itemsPerPage={analyticsState.itemsPerPage}
-                isRefreshing={isRefreshing}
-                onDateRangeChange={analyticsState.handleDateRangeChange}
-                onCampaignChange={analyticsState.handleCampaignChange}
-                onResetCampaigns={analyticsState.handleResetCampaigns}
-                onRefresh={refreshAnalytics}
-                onActiveMetricChange={analyticsState.setActiveMetric}
-                onPageChange={analyticsState.setCurrentPage}
+                state={state}
+                handlers={handlers}
             />
 
             <AnalyticsDialogs

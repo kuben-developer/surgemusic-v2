@@ -14,21 +14,7 @@ import {
   Loader2 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface FolderSidebarProps {
-  folders?: any[];
-  isLoading: boolean;
-  selectedFolderId: string | null;
-  onFolderSelect: (folderId: string) => void;
-  
-  // Create folder state
-  showCreateForm: boolean;
-  setShowCreateForm: (show: boolean) => void;
-  newFolderName: string;
-  setNewFolderName: (name: string) => void;
-  isCreating: boolean;
-  onCreateFolder: () => Promise<void>;
-}
+import type { FolderSidebarProps } from "../types/folder-sidebar.types";
 
 export function FolderSidebar({
   folders,

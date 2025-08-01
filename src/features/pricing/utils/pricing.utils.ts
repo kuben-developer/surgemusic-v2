@@ -101,3 +101,23 @@ export function formatSongs(count: number): string {
 export function getIntervalDisplayName(interval: PricingInterval): string {
   return interval === 'year' ? 'Yearly (Save 20%)' : 'Monthly';
 }
+
+/**
+ * Validates if a checkout session can be created for a plan
+ */
+export function canCreateCheckoutSession(plan: PricingPlan): boolean {
+  return isValidPlan(plan) && plan.price > 0;
+}
+
+/**
+ * Gets a user-friendly error message for plan validation
+ */
+export function getPlanValidationError(plan: PricingPlan): string | null {
+  if (!isValidPlan(plan)) {
+    return 'This plan is not available for purchase.';
+  }
+  if (plan.price <= 0) {
+    return 'Invalid pricing for this plan.';
+  }
+  return null;
+}

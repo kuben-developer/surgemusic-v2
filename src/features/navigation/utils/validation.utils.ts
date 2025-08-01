@@ -40,17 +40,33 @@ export function validateTeams(teams: TeamItem[]): boolean {
 /**
  * Gets safe user name from user object
  */
-export function getSafeUserName(user: any): string {
-  if (!user) return "User"
-  return user.fullName || user.firstName || user.username || "User"
+export function getSafeUserName(user: unknown): string {
+  if (!user || typeof user !== 'object') return "User"
+  
+  const userObj = user as Record<string, unknown>
+  const fullName = typeof userObj.fullName === 'string' ? userObj.fullName : ''
+  const firstName = typeof userObj.firstName === 'string' ? userObj.firstName : ''
+  const username = typeof userObj.username === 'string' ? userObj.username : ''
+  
+  return fullName || firstName || username || "User"
 }
 
 /**
  * Gets safe user email from user object
  */
-export function getSafeUserEmail(user: any): string {
-  if (!user?.emailAddresses) return ""
-  return user.emailAddresses[0]?.emailAddress || ""
+export function getSafeUserEmail(user: unknown): string {
+  if (!user || typeof user !== 'object') return ""
+  
+  const userObj = user as Record<string, unknown>
+  const emailAddresses = userObj.emailAddresses
+  
+  if (!Array.isArray(emailAddresses) || emailAddresses.length === 0) return ""
+  
+  const firstEmail = emailAddresses[0]
+  if (!firstEmail || typeof firstEmail !== 'object') return ""
+  
+  const emailObj = firstEmail as Record<string, unknown>
+  return typeof emailObj.emailAddress === 'string' ? emailObj.emailAddress : ""
 }
 
 /**

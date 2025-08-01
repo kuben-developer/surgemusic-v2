@@ -12,16 +12,31 @@ export { KpiSection } from './components/sections/KpiSection';
 export { ChartsSection } from './components/sections/ChartsSection';
 export { CommentsSection } from './components/sections/CommentsSection';
 
-// Hooks
+// Hooks - State Management
+export { useAnalyticsState } from './hooks/useAnalyticsState';
+export { useAnalyticsFilters } from './hooks/useAnalyticsFilters'; // Legacy - use useAnalyticsState instead
+export { useFilterState } from './hooks/useFilterState';
+export { usePagination } from './hooks/usePagination';
+export { useMetricSelection } from './hooks/useMetricSelection';
+
+// Hooks - Data & Calculations
 export { useAnalyticsData } from './hooks/useAnalyticsData';
-export { useAnalyticsFilters } from './hooks/useAnalyticsFilters';
 export { useAnalyticsRefresh } from './hooks/useAnalyticsRefresh';
 export { useAnalyticsTransform } from './hooks/useAnalyticsTransform';
 export { useMetricCalculations } from './hooks/useMetricCalculations';
 export { useCampaignData } from './hooks/useCampaignData';
 
 // Types used by other features
-export type { AnalyticsData, Campaign } from './types/analytics.types';
+export type { 
+  AnalyticsData, 
+  Campaign,
+  GrowthMetrics,
+  BaseAnalyticsProps,
+  ChartDataProps,
+  PaginationProps,
+  CampaignFilterProps,
+  TopContentProps
+} from './types/analytics.types';
 
 // Constants
 export { metricInfo, fadeInUp, staggerContainer } from './constants/metrics.constants';

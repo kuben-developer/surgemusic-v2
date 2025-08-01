@@ -46,7 +46,9 @@ export {
   getFeatureCount,
   formatVideoGenerations,
   formatSongs,
-  getIntervalDisplayName
+  getIntervalDisplayName,
+  canCreateCheckoutSession,
+  getPlanValidationError
 } from './utils/pricing.utils';
 
 // Types

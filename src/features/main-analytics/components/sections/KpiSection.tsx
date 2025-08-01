@@ -3,38 +3,25 @@
 import { motion } from "framer-motion";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
 import { fadeInUp } from '../../constants/metrics.constants';
+import type { BaseAnalyticsProps, GrowthMetrics } from '../../types/analytics.types';
 
-interface KpiSectionProps {
-  campaignCount: number;
-  totalVideos: number;
-  totals: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    totalVideos: number;
-  };
-  viewsGrowth: { value: number; isPositive: boolean };
-  likesGrowth: { value: number; isPositive: boolean };
-  commentsGrowth: { value: number; isPositive: boolean };
-  engagementGrowth: { value: number; isPositive: boolean };
-  avgEngagementRate: string;
-}
+interface KpiSectionProps extends BaseAnalyticsProps, GrowthMetrics {}
 
 /**
  * KPI metrics section component
  * Displays key performance indicators in a grid layout
  */
-export function KpiSection({
-  campaignCount,
-  totalVideos,
-  totals,
-  viewsGrowth,
-  likesGrowth,
-  commentsGrowth,
-  engagementGrowth,
-  avgEngagementRate
-}: KpiSectionProps) {
+export function KpiSection(props: KpiSectionProps) {
+  const {
+    campaignCount,
+    totalVideos,
+    totals,
+    avgEngagementRate,
+    viewsGrowth,
+    likesGrowth,
+    commentsGrowth,
+    engagementGrowth
+  } = props;
   return (
     <motion.div variants={fadeInUp}>
       <KpiMetricsGrid
