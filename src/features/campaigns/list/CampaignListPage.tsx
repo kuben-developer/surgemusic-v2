@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
 import { FolderNavigation } from "./components/FolderNavigation";
-import { CampaignGrid } from "./components/CampaignGrid";
+import { CampaignListGrid } from "./components/CampaignListGrid";
 import { useCampaignListData, type FolderData } from "./hooks/useCampaignData";
 
 export default function CampaignListPage() {
@@ -74,7 +74,7 @@ export default function CampaignListPage() {
       </div>
 
       {/* Campaign Grid */}
-      <CampaignGrid
+      <CampaignListGrid
         campaigns={processedData.filteredCampaigns}
         searchQuery={searchQuery}
       />

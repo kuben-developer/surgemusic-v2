@@ -8,6 +8,7 @@ export { AvailableCampaignCard } from './components/AvailableCampaignCard';
 export { CampaignSearchInput } from './components/CampaignSearchInput';
 export { CampaignBulkActions } from './components/CampaignBulkActions';
 export { CampaignGrid } from './components/CampaignGrid';
+export { CampaignListGrid } from './components/CampaignListGrid';
 
 // Hooks
 export { useFolderActions } from './hooks/useFolderActions';
