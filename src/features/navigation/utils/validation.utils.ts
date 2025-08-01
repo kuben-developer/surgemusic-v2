@@ -10,7 +10,7 @@ export function validateNavSections(sections: NavSection[]): boolean {
     section.items.every(item => 
       item.title && 
       item.url && 
-      typeof item.icon === 'function'
+      item.icon !== undefined
     )
   )
 }
