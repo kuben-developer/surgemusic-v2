@@ -1,2 +1,2 @@
+// Page export for app router
 export { PricingPage } from './PricingPage';
-export type { PricingPlan, PricingInterval } from './types/pricing.types';

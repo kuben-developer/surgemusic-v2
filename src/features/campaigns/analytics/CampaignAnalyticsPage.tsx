@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import AnalyticsClient from "./analytics-client"
+import AnalyticsClient from "./components/AnalyticsClient"
 
 export default function CampaignAnalyticsPage() {
     return (

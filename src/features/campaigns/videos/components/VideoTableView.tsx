@@ -1,6 +1,6 @@
 "use client"
 
-import type { Doc, Id } from "../../../../../../convex/_generated/dataModel"
+import type { Doc, Id } from "../../../../../convex/_generated/dataModel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -186,7 +186,7 @@ export function VideoTableView({
   }
 
   // Toggle select individual video with shift-click support
-  const toggleSelectVideo = (id: string, event?: React.MouseEvent) => {
+  const toggleSelectVideo = (id: string, event?: React.MouseEvent | MouseEvent) => {
     // Find the video by id and its index in sortedVideos
     const video = videos.find(v => String(v._id) === id);
     const currentIndex = sortedVideos.findIndex(v => String(v._id) === id);
@@ -446,8 +446,8 @@ export function VideoTableView({
                             checked={selectedVideos.includes(String(video._id))}
                             onCheckedChange={(checked) => {
                               // Get the current event to check for shift key
-                              const event = window.event as any;
-                              toggleSelectVideo(String(video._id), event as any);
+                              const event = window.event as MouseEvent | undefined;
+                              toggleSelectVideo(String(video._id), event);
                             }}
                             onClick={(e) => {
                               // Prevent default checkbox behavior to handle shift-click ourselves

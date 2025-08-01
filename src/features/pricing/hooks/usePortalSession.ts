@@ -1,7 +1,7 @@
 import { useAction } from "convex/react";
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 
 export function usePortalSession() {
   const router = useRouter();

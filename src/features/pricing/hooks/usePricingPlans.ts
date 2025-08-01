@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { monthlyPlans, yearlyPlans } from '../constants/plans.constants';
 import type { PricingInterval, PricingPlan } from '../types/pricing.types';
 

@@ -1,5 +1,2 @@
-// Page export
+// Page export for app router
 export { default as CampaignListPage } from './CampaignListPage';
-
-// Components
-export { CampaignCard } from './components/CampaignCard';

@@ -1,19 +1,9 @@
-// Page exports for app router
-export { CampaignListPage } from './list';
-export { CampaignDetailPage } from './detail';
-export { CampaignCreatePage } from './create';
-export { CampaignAnalyticsPage } from './analytics';
+// This file is intentionally kept minimal since the app router imports directly from sub-features.
+// The videos sub-feature exports are used internally by the detail sub-feature.
 
-
-// Hooks that might be used by other features
-export { useCampaignData, useCampaignProgress } from './detail';
-
-// Video components and hooks that might be used elsewhere
+// Video components used by detail sub-feature
 export { 
   VideoTableView, 
-  VideoGrid, 
   ViewToggle,
-  useVideoFiltering,
-  useVideoDownload,
   type ViewMode 
 } from './videos';

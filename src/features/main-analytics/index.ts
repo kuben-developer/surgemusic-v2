@@ -1,13 +1,8 @@
-// Page component
+// Page export for app router
 export { AnalyticsPage } from './AnalyticsPage';
 
-// Hooks (if needed externally)
-export { useAnalyticsData } from './hooks/useAnalyticsData';
-export { useAnalyticsFilters } from './hooks/useAnalyticsFilters';
-export { useAnalyticsRefresh } from './hooks/useAnalyticsRefresh';
+// Type used by reports feature
+export type { AnalyticsData } from './types/analytics.types';
 
-// Types (if needed externally)
-export type { AnalyticsData, Campaign } from './types/analytics.types';
-
-// Utils (if needed externally)
+// Utility used by multiple features
 export { calculateGrowth } from './utils/analytics.utils';

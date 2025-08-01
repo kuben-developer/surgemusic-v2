@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
-import type { Id, Doc } from "../../../../convex/_generated/dataModel"
+import { api } from "../../../../../convex/_generated/api"
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel"
 
 export function useCampaignData(campaignId: string | undefined) {
   const campaign = useQuery(

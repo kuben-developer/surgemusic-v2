@@ -4,8 +4,8 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Zap, Video, Music, ImageIcon, Globe, Download, FileVideo, Film, Loader2, Clock, User, Tag, Calendar, ChevronRight, AlertCircle, List, Grid, BarChart2, ChevronLeft } from "lucide-react"
 import { useQuery } from "convex/react"
-import { api } from "../../../../../../convex/_generated/api"
-import type { Id, Doc } from "../../../../../../convex/_generated/dataModel"
+import { api } from "../../../../../convex/_generated/api"
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
@@ -221,7 +221,7 @@ export default function CampaignClient() {
         if (!generatedVideos) return []
         if (statusFilter === "all") return generatedVideos
         
-        return generatedVideos.filter(video => {
+        return generatedVideos.filter((video: Doc<"generatedVideos">) => {
             if (statusFilter === "posted") {
                 return video.tiktokUpload?.status?.isPosted || video.instagramUpload?.status?.isPosted || video.youtubeUpload?.status?.isPosted;
             }
@@ -258,7 +258,7 @@ export default function CampaignClient() {
     const indexOfFirstVideo = indexOfLastVideo - videosPerPage
     
     // Prepare videos for current page - only add real videoUrl to current page videos
-    const currentVideos = filteredVideos.slice(indexOfFirstVideo, indexOfLastVideo).map(video => ({
+    const currentVideos = filteredVideos.slice(indexOfFirstVideo, indexOfLastVideo).map((video: Doc<"generatedVideos">) => ({
         ...video,
         // Keep the videoUrl property as is - it will be loaded only when rendered
     }))
@@ -266,7 +266,7 @@ export default function CampaignClient() {
     // For table view, we'll leave the filteredVideos as is, but use lazy loading in the video elements
     
     // Calculate total scheduled videos
-    const totalScheduledCount = generatedVideos?.filter(video => 
+    const totalScheduledCount = generatedVideos?.filter((video: Doc<"generatedVideos">) => 
         (video.tiktokUpload?.scheduledAt !== null && video.tiktokUpload?.scheduledAt !== undefined) ||
         (video.instagramUpload?.scheduledAt !== null && video.instagramUpload?.scheduledAt !== undefined) ||
         (video.youtubeUpload?.scheduledAt !== null && video.youtubeUpload?.scheduledAt !== undefined)
@@ -658,7 +658,7 @@ export default function CampaignClient() {
                                     className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
                                     variants={staggerContainer}
                                 >
-                                    {currentVideos.map((video, index) => (
+                                    {currentVideos.map((video: Doc<"generatedVideos">, index: number) => (
                                         <motion.div
                                             key={index}
                                             variants={fadeInUp}

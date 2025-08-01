@@ -1,5 +1,2 @@
-// Page export
+// Page export for app router
 export { default as CampaignAnalyticsPage } from './CampaignAnalyticsPage';
-
-// Components
-export { default as AnalyticsClient } from './components/AnalyticsClient';

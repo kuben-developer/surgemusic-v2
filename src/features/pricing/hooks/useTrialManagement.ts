@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAction } from "convex/react";
 import { toast } from "sonner";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 
 export function useTrialManagement() {
   const [convertedToPaidPlanLoading, setConvertedToPaidPlanLoading] = useState(false);

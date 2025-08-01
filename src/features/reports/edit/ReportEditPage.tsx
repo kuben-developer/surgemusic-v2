@@ -51,7 +51,7 @@ export default function ReportEditPage() {
     // Prepare initial data for the form
     const initialFormData = {
         name: reportData.name,
-        campaignIds: reportData.campaigns.map((c: { id: string }) => c.id)
+        campaignIds: reportData.campaigns.map((c: { _id: string }) => c._id)
     };
 
     return (

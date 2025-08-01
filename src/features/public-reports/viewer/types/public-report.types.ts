@@ -66,7 +66,7 @@ export interface PublicCampaignInfo {
 
 // Totals for metrics (extends from analytics types)
 export interface MetricTotals extends Totals {
-  totalVideos?: number;
+  totalVideos: number;
 }
 
 // Main shared report data structure
