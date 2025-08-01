@@ -77,7 +77,7 @@ export function AnalyticsContent({
                 isRefreshing={isRefreshing}
                 campaignCount={campaignCount}
                 reportName={report.name}
-                lastUpdatedAt={lastUpdatedAt}
+                lastUpdatedAt={lastUpdatedAt ? new Date(lastUpdatedAt).getTime() : null}
             />
 
             <KpiMetricsGrid
@@ -85,11 +85,11 @@ export function AnalyticsContent({
                 totalVideos={totalVideos}
                 avgEngagementRate={avgEngagementRate}
                 campaignsCount={campaignCount}
-                viewsGrowth={viewsGrowth.value}
-                likesGrowth={likesGrowth.value}
-                commentsGrowth={commentsGrowth.value}
-                sharesGrowth={sharesGrowth.value}
-                engagementGrowth={engagementGrowth.value}
+                viewsGrowth={viewsGrowth}
+                likesGrowth={likesGrowth}
+                commentsGrowth={commentsGrowth}
+                sharesGrowth={sharesGrowth}
+                engagementGrowth={engagementGrowth}
             />
 
             <AnalyticsChartsSection

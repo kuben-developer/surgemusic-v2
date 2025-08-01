@@ -4,11 +4,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import type { Control, FieldValues, Path } from "react-hook-form";
-import type { Campaign } from "../types/report.types";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface CampaignSelectionListProps<T extends FieldValues> {
     control: Control<T>;
-    campaigns: Campaign[];
+    campaigns: Doc<"campaigns">[];
 }
 
 export function CampaignSelectionList<T extends FieldValues>({
@@ -18,7 +18,7 @@ export function CampaignSelectionList<T extends FieldValues>({
     return (
         <ScrollArea className="h-60 w-full rounded-md border">
             <div className="p-4">
-                {campaigns.map((campaign: Campaign) => (
+                {campaigns.map((campaign) => (
                     <FormField
                         key={campaign._id}
                         control={control}

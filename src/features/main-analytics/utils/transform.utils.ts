@@ -9,22 +9,54 @@ import type { VideoMetric, DailyData, Totals, Campaign } from '@/types/analytics
  * Transforms video metrics to ensure proper data structure and add fallback values
  */
 export function transformVideoMetrics(videoMetrics: VideoMetric[] = []): VideoMetric[] {
-  return videoMetrics.map((vm: VideoMetric) => ({
-    ...vm,
-    id: vm._id || vm.id || generateRandomId(),
-    videoInfo: {
-      ...vm.videoInfo,
-      id: vm.videoInfo._id || vm.videoInfo.id || generateRandomId(),
-      tiktokUrl: vm.videoInfo.tiktokUrl || '',
-      createdAt: vm.videoInfo._creationTime 
-        ? new Date(vm.videoInfo._creationTime) 
-        : new Date(),
-      campaign: {
-        id: parseInt(vm.videoInfo.campaign?.id?.toString() || '0'),
-        campaignName: vm.videoInfo.campaign?.campaignName || ''
+  return videoMetrics.map((vm: VideoMetric) => {
+    // Handle Convex-specific properties that might exist at runtime
+    const videoInfoWithConvex = vm.videoInfo as VideoMetric['videoInfo'] & { _id?: string; _creationTime?: number };
+    const hasConvexId = videoInfoWithConvex && '_id' in videoInfoWithConvex;
+    const hasConvexTime = videoInfoWithConvex && '_creationTime' in videoInfoWithConvex;
+    
+    return {
+      ...vm,
+      // Use the video's _id as the metric ID (metrics don't have their own IDs)
+      id: (hasConvexId ? videoInfoWithConvex._id : vm.videoInfo?.id) ?? generateRandomId(),
+      videoInfo: vm.videoInfo ? {
+        ...vm.videoInfo,
+        // Standardize on the existing id property
+        id: (hasConvexId ? videoInfoWithConvex._id : vm.videoInfo.id) ?? generateRandomId(),
+        tiktokUrl: vm.videoInfo.tiktokUrl ?? '',
+        createdAt: hasConvexTime && videoInfoWithConvex._creationTime
+          ? new Date(videoInfoWithConvex._creationTime) 
+          : (vm.videoInfo.createdAt instanceof Date ? vm.videoInfo.createdAt : new Date()),
+        campaign: vm.videoInfo.campaign ? {
+          // Handle both Convex _id and standard id
+          id: (() => {
+            const campaignWithConvex = vm.videoInfo.campaign as typeof vm.videoInfo.campaign & { _id?: string };
+            if ('_id' in campaignWithConvex && typeof campaignWithConvex._id === 'string') {
+              return parseInt(campaignWithConvex._id, 10) ?? 0;
+            }
+            return vm.videoInfo.campaign.id ?? 0;
+          })(),
+          campaignName: vm.videoInfo.campaign.campaignName ?? ''
+        } : {
+          id: 0,
+          campaignName: ''
+        }
+      } : {
+        // Fallback structure if videoInfo is missing
+        id: generateRandomId(),
+        postId: null,
+        videoUrl: '',
+        videoName: '',
+        videoType: '',
+        tiktokUrl: '',
+        createdAt: new Date(),
+        campaign: {
+          id: 0,
+          campaignName: ''
+        }
       }
-    }
-  }));
+    };
+  });
 }
 
 /**

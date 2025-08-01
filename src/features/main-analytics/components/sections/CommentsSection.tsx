@@ -16,7 +16,7 @@ export function CommentsSection(props: CommentsSectionProps) {
   // Determine campaign IDs to show comments for
   const campaignIds = selectedCampaigns.length > 0 
     ? selectedCampaigns 
-    : campaigns.map((campaign) => campaign._id).filter(Boolean);
+    : campaigns.map((campaign) => campaign._id || campaign.id).filter((id): id is string => Boolean(id));
 
   return (
     <motion.div variants={fadeInUp}>

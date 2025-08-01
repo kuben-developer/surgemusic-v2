@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { ArrowUpRight } from "lucide-react";
 import React from "react";
-import type { GrowthData, MetricKey, MetricInfo, DailyData, Totals } from "./types";
+import type { GrowthData, MetricKey, MetricInfo, DailyData, Totals } from "@/types/analytics.types";
 
 interface PerformanceChartCardProps {
     dailyData: DailyData[];

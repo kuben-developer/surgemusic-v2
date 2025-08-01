@@ -14,7 +14,7 @@ export function useVideoCountLogic({
   setSelectedVideoCount
 }: UseVideoCountLogicProps) {
   const [isCustomMode, setIsCustomMode] = useState(false);
-  const [customVideoCount, setCustomVideoCount] = useState(CUSTOM_VIDEO_CONFIG.MIN_COUNT);
+  const [customVideoCount, setCustomVideoCount] = useState<number>(CUSTOM_VIDEO_CONFIG.MIN_COUNT);
 
   const handleCustomSliderChange = (value: number[]) => {
     const firstValue = value[0];

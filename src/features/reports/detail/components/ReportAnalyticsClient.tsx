@@ -100,7 +100,7 @@ export function ReportAnalyticsClient() {
             <AnalyticsContent
                 report={transformedReport!}
                 analyticsData={analyticsData}
-                growthData={growthData}
+                growthData={growthData!}
                 processedData={processedData}
                 state={state}
                 handlers={handlers}

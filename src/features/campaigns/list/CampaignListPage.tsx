@@ -18,7 +18,7 @@ export default function CampaignListPage() {
   const [folderManagerOpen, setFolderManagerOpen] = useState(false);
 
   // Fetch folder and campaign data using Convex
-  const folderData = useQuery(api.campaigns.getAllWithFolders) as FolderData | undefined;
+  const folderData = useQuery(api.campaigns.getAllWithFolders);
   const isLoading = folderData === undefined;
   const error = null; // Convex handles errors differently
 
@@ -64,7 +64,7 @@ export default function CampaignListPage() {
       />
 
       {/* Folder Navigation */}
-      <div className="mb-8">
+      <div className="my-8">
         <FolderNavigation
           folders={processedData.folders}
           allCampaigns={processedData.allCampaigns}

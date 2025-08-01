@@ -13,6 +13,17 @@ interface AnalyticsAreaChartProps {
 export function AnalyticsAreaChart({ dailyData, activeMetric }: AnalyticsAreaChartProps) {
   const metricInfo = METRIC_INFO[activeMetric as keyof typeof METRIC_INFO];
   
+  if (!metricInfo) {
+    return (
+      <div className="h-80 bg-white dark:bg-muted/30 rounded-lg p-4 border border-border/30 shadow-sm flex items-center justify-center">
+        <p className="text-muted-foreground">Invalid metric selected</p>
+      </div>
+    );
+  }
+
+  // TypeScript assertion after null check - we know metricInfo is defined here
+  const safeMetricInfo = metricInfo;
+  
   return (
     <motion.div
       className="h-80 bg-white dark:bg-muted/30 rounded-lg p-4 border border-border/30 shadow-sm"
@@ -27,12 +38,12 @@ export function AnalyticsAreaChart({ dailyData, activeMetric }: AnalyticsAreaCha
             <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
               <stop
                 offset="5%"
-                stopColor={metricInfo.color}
+                stopColor={safeMetricInfo.color}
                 stopOpacity={0.8}
               />
               <stop
                 offset="95%"
-                stopColor={metricInfo.color}
+                stopColor={safeMetricInfo.color}
                 stopOpacity={0.2}
               />
             </linearGradient>
@@ -64,7 +75,7 @@ export function AnalyticsAreaChart({ dailyData, activeMetric }: AnalyticsAreaCha
             }}
             labelStyle={{ color: 'var(--foreground)', fontWeight: 600, marginBottom: '4px' }}
             itemStyle={{ color: 'var(--foreground)', fontSize: 14 }}
-            formatter={(value) => [value.toLocaleString(), metricInfo.label]}
+            formatter={(value) => [value.toLocaleString(), safeMetricInfo.label]}
             labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', {
               weekday: 'short',
               month: 'short',
@@ -74,13 +85,13 @@ export function AnalyticsAreaChart({ dailyData, activeMetric }: AnalyticsAreaCha
           <Area
             type="monotone"
             dataKey={activeMetric}
-            stroke={metricInfo.color}
+            stroke={safeMetricInfo.color}
             strokeWidth={3}
             fillOpacity={1}
             fill="url(#colorGradient)"
             activeDot={{
               r: 6,
-              stroke: metricInfo.color,
+              stroke: safeMetricInfo.color,
               strokeWidth: 2,
               fill: 'var(--background)'
             }}

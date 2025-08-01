@@ -80,7 +80,7 @@ export function useFolderSidebar({
   // Computed values
   const folderCount = folders?.length || 0;
   const hasNoFolders = !isLoading && (!folders || folders.length === 0);
-  const canCreateFolder = newFolderName.trim() && !isCreating;
+  const canCreateFolder = Boolean(newFolderName.trim()) && !isCreating;
 
   return {
     handleFolderSelect,

@@ -1,12 +1,12 @@
 export interface VideoMetric {
   id: string;
   _id?: string;
-  videoInfo: VideoInfo;
+  videoInfo?: VideoInfo;
   views: number;
   likes: number;
   comments: number;
   shares: number;
-  engagementRate: string;
+  engagementRate?: string;
 }
 
 export interface VideoInfo {

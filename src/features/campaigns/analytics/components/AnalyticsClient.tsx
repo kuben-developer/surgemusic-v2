@@ -13,7 +13,8 @@ import { AnalyticsHeader } from "./AnalyticsHeader";
 import { CampaignInfoSection } from "./CampaignInfoSection";
 import { useAnalyticsData } from "../hooks/useAnalyticsData";
 import { fadeInUp, staggerContainer } from "../constants/metrics";
-import { processAnalyticsData, calculateGrowthMetrics, calculateEngagementGrowth } from "../utils/analytics-calculations";
+import { processAnalyticsData } from "../utils/analytics-calculations";
+import { calculateGrowth } from "@/utils/analytics/growth-calculations.utils";
 
 export default function AnalyticsClient() {
     const params = useParams()
@@ -34,7 +35,6 @@ export default function AnalyticsClient() {
         isAnalyticsLoading,
         handleDateRangeChange,
         refreshAnalytics,
-        calculateGrowth,
     } = useAnalyticsData({ campaignId })
 
     if (isCampaignLoading || isAnalyticsLoading) {
@@ -76,12 +76,12 @@ export default function AnalyticsClient() {
         videoMetrics
     } = processAnalyticsData(analyticsData);
 
-    // Calculate growth metrics
-    const viewsGrowth = calculateGrowthMetrics(dailyData, 'views');
-    const likesGrowth = calculateGrowthMetrics(dailyData, 'likes');
-    const commentsGrowth = calculateGrowthMetrics(dailyData, 'comments');
-    const sharesGrowth = calculateGrowthMetrics(dailyData, 'shares');
-    const engagementGrowth = calculateEngagementGrowth(dailyData);
+    // Calculate growth metrics using the imported function
+    const viewsGrowth = calculateGrowth(dailyData, 'views');
+    const likesGrowth = calculateGrowth(dailyData, 'likes');
+    const commentsGrowth = calculateGrowth(dailyData, 'comments');
+    const sharesGrowth = calculateGrowth(dailyData, 'shares');
+    const engagementGrowth = calculateGrowth(dailyData, 'engagement');
 
     return (
         <div className="container max-w-7xl mx-auto py-12 px-4">
@@ -96,7 +96,7 @@ export default function AnalyticsClient() {
                     campaignId={campaignId}
                     dateRange={dateRange}
                     isRefreshing={isRefreshing}
-                    lastUpdatedAt={lastUpdatedAt}
+                    lastUpdatedAt={lastUpdatedAt ?? undefined}
                     onDateRangeChange={handleDateRangeChange}
                     onRefresh={refreshAnalytics}
                 />

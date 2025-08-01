@@ -16,20 +16,20 @@ interface AnalyticsDialogsProps {
     // Delete dialog
     isDeleteDialogOpen: boolean;
     onDeleteDialogChange: (open: boolean) => void;
-    onDeleteConfirm: () => void;
+    onDeleteConfirm: () => Promise<void>;
     
     // Share dialog
     isShareDialogOpen: boolean;
     onShareDialogChange: (open: boolean) => void;
     shareUrl: string;
     isCopied: boolean;
-    onCopyToClipboard: () => void;
+    onCopyToClipboard: () => Promise<void>;
     
     // Edit videos modal
     isEditVideosModalOpen: boolean;
     onEditVideosModalChange: (open: boolean) => void;
-    onSaveHiddenVideos: (hiddenVideoIds: string[], refetch: () => void) => Promise<void>;
-    refetchAnalytics: () => void;
+    onSaveHiddenVideos: (hiddenVideoIds: string[], refetch: () => Promise<void>) => Promise<void>;
+    refetchAnalytics: () => Promise<void>;
 }
 
 export function AnalyticsDialogs({

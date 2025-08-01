@@ -73,7 +73,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-green-100 dark:bg-green-900/20",
     iconColor: "text-green-600 dark:text-green-400",
     getValue: (data) => data.totals.views.toLocaleString(),
-    getGrowth: (data) => data.viewsGrowth,
+    getGrowth: (data) => data.viewsGrowth || null,
   },
   {
     key: "likes",
@@ -82,7 +82,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
     iconColor: "text-orange-600 dark:text-orange-400",
     getValue: (data) => data.totals.likes.toLocaleString(),
-    getGrowth: (data) => data.likesGrowth,
+    getGrowth: (data) => data.likesGrowth || null,
   },
   {
     key: "comments",
@@ -91,7 +91,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-red-100 dark:bg-red-900/20",
     iconColor: "text-red-600 dark:text-red-400",
     getValue: (data) => data.totals.comments.toLocaleString(),
-    getGrowth: (data) => data.commentsGrowth,
+    getGrowth: (data) => data.commentsGrowth || null,
   },
   {
     key: "shares",
@@ -100,7 +100,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-blue-100 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
     getValue: (data) => data.totals.shares.toLocaleString(),
-    getGrowth: (data) => data.sharesGrowth,
+    getGrowth: (data) => data.sharesGrowth || null,
   },
   {
     key: "engagement",
@@ -109,7 +109,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
     iconColor: "text-indigo-600 dark:text-indigo-400",
     getValue: (data) => `${data.avgEngagementRate}%`,
-    getGrowth: (data) => data.engagementGrowth,
+    getGrowth: (data) => data.engagementGrowth ?? null,
   },
 ];
 

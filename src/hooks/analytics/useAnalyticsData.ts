@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import type { 
-  BaseAnalyticsData, 
   ProcessedAnalyticsData,
   GrowthMetrics 
 } from '@/types/analytics.types';
@@ -21,7 +20,7 @@ interface UseAnalyticsDataProps {
 }
 
 interface UseAnalyticsDataReturn {
-  processedData: BaseAnalyticsData | ProcessedAnalyticsData;
+  processedData: ProcessedAnalyticsData;
   growthMetrics: GrowthMetrics;
   isDataValid: boolean;
   campaignCount: number;
@@ -54,7 +53,7 @@ export function useAnalyticsData({
             allVideoMetrics: [],
             visibleVideoMetrics: []
           } as ProcessedAnalyticsData
-        : createDefaultAnalyticsData();
+        : { ...createDefaultAnalyticsData(), hiddenVideoIds: [] };
     }
 
     return includeHiddenFiltering 
@@ -74,7 +73,7 @@ export function useAnalyticsData({
   } = useMetricCalculations({
     dailyData: processedData.dailyData,
     videoMetrics: processedData.videoMetrics,
-    hiddenVideoIds: 'hiddenVideoIds' in processedData ? (processedData.hiddenVideoIds || []) : [],
+    hiddenVideoIds: Array.isArray(processedData.hiddenVideoIds) ? processedData.hiddenVideoIds : [],
     useWeeklyCalculation: useWeeklyGrowth
   });
 

@@ -3,12 +3,12 @@
 import React from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { Campaign } from "../types/report.types";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 
-type SetValueFunction = (name: string, value: string[], options?: { shouldValidate?: boolean }) => void;
+type SetValueFunction = (name: "campaignIds", value: string[], options?: { shouldValidate?: boolean }) => void;
 
 interface UseCampaignSelectionReturn {
-  campaigns: Campaign[];
+  campaigns: Doc<"campaigns">[];
   isLoadingCampaigns: boolean;
   campaignsError: null;
   allCampaignIds: string[];
@@ -23,7 +23,7 @@ export function useCampaignSelection(): UseCampaignSelectionReturn {
   const campaigns = campaignsResult ?? [];
   const campaignsError = null; // Convex doesn't expose errors the same way
 
-  const allCampaignIds = React.useMemo(() => campaigns.map((c: Campaign) => c._id), [campaigns]);
+  const allCampaignIds = React.useMemo(() => campaigns.map((c) => c._id), [campaigns]);
 
   const selectAll = (setValue: SetValueFunction) => {
     setValue("campaignIds", allCampaignIds, { shouldValidate: true });

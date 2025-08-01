@@ -7,7 +7,7 @@ import {
     TrendingUp
 } from "lucide-react";
 import { KpiCard } from "./KpiCard";
-import type { GrowthData, Totals } from "./types";
+import type { GrowthData, Totals } from "@/types/analytics.types";
 
 interface KpiMetricsGridProps {
     campaignsCount: number;

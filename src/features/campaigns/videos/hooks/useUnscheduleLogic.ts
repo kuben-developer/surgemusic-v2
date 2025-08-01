@@ -3,14 +3,8 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
-
-interface UnscheduleResult {
-  postId: string;
-  success: boolean;
-  error?: string;
-}
+import type { ScheduledVideo, UnscheduleResult } from "../types/unschedule.types";
 
 interface UnscheduleResponse {
   message: string;
@@ -25,19 +19,14 @@ export function useUnscheduleLogic() {
 
   const unschedulePost = useMutation(api.ayrshare.unschedulePost);
 
-  const toggleSelectAll = (scheduledVideos?: Doc<"generatedVideos">[]) => {
+  const toggleSelectAll = (scheduledVideos?: ScheduledVideo[]) => {
     if (!scheduledVideos) return;
     
     if (selectedVideos.length === scheduledVideos.length) {
       setSelectedVideos([]);
     } else {
-      // Extract post IDs from the various upload fields (tiktok, instagram, youtube)
-      const postIds: string[] = [];
-      scheduledVideos.forEach(video => {
-        if (video.tiktokUpload?.post.id) postIds.push(video.tiktokUpload.post.id);
-        if (video.instagramUpload?.post.id) postIds.push(video.instagramUpload.post.id);
-        if (video.youtubeUpload?.post.id) postIds.push(video.youtubeUpload.post.id);
-      });
+      // Extract post IDs from the scheduled videos
+      const postIds = scheduledVideos.map(video => video.postId);
       setSelectedVideos(postIds);
     }
   };

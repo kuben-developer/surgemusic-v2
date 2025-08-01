@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from 'react';
 import type { VideoMetric, DailyData, Totals, AnalyticsData, Campaign } from '@/types/analytics.types';
 import { 
@@ -41,13 +43,13 @@ export function useAnalyticsTransform(data: AnalyticsData | null): UseAnalyticsT
 
     // Calculate derived values
     const campaignCount = campaigns.length;
-    const totalVideos = totals.totalVideos;
+    const totalVideos = totals.totalVideos ?? mappedVideoMetrics.length;
 
     return {
       mappedVideoMetrics,
       campaignCount,
       totalVideos,
-      totals,
+      totals: { ...totals, totalVideos },
       dailyData,
       avgEngagementRate,
       campaigns

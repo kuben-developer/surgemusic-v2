@@ -79,10 +79,10 @@ export type Campaign = {
     videoCount: number;
     genre: string;
     themes: string[];
-    isCompleted: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    status?: string;
+    status: "pending" | "completed" | "failed";
+    _creationTime: number;
+    userId: string;
+    referenceId: string;
 };
 
 export type ReportCampaign = {

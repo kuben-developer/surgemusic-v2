@@ -22,7 +22,7 @@ interface VideoSectionContentProps {
   viewMode: "table" | "grid";
   downloadingVideos: Record<string, boolean>;
   onDownloadVideo: (url: string, name: string, id: string) => void;
-  onDownloadAll: () => void;
+  onDownloadAll: (videos?: Doc<"generatedVideos">[]) => void;
   campaign?: Doc<"campaigns">;
   campaignId: string;
   statusFilter: string;
@@ -78,7 +78,7 @@ export function VideoSectionContent({
         videos={filteredVideos}
         downloadingVideos={downloadingVideos}
         handleDownloadVideo={onDownloadVideo}
-        handleDownloadAll={onDownloadAll}
+        handleDownloadAll={async (videos) => onDownloadAll(videos)}
         songName={campaign?.songName || ""}
         artistName={campaign?.artistName || ""}
         genre={campaign?.genre || ""}

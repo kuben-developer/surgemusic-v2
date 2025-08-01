@@ -46,10 +46,10 @@ export function AnalyticsChartsSection({
                 setActiveMetric={onActiveMetricChange}
                 metricInfo={metricInfo}
                 dateRange={dateRange}
-                viewsGrowth={viewsGrowth.value}
-                likesGrowth={likesGrowth.value}
-                commentsGrowth={commentsGrowth.value}
-                sharesGrowth={sharesGrowth.value}
+                viewsGrowth={viewsGrowth}
+                likesGrowth={likesGrowth}
+                commentsGrowth={commentsGrowth}
+                sharesGrowth={sharesGrowth}
             />
 
             <TopContentCard

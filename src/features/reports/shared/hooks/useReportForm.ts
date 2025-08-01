@@ -10,10 +10,8 @@ import type { ReportFormValues } from '../types/report.types';
 // Define the Zod schema for the form
 const reportFormSchema = z.object({
     name: z.string().min(1, { message: "Report name cannot be empty." }),
-    campaignIds: z.array(z.string()).refine((value) => value.some((item) => item), {
-        message: "You have to select at least one campaign.",
-    }),
-});
+    campaignIds: z.array(z.string()).min(1, { message: "You have to select at least one campaign." }),
+}) satisfies z.ZodType<ReportFormValues>;
 
 interface UseReportFormProps {
     initialData?: Partial<ReportFormValues & { campaignIds: string[] }>;

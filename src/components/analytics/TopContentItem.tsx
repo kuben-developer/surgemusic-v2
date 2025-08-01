@@ -1,5 +1,5 @@
 import { ExternalLink, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
-import type { VideoMetric } from "./types";
+import type { VideoMetric } from "@/types/analytics.types";
 
 export { type VideoMetric };
 
@@ -10,6 +10,15 @@ interface TopContentItemProps {
 }
 
 export function TopContentItem({ video, rank }: TopContentItemProps) {
+    // Handle case where videoInfo might be undefined
+    if (!video.videoInfo) {
+        return (
+            <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-muted/30">
+                <div className="text-sm text-muted-foreground">Video information unavailable</div>
+            </div>
+        );
+    }
+
     return (
         <div
             key={video.id}

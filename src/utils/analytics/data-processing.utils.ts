@@ -11,14 +11,15 @@ import type {
  * Process raw analytics data into a standardized format
  * Used across multiple features for data normalization
  */
-export const processAnalyticsData = (analyticsData: any): BaseAnalyticsData => {
+export const processAnalyticsData = (analyticsData: any): ProcessedAnalyticsData => {
   if (!analyticsData) {
     return {
       totals: { views: 0, likes: 0, comments: 0, shares: 0 },
       dailyData: [],
       avgEngagementRate: '0',
       lastUpdatedAt: null,
-      videoMetrics: []
+      videoMetrics: [],
+      hiddenVideoIds: []
     };
   }
 
@@ -27,7 +28,8 @@ export const processAnalyticsData = (analyticsData: any): BaseAnalyticsData => {
     dailyData: analyticsData.dailyData || [],
     avgEngagementRate: analyticsData.avgEngagementRate || '0',
     lastUpdatedAt: analyticsData.lastUpdatedAt,
-    videoMetrics: analyticsData.videoMetrics || []
+    videoMetrics: analyticsData.videoMetrics || [],
+    hiddenVideoIds: []
   };
 };
 

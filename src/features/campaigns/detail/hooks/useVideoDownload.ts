@@ -6,7 +6,7 @@ import JSZip from 'jszip';
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface UseVideoDownloadProps {
-  campaign?: Doc<"campaigns">;
+  campaign?: Doc<"campaigns"> | null;
   generatedVideos?: Doc<"generatedVideos">[];
 }
 
@@ -61,6 +61,10 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
 
       for (let i = 0; i < generatedVideos.length; i++) {
         const video = generatedVideos[i];
+        if (!video?.video?.url || !video?.video?.name) {
+          console.warn(`Skipping video ${i}: missing video data`);
+          continue;
+        }
         try {
           const response = await fetch(video.video.url);
           const blob = await response.blob();
@@ -70,7 +74,7 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
           const currentProgress = Math.round(((i + 1) / totalVideos) * 100);
           setProgress(currentProgress);
         } catch (error) {
-          console.error(`Error downloading video ${video.video.name}:`, error);
+          console.error(`Error downloading video ${video.video?.name || 'unknown'}:`, error);
           // Continue with other videos even if one fails
         }
       }

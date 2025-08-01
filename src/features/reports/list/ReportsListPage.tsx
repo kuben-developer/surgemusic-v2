@@ -20,7 +20,7 @@ export default function ReportsListPage() {
     } = useReportsList();
 
     const hasReports = reports && reports.length > 0;
-    const isEmpty = !isLoading && !error && reports && reports.length === 0;
+    const isEmpty = !isLoading && !error && reports !== undefined && reports.length === 0;
     const shouldShowTable = !isLoading && !error && hasReports;
 
     return (

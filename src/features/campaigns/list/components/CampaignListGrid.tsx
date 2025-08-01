@@ -1,15 +1,30 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music, Calendar } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Globe, Music, Sparkles, Shapes } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { ProcessedCampaign } from "../hooks/useCampaignData";
 
 interface CampaignListGridProps {
   campaigns: ProcessedCampaign[];
   searchQuery: string;
 }
+
+const getRandomColor = () => {
+  const colors = [
+    "text-red-400",
+    "text-blue-400",
+    "text-green-400",
+    "text-yellow-400",
+    "text-purple-400",
+    "text-pink-400",
+    "text-indigo-400",
+    "text-teal-400",
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
 
 export function CampaignListGrid({ campaigns, searchQuery }: CampaignListGridProps) {
   const router = useRouter();
@@ -25,55 +40,89 @@ export function CampaignListGrid({ campaigns, searchQuery }: CampaignListGridPro
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-300px)]">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {campaigns.map((campaign) => (
-          <Card
-            key={campaign._id}
-            className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => router.push(`/campaign/${campaign._id}`)}
-          >
-            <div className="space-y-3">
-              {campaign.campaignCoverImageUrl && (
-                <div className="aspect-square relative overflow-hidden rounded-md bg-muted">
-                  <img
-                    src={campaign.campaignCoverImageUrl}
-                    alt={campaign.campaignName}
-                    className="object-cover w-full h-full"
-                  />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {campaigns.map((campaign, index) => (
+        <Card
+          key={campaign._id}
+          className="group relative overflow-hidden border-primary/10 bg-card/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+        >
+          <CardContent className="p-0">
+            <div className="relative aspect-[3/4] bg-muted/30">
+              <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60 z-10" />
+              <div className="absolute bottom-4 left-4 right-4 z-20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="bg-background/50 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-medium border border-primary/10">
+                    {campaign.videoCount} VIDEOS
+                  </div>
+                  <div className="bg-background/50 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-medium border border-primary/10">
+                    {campaign.genre.toUpperCase()}
+                  </div>
+                </div>
+                <h2 className="text-xl font-semibold line-clamp-1 drop-shadow-sm">
+                  {campaign.campaignName}
+                </h2>
+              </div>
+              {campaign.campaignCoverImageUrl ? (
+                <Image
+                  src={campaign.campaignCoverImageUrl}
+                  alt={campaign.campaignName}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
+                  <Shapes className={`h-24 w-24 ${getRandomColor()}`} />
                 </div>
               )}
-              
-              <div>
-                <h3 className="font-semibold truncate">{campaign.campaignName}</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <Music className="h-3 w-3" />
-                  <span className="truncate">{campaign.songName}</span>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Music className="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
+                  <p className="text-sm font-medium truncate">{campaign.songName}</p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>{new Date(campaign._creationTime).toLocaleDateString()}</span>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
+                  <p className="text-sm text-muted-foreground truncate">{campaign.artistName}</p>
                 </div>
               </div>
-
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-xs text-muted-foreground">
-                  {campaign.videoCount} videos
-                </span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  campaign.status === 'completed' 
-                    ? 'bg-green-100 text-green-700' 
-                    : campaign.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {campaign.status}
-                </span>
+              <div className="flex flex-wrap gap-1.5">
+                {campaign.themes?.map((theme: string, index: number) => (
+                  <div
+                    key={index}
+                    className="text-[10px] px-2.5 py-1 rounded-md bg-primary/5 text-foreground border border-primary/10"
+                  >
+                    {theme}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className={`w-2 h-2 rounded-full ${campaign.isCompleted ? 'bg-green-600' : 'bg-orange-400 animate-pulse'}`} />
+                  {campaign.isCompleted ? 'Completed' : 'In Progress'}
+                </div>
+                <div className="text-muted-foreground">
+                  {new Date(campaign._creationTime).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </div>
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
+          </CardContent>
+          <CardFooter className="p-5 pt-0">
+            <Button
+              className="relative w-full gap-2 bg-primary/5 hover:bg-primary/10 text-foreground border border-primary/10 hover:border-primary/30 transition-colors"
+              variant="secondary"
+              size="sm"
+              onClick={() => router.push(`/campaign/${campaign._id}`)}
+            >
+              <Globe className="h-4 w-4 transition-transform group-hover:scale-110" />
+              <span>View Campaign</span>
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   );
 }

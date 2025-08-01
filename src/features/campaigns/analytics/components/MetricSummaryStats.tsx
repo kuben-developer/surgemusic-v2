@@ -39,7 +39,7 @@ export function MetricSummaryStats({
     <div className="mt-4 grid grid-cols-3 gap-4">
       <div className="rounded-lg bg-muted/30 p-3">
         <div className="text-xs text-muted-foreground mb-1">Total</div>
-        <div className="text-lg font-semibold">{totals[activeMetric as keyof typeof totals].toLocaleString()}</div>
+        <div className="text-lg font-semibold">{(totals[activeMetric as keyof typeof totals] || 0).toLocaleString()}</div>
       </div>
       <div className="rounded-lg bg-muted/30 p-3">
         <div className="text-xs text-muted-foreground mb-1">Average</div>

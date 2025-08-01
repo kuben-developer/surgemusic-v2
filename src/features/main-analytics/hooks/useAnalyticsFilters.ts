@@ -1,7 +1,7 @@
 "use client";
 
 import { useAnalyticsState } from './useAnalyticsState';
-import type { MetricKey } from '@/components/analytics/types';
+import type { MetricKey } from '@/types/analytics.types';
 
 interface UseAnalyticsFiltersReturn {
   // Campaign filters

@@ -10,8 +10,15 @@ interface UseFolderDataProps {
 }
 
 interface FolderCampaignsData {
-  folder: Doc<"folders">;
-  campaigns: Doc<"campaigns">[];
+  campaigns: (Doc<"campaigns"> & { videoCount: number })[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
 }
 
 interface UseFolderDataReturn {

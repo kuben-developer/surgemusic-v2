@@ -1,4 +1,11 @@
-import type { Doc } from '../../../../convex/_generated/dataModel';
+// User data structure from getCurrentUser API
+export interface UserData {
+  videoGenerationCredit: number;
+  videoGenerationAdditionalCredit: number;
+  subscriptionPriceId?: string;
+  isTrial: boolean;
+  firstTimeUser: boolean;
+}
 
 // Core types
 export type PricingInterval = 'month' | 'year';
@@ -64,7 +71,7 @@ export interface PricingToggleProps {
 
 // Hook return types
 export interface UsePricingPlansReturn {
-  readonly user: Doc<"users"> | undefined;
+  readonly user: UserData | null | undefined;
   readonly isLoading: boolean;
   readonly interval: PricingInterval;
   readonly setInterval: (interval: PricingInterval) => void;

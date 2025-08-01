@@ -14,9 +14,11 @@ export { useAnalyticsData } from './hooks/useAnalyticsData';
 
 // Utils
 export { 
+  calculateMetricGrowth,
   calculateGrowthMetrics, 
   calculateEngagementGrowth, 
-  processAnalyticsData 
+  processAnalyticsData,
+  calculateAllGrowthMetrics
 } from './utils/analytics-calculations';
 
 // Types

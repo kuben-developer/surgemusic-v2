@@ -192,7 +192,7 @@ export function FolderSidebar({
                       {folder.name}
                     </p>
                     <p className="text-xs opacity-70">
-                      {folder.campaignCount} campaign{folder.campaignCount !== 1 ? 's' : ''}
+                      {folder.campaignIds.length} campaign{folder.campaignIds.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>

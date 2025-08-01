@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopContentItem } from "./TopContentItem";
-import type { VideoMetric } from "./types";
+import type { VideoMetric } from "@/types/analytics.types";
 
 interface TopContentCardProps {
     videoMetrics: VideoMetric[];
@@ -20,7 +20,7 @@ export function TopContentCard({
     hiddenVideoIds = [],
 }: TopContentCardProps) {
     const filteredVideos = hiddenVideoIds.length > 0
-        ? videoMetrics?.filter(video => !hiddenVideoIds.includes(video.videoInfo.id))
+        ? videoMetrics?.filter(video => video.videoInfo && !hiddenVideoIds.includes(video.videoInfo.id))
         : videoMetrics || [];
 
     const totalVideos = filteredVideos.length;

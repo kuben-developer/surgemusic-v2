@@ -112,8 +112,8 @@ export function EditVisibleVideosModal({
         
         const lowerCaseQuery = searchQuery.toLowerCase();
         return (
-            video.videoInfo.videoName?.toLowerCase().includes(lowerCaseQuery) ||
-            video.videoInfo.campaign?.campaignName?.toLowerCase().includes(lowerCaseQuery)
+            video.videoInfo?.videoName?.toLowerCase().includes(lowerCaseQuery) ||
+            video.videoInfo?.campaign?.campaignName?.toLowerCase().includes(lowerCaseQuery)
         );
     });
 
@@ -131,7 +131,7 @@ export function EditVisibleVideosModal({
             case "shares":
                 return (a.shares - b.shares) * direction;
             case "date":
-                return (new Date(a.videoInfo.createdAt).getTime() - new Date(b.videoInfo.createdAt).getTime()) * direction;
+                return (new Date(a.videoInfo?.createdAt || 0).getTime() - new Date(b.videoInfo?.createdAt || 0).getTime()) * direction;
             default:
                 return 0;
         }
@@ -181,23 +181,23 @@ export function EditVisibleVideosModal({
     const totalCount = allVideoMetrics.length;
     
     // Count of visible videos from the filtered results
-    const filteredVisibleCount = sortedVideos.filter(video => !hiddenVideoIds.includes(video.videoInfo.id)).length;
+    const filteredVisibleCount = sortedVideos.filter(video => video.videoInfo?.id && !hiddenVideoIds.includes(video.videoInfo.id)).length;
     const filteredCount = sortedVideos.length;
 
     // Bulk selection functions
     const selectAllVisible = () => {
         // Remove all currently filtered/visible videos from hiddenVideoIds
-        const visibleVideoIds = sortedVideos.map(video => video.videoInfo.id);
+        const visibleVideoIds = sortedVideos.map(video => video.videoInfo?.id).filter(Boolean);
         setHiddenVideoIds(prev => prev.filter(id => !visibleVideoIds.includes(id)));
     };
 
     const deselectAllVisible = () => {
         // Add all currently filtered/visible videos to hiddenVideoIds
-        const visibleVideoIds = sortedVideos.map(video => video.videoInfo.id);
+        const visibleVideoIds = sortedVideos.map(video => video.videoInfo?.id).filter(Boolean);
         setHiddenVideoIds(prev => {
             // Create a Set of all hidden IDs to avoid duplicates
             const hiddenSet = new Set(prev);
-            visibleVideoIds.forEach(id => hiddenSet.add(id));
+            visibleVideoIds.forEach(id => id && hiddenSet.add(id));
             return Array.from(hiddenSet);
         });
     };
@@ -340,7 +340,7 @@ export function EditVisibleVideosModal({
                 <div className="max-h-[60vh] overflow-y-auto py-4">
                     <div className="space-y-4">
                         {paginatedVideos.map((video) => {
-                            const isHidden = hiddenVideoIds.includes(video.videoInfo.id);
+                            const isHidden = video.videoInfo?.id ? hiddenVideoIds.includes(video.videoInfo.id) : false;
                             return (
                                 <div
                                     key={video.id}
@@ -355,7 +355,7 @@ export function EditVisibleVideosModal({
                                         <Checkbox
                                             id={`video-${video.id}`}
                                             checked={!isHidden}
-                                            onCheckedChange={() => toggleVideoVisibility(video.videoInfo.id)}
+                                            onCheckedChange={() => video.videoInfo?.id && toggleVideoVisibility(video.videoInfo.id)}
                                         />
                                         <Label
                                             htmlFor={`video-${video.id}`}
@@ -374,10 +374,10 @@ export function EditVisibleVideosModal({
                                             )}
                                         </Label>
                                     </div>
-                                    {video.videoInfo.videoUrl && (
+                                    {video.videoInfo?.videoUrl && (
                                         <div className="h-20 w-20 overflow-hidden rounded-lg border border-border shadow-sm transition-all hover:shadow-md">
                                             <video
-                                                src={video.videoInfo.videoUrl}
+                                                src={video.videoInfo?.videoUrl}
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
@@ -389,11 +389,11 @@ export function EditVisibleVideosModal({
                                                 "text-sm font-semibold truncate mr-2 group-hover:text-primary transition-colors",
                                                 isHidden && "text-muted-foreground"
                                             )}>
-                                                {video.videoInfo.videoName || "Untitled Video"}
+                                                {video.videoInfo?.videoName || "Untitled Video"}
                                             </h4>
-                                            {video.videoInfo.createdAt && (
+                                            {video.videoInfo?.createdAt && (
                                                 <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground whitespace-nowrap">
-                                                    {new Date(video.videoInfo.createdAt).toLocaleDateString("en-US", {
+                                                    {new Date(video.videoInfo?.createdAt || 0).toLocaleDateString("en-US", {
                                                         day: "numeric",
                                                         month: "short",
                                                         hour: "numeric",

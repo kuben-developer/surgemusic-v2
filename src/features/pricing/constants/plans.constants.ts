@@ -86,6 +86,9 @@ function createPricingPlan(
     ...baseConfig.baseFeatures,
   ];
 
+  // Map interval to STRIPE_PRICE_IDS key
+  const stripeKey = interval === 'month' ? 'monthly' : 'yearly';
+
   return {
     name: baseConfig.name,
     price,
@@ -93,7 +96,7 @@ function createPricingPlan(
     videoGenerations,
     songs: baseConfig.songs,
     features,
-    priceId: STRIPE_PRICE_IDS[interval][baseConfig.name],
+    priceId: STRIPE_PRICE_IDS[stripeKey][baseConfig.name],
     interval,
   };
 }

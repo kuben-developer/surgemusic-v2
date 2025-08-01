@@ -29,7 +29,7 @@ export function ReportHeaderWithDateRange({
     >
       <ReportHeader 
         reportName={reportName} 
-        reportCreatedAt={reportCreatedAt}
+        reportCreatedAt={new Date(reportCreatedAt)}
       />
       <DateRangeSelector 
         value={dateRange} 

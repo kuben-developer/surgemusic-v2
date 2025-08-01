@@ -4,25 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarX, CheckCircle2, AlertCircle, Instagram, Youtube, Music2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-interface ScheduledVideo {
-  id: string;
-  videoName: string;
-  videoUrl: string;
-  postId: string;
-  scheduledAt: Date;
-  postCaption: string;
-  scheduledSocialAccounts: {
-    platform: string;
-    username: string;
-  }[];
-}
-
-interface UnscheduleResult {
-  postId: string;
-  success: boolean;
-  error?: string;
-}
+import type { ScheduledVideo, UnscheduleResult } from "../types/unschedule.types";
 
 interface UnscheduleVideoItemProps {
   video: ScheduledVideo;

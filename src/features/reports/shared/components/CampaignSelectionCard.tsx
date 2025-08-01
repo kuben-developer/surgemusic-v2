@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FormField, FormItem, FormMessage } from "@/components/ui/form";
 import type { Control, FieldValues, Path } from "react-hook-form";
-import type { Campaign } from "../types/report.types";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { CampaignSelectionHeader } from "./CampaignSelectionHeader";
 import { CampaignSelectionStates } from "./CampaignSelectionStates";
 import { CampaignSelectionActions } from "./CampaignSelectionActions";
@@ -11,7 +11,7 @@ import { CampaignSelectionList } from "./CampaignSelectionList";
 
 interface CampaignSelectionCardProps<T extends FieldValues> {
     control: Control<T>;
-    campaigns: Campaign[];
+    campaigns: Doc<"campaigns">[];
     isLoadingCampaigns: boolean;
     campaignsError: null;
     selectedCampaignIds: string[];

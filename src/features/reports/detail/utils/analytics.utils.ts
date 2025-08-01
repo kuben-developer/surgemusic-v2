@@ -1,6 +1,12 @@
 // Re-export shared utilities for backward compatibility
 export { 
   calculateAllGrowthMetrics,
+  calculateMetricGrowth,
+  calculateEngagementGrowth,
   filterVisibleVideos,
-  processAnalyticsDataWithFiltering as processAnalyticsData
+  processAnalyticsDataWithFiltering,
+  processAnalyticsDataWithFiltering as processAnalyticsData,
+  calculateGrowth,
+  calculateWeeklyGrowth,
+  getDefaultGrowthMetrics
 } from '@/utils/analytics';

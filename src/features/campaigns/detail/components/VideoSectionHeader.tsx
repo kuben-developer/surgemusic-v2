@@ -63,7 +63,7 @@ export function VideoSectionHeader({
           </SelectContent>
         </Select>
 
-        <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+        <ViewToggle viewMode={viewMode} setViewMode={onViewModeChange} />
 
         {hasVideos && (
           <Button

@@ -1,3 +1,5 @@
+"use client";
+
 interface LoadingStatesProps {
   type?: 'content' | 'page';
 }

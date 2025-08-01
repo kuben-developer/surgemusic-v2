@@ -1,5 +1,7 @@
+import type { Id } from "../../../../../convex/_generated/dataModel";
+
 export interface ScheduledVideo {
-  id: string;
+  id: Id<"generatedVideos">;
   videoName: string;
   videoUrl: string;
   postId: string;

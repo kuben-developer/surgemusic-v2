@@ -16,7 +16,7 @@ export function useReportShare({ reportId }: UseReportShareProps) {
     const [isSharing, setIsSharing] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     
-    const generateShareLinkMutation = useMutation(api.reports.generateShareLink);
+    const shareReportMutation = useMutation(api.reports.share);
 
     const handleShareReport = async () => {
         if (!reportId) {
@@ -26,12 +26,15 @@ export function useReportShare({ reportId }: UseReportShareProps) {
         
         setIsSharing(true);
         try {
-            const response = await generateShareLinkMutation({ 
-                reportId: reportId as Id<"reports"> 
+            const response = await shareReportMutation({ 
+                id: reportId as Id<"reports"> 
             });
-            const fullUrl = `${window.location.origin}/shared/reports/${response.shareToken}`;
-            setShareUrl(fullUrl);
-            setIsShareDialogOpen(true);
+            if (response && response.shareUrl) {
+                setShareUrl(response.shareUrl);
+                setIsShareDialogOpen(true);
+            } else {
+                throw new Error("Invalid response from share API");
+            }
         } catch (error) {
             toast.error(`Failed to generate share link: ${(error as Error).message}`);
         } finally {

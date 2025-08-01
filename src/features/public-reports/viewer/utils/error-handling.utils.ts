@@ -11,7 +11,7 @@ export const getErrorType = (error: PublicReportError | null): PublicReportError
     return 'NOT_FOUND';
   } else if (status === 403 || status === 401) {
     return 'EXPIRED';
-  } else if (status >= 500) {
+  } else if (status && status >= 500) {
     return 'SERVER_ERROR';
   }
 

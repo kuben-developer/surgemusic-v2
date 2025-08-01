@@ -74,7 +74,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       {/* Report Header with Date Range */}
       <ReportHeaderWithDateRange
         reportName={data.reportName}
-        reportCreatedAt={data.reportCreatedAt}
+        reportCreatedAt={data.reportCreatedAt.toISOString()}
         dateRange={dateRange}
         onDateRangeChange={handleDateRangeChange}
       />
@@ -103,7 +103,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
         likesGrowth={likesGrowth}
         commentsGrowth={commentsGrowth}
         sharesGrowth={sharesGrowth}
-        visibleVideoMetrics={visibleVideoMetrics}
+        visibleVideoMetrics={visibleVideoMetrics || []}
         currentPage={currentPage}
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}

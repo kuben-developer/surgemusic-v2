@@ -7,9 +7,9 @@ import { fadeInUp, metricInfo } from '../../constants/metrics.constants';
 import type { 
   ChartDataProps, 
   TopContentProps,
-  GrowthMetrics 
-} from '../../types/analytics.types';
-import type { Totals } from '@/components/analytics/types';
+  GrowthMetrics,
+  Totals
+} from '@/types/analytics.types';
 
 interface ChartsSectionProps extends ChartDataProps, TopContentProps {
   totals: Totals & { totalVideos: number };

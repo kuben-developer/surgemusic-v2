@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eye, Heart, MessageCircle, Share2, ExternalLink } from "lucide-react";
@@ -5,7 +7,7 @@ import type { AnalyticsData } from "../types/analytics.types";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface VideoPerformanceTableProps {
-  generatedVideos: Doc<"videos">[] | undefined;
+  generatedVideos: Doc<"generatedVideos">[] | undefined;
   videoMetrics: AnalyticsData['videoMetrics'];
   currentPage: number;
   itemsPerPage: number;
