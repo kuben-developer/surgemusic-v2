@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { ProcessedCampaign } from "../hooks/useCampaignData";
 
-interface CampaignListGridProps {
+interface CampaignGridViewProps {
   campaigns: ProcessedCampaign[];
   searchQuery: string;
 }
@@ -26,7 +26,7 @@ const getRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-export function CampaignListGrid({ campaigns, searchQuery }: CampaignListGridProps) {
+export function CampaignGridView({ campaigns, searchQuery }: CampaignGridViewProps) {
   const router = useRouter();
 
   if (campaigns.length === 0) {

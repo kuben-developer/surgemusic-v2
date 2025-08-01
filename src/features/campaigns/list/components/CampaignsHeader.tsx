@@ -9,6 +9,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
+import { ViewToggle, type ViewMode } from "@/features/campaigns";
 
 interface DataSummary {
   totalFolders: number;
@@ -25,6 +26,8 @@ interface CampaignsHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onManageFolders: () => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 export function CampaignsHeader({
@@ -32,6 +35,8 @@ export function CampaignsHeader({
   searchQuery,
   onSearchChange,
   onManageFolders,
+  viewMode,
+  setViewMode,
 }: CampaignsHeaderProps) {
   return (
     <div className="space-y-8">
@@ -79,8 +84,8 @@ export function CampaignsHeader({
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div>
+      {/* Search Bar and View Toggle */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Input
           type="text"
           placeholder="Search campaigns..."
@@ -88,6 +93,7 @@ export function CampaignsHeader({
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full max-w-md"
         />
+        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
       </div>
     </div>
   );

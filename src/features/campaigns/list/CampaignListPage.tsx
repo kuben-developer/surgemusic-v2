@@ -8,14 +8,17 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
 import { FolderNavigation } from "./components/FolderNavigation";
-import { CampaignListGrid } from "./components/CampaignListGrid";
-import { useCampaignListData, type FolderData } from "./hooks/useCampaignData";
+import { CampaignGridView } from "./components/CampaignGridView";
+import { CampaignTableView } from "./components/CampaignTableView";
+import { type ViewMode } from "@/features/campaigns";
+import { useCampaignListData } from "./hooks/useCampaignData";
 
 export default function CampaignListPage() {
   // State management for folder and campaign data
   const [selectedView, setSelectedView] = useState<'all' | string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [folderManagerOpen, setFolderManagerOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   // Fetch folder and campaign data using Convex
   const folderData = useQuery(api.campaigns.getAllWithFolders);
@@ -61,6 +64,8 @@ export default function CampaignListPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onManageFolders={() => setFolderManagerOpen(true)}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
       />
 
       {/* Folder Navigation */}
@@ -73,11 +78,18 @@ export default function CampaignListPage() {
         />
       </div>
 
-      {/* Campaign Grid */}
-      <CampaignListGrid
-        campaigns={processedData.filteredCampaigns}
-        searchQuery={searchQuery}
-      />
+      {/* Campaign View - Grid or Table */}
+      {viewMode === 'grid' ? (
+        <CampaignGridView
+          campaigns={processedData.filteredCampaigns}
+          searchQuery={searchQuery}
+        />
+      ) : (
+        <CampaignTableView
+          campaigns={processedData.filteredCampaigns}
+          searchQuery={searchQuery}
+        />
+      )}
 
       {/* Folder Manager Dialog */}
       <FolderManagerDialog
