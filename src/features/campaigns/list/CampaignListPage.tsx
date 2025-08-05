@@ -4,12 +4,12 @@ import { FolderManagerDialog } from "@/features/campaigns/folders";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
 import { FolderNavigation } from "@/features/campaigns/folders";
 import { CampaignGridView } from "./components/CampaignGridView";
 import { CampaignTableView } from "./components/CampaignTableView";
+import { CampaignListLoader } from "./components/CampaignListLoader";
 import { type ViewMode } from "@/features/campaigns";
 import { useCampaignListData } from "./hooks/useCampaignData";
 
@@ -38,13 +38,7 @@ export default function CampaignListPage() {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="container max-w-7xl mx-auto py-8 px-4">
-        <div className="flex justify-center items-center min-h-[50vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
-        </div>
-      </div>
-    );
+    return <CampaignListLoader />;
   }
 
   // Error state
