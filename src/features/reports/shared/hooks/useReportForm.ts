@@ -1,17 +1,8 @@
 "use client";
 
 import React from 'react';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
 import type { ReportFormValues } from '../types/report.types';
-
-// Define the Zod schema for the form
-const reportFormSchema = z.object({
-    name: z.string().min(1, { message: "Report name cannot be empty." }),
-    campaignIds: z.array(z.string()).min(1, { message: "You have to select at least one campaign." }),
-}) satisfies z.ZodType<ReportFormValues>;
 
 interface UseReportFormProps {
     initialData?: Partial<ReportFormValues & { campaignIds: string[] }>;
@@ -19,45 +10,80 @@ interface UseReportFormProps {
     isLoading?: boolean;
 }
 
+interface FormErrors {
+    name?: string;
+    campaignIds?: string;
+}
+
 export function useReportForm({ 
     initialData = {}, 
     onSubmit,
     isLoading = false 
 }: UseReportFormProps) {
-    const form = useForm<ReportFormValues>({
-        resolver: zodResolver(reportFormSchema),
-        defaultValues: { 
-            name: initialData.name ?? "", 
-            campaignIds: initialData.campaignIds ?? [] 
-        },
-    });
-
-    // Watch campaignIds for checkbox updates
-    const selectedCampaignIds = form.watch("campaignIds", initialData.campaignIds ?? []);
+    const [name, setName] = React.useState(initialData.name ?? "");
+    const [campaignIds, setCampaignIds] = React.useState<string[]>(initialData.campaignIds ?? []);
+    const [errors, setErrors] = React.useState<FormErrors>({});
 
     // Reset form if initialData changes (e.g., on edit page load)
     React.useEffect(() => {
         if (!isLoading && initialData.name !== undefined) {
-            form.reset({
-                name: initialData.name,
-                campaignIds: initialData.campaignIds ?? []
-            });
+            setName(initialData.name);
+            setCampaignIds(initialData.campaignIds ?? []);
+            setErrors({});
         }
-    }, [initialData, form, isLoading]);
+    }, [initialData, isLoading]);
 
-    // Wrapper for the onSubmit prop to handle form state and potential errors
-    const handleFormSubmit = async (values: ReportFormValues) => {
+    // Validation function
+    const validate = (): boolean => {
+        const newErrors: FormErrors = {};
+        
+        if (!name.trim()) {
+            newErrors.name = "Report name cannot be empty.";
+        }
+        
+        if (campaignIds.length === 0) {
+            newErrors.campaignIds = "You have to select at least one campaign.";
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Handle form submission
+    const handleSubmit = async () => {
+        if (!validate()) {
+            return;
+        }
+
         try {
-            await onSubmit(values);
+            await onSubmit({ name, campaignIds });
         } catch (error) {
             console.error("Form submission error:", error);
             toast.error("An unexpected error occurred."); 
         }
     };
 
+    // Clear specific error when field is updated
+    const handleNameChange = (value: string) => {
+        setName(value);
+        if (errors.name) {
+            setErrors(prev => ({ ...prev, name: undefined }));
+        }
+    };
+
+    const handleCampaignIdsChange = (ids: string[]) => {
+        setCampaignIds(ids);
+        if (errors.campaignIds) {
+            setErrors(prev => ({ ...prev, campaignIds: undefined }));
+        }
+    };
+
     return {
-        form,
-        selectedCampaignIds,
-        handleFormSubmit,
+        name,
+        campaignIds,
+        errors,
+        setName: handleNameChange,
+        setCampaignIds: handleCampaignIdsChange,
+        handleSubmit,
     };
 }

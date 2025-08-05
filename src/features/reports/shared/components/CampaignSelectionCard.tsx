@@ -1,16 +1,13 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { FormField, FormItem, FormMessage } from "@/components/ui/form";
-import type { Control, FieldValues, Path } from "react-hook-form";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { CampaignSelectionHeader } from "./CampaignSelectionHeader";
 import { CampaignSelectionStates } from "./CampaignSelectionStates";
 import { CampaignSelectionActions } from "./CampaignSelectionActions";
 import { CampaignSelectionList } from "./CampaignSelectionList";
 
-interface CampaignSelectionCardProps<T extends FieldValues> {
-    control: Control<T>;
+interface CampaignSelectionCardProps {
     campaigns: Doc<"campaigns">[];
     isLoadingCampaigns: boolean;
     campaignsError: null;
@@ -18,10 +15,11 @@ interface CampaignSelectionCardProps<T extends FieldValues> {
     allCampaignIds: string[];
     onSelectAll: () => void;
     onClearAll: () => void;
+    onToggleCampaign: (campaignId: string, checked: boolean) => void;
+    error?: string;
 }
 
-export function CampaignSelectionCard<T extends FieldValues>({
-    control,
+export function CampaignSelectionCard({
     campaigns,
     isLoadingCampaigns,
     campaignsError,
@@ -29,45 +27,44 @@ export function CampaignSelectionCard<T extends FieldValues>({
     allCampaignIds,
     onSelectAll,
     onClearAll,
-}: CampaignSelectionCardProps<T>) {
+    onToggleCampaign,
+    error,
+}: CampaignSelectionCardProps) {
     const hasCampaigns = campaigns && campaigns.length > 0;
     const shouldShowContent = !isLoadingCampaigns && !campaignsError && hasCampaigns;
 
     return (
-        <FormField
-            control={control}
-            name={"campaignIds" as Path<T>}
-            render={() => (
-                <FormItem>
-                    <Card>
-                        <CampaignSelectionHeader />
-                        <CardContent>
-                            <CampaignSelectionStates
+        <div className="space-y-2">
+            <Card>
+                <CampaignSelectionHeader />
+                <CardContent>
+                    <CampaignSelectionStates
+                        isLoadingCampaigns={isLoadingCampaigns}
+                        campaignsError={campaignsError}
+                        hasCampaigns={hasCampaigns}
+                    />
+                    
+                    {shouldShowContent && (
+                        <>
+                            <CampaignSelectionActions
+                                onSelectAll={onSelectAll}
+                                onClearAll={onClearAll}
                                 isLoadingCampaigns={isLoadingCampaigns}
-                                campaignsError={campaignsError}
-                                hasCampaigns={hasCampaigns}
+                                selectedCount={selectedCampaignIds.length}
+                                totalCount={allCampaignIds.length}
                             />
-                            
-                            {shouldShowContent && (
-                                <>
-                                    <CampaignSelectionActions
-                                        onSelectAll={onSelectAll}
-                                        onClearAll={onClearAll}
-                                        isLoadingCampaigns={isLoadingCampaigns}
-                                        selectedCount={selectedCampaignIds.length}
-                                        totalCount={allCampaignIds.length}
-                                    />
-                                    <CampaignSelectionList
-                                        control={control}
-                                        campaigns={campaigns}
-                                    />
-                                </>
-                            )}
-                            <FormMessage className="pt-2" />
-                        </CardContent>
-                    </Card>
-                </FormItem>
+                            <CampaignSelectionList
+                                campaigns={campaigns}
+                                selectedCampaignIds={selectedCampaignIds}
+                                onToggleCampaign={onToggleCampaign}
+                            />
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+            {error && (
+                <p className="text-sm text-destructive pt-2">{error}</p>
             )}
-        />
+        </div>
     );
 }

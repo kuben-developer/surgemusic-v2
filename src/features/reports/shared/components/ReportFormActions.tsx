@@ -8,6 +8,7 @@ interface ReportFormActionsProps {
     isLoadingCampaigns?: boolean;
     hasCampaigns?: boolean;
     submitButtonText?: string;
+    onSubmit: () => Promise<void>;
 }
 
 export function ReportFormActions({
@@ -15,12 +16,13 @@ export function ReportFormActions({
     isLoadingCampaigns = false,
     hasCampaigns = true,
     submitButtonText = "Save Report",
+    onSubmit,
 }: ReportFormActionsProps) {
     const isDisabled = isLoading || isLoadingCampaigns || !hasCampaigns;
 
     return (
         <Button 
-            type="submit" 
+            onClick={onSubmit}
             disabled={isDisabled} 
             className="flex items-center gap-2"
         >

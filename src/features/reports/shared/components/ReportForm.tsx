@@ -1,6 +1,5 @@
 "use client";
 
-import { Form } from "@/components/ui/form";
 import { useCampaignSelection } from "../hooks/useCampaignSelection";
 import { useReportForm } from "../hooks/useReportForm";
 import { CampaignSelectionCard } from "./CampaignSelectionCard";
@@ -23,7 +22,14 @@ export function ReportForm({
 }: ReportFormProps) {
     
     // Use custom hooks for form and campaign selection
-    const { form, selectedCampaignIds, handleFormSubmit } = useReportForm({
+    const { 
+        name, 
+        campaignIds, 
+        errors, 
+        setName, 
+        setCampaignIds, 
+        handleSubmit 
+    } = useReportForm({
         initialData,
         onSubmit,
         isLoading,
@@ -34,44 +40,52 @@ export function ReportForm({
         isLoadingCampaigns,
         campaignsError,
         allCampaignIds,
-        selectAll,
-        clearAll,
     } = useCampaignSelection();
 
     const handleSelectAll = () => {
-        selectAll(form.setValue);
+        setCampaignIds(allCampaignIds);
     };
 
     const handleClearAll = () => {
-        clearAll(form.setValue);
+        setCampaignIds([]);
+    };
+
+    const handleToggleCampaign = (campaignId: string, checked: boolean) => {
+        if (checked) {
+            setCampaignIds([...campaignIds, campaignId]);
+        } else {
+            setCampaignIds(campaignIds.filter(id => id !== campaignId));
+        }
     };
 
     return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-                <ReportNameField
-                    control={form.control}
-                    name="name"
-                />
+        <div className="space-y-8">
+            <ReportNameField
+                value={name}
+                onChange={setName}
+                error={errors.name}
+                disabled={isLoading}
+            />
 
-                <CampaignSelectionCard
-                    control={form.control}
-                    campaigns={campaigns}
-                    isLoadingCampaigns={isLoadingCampaigns}
-                    campaignsError={campaignsError}
-                    selectedCampaignIds={selectedCampaignIds}
-                    allCampaignIds={allCampaignIds}
-                    onSelectAll={handleSelectAll}
-                    onClearAll={handleClearAll}
-                />
+            <CampaignSelectionCard
+                campaigns={campaigns}
+                isLoadingCampaigns={isLoadingCampaigns}
+                campaignsError={campaignsError}
+                selectedCampaignIds={campaignIds}
+                allCampaignIds={allCampaignIds}
+                onSelectAll={handleSelectAll}
+                onClearAll={handleClearAll}
+                onToggleCampaign={handleToggleCampaign}
+                error={errors.campaignIds}
+            />
 
-                <ReportFormActions
-                    isLoading={isLoading}
-                    isLoadingCampaigns={isLoadingCampaigns}
-                    hasCampaigns={campaigns && campaigns.length > 0}
-                    submitButtonText={submitButtonText}
-                />
-            </form>
-        </Form>
+            <ReportFormActions
+                isLoading={isLoading}
+                isLoadingCampaigns={isLoadingCampaigns}
+                hasCampaigns={campaigns && campaigns.length > 0}
+                submitButtonText={submitButtonText}
+                onSubmit={handleSubmit}
+            />
+        </div>
     );
 }
