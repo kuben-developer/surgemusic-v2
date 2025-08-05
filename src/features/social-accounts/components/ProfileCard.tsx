@@ -24,7 +24,7 @@ export function ProfileCard({
   isGeneratingUrl = false
 }: ProfileCardProps) {
   return (
-    <Card className="overflow-hidden space-y-0 px-2 py-1">
+    <Card className="overflow-hidden space-y-0 px-2 py-1 gap-0">
       <CardHeader className="px-2 py-0 pt-2 ">
         <div className="flex items-center justify-between">
           <ProfileHeader
@@ -43,7 +43,7 @@ export function ProfileCard({
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="pb-2 ">
+        <CardContent className="py-2">
           <ProfileContent
             profile={profile}
             onOpenManager={onOpenManager}
