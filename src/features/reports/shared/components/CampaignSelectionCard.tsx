@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
@@ -34,6 +34,44 @@ export function CampaignSelectionCard({
     error,
 }: CampaignSelectionCardProps) {
     const [searchQuery, setSearchQuery] = useState("");
+    const [campaignOrder, setCampaignOrder] = useState<string[]>([]);
+    const initialSelectionsRef = useRef<string[] | null>(null);
+    const sortAppliedRef = useRef(false);
+    
+    // Capture initial selections on first render
+    if (initialSelectionsRef.current === null) {
+        initialSelectionsRef.current = selectedCampaignIds;
+    }
+    
+    // Apply initial sorting only once when component first loads with campaigns
+    useEffect(() => {
+        if (!sortAppliedRef.current && campaigns && campaigns.length > 0) {
+            const initialSelections = initialSelectionsRef.current;
+            
+            // Check if we have initial selections (editing mode)
+            if (initialSelections && initialSelections.length > 0) {
+                // Sort campaigns with initially selected ones at the top
+                const selected: typeof campaigns = [];
+                const unselected: typeof campaigns = [];
+                
+                campaigns.forEach(campaign => {
+                    if (initialSelections.includes(campaign._id)) {
+                        selected.push(campaign);
+                    } else {
+                        unselected.push(campaign);
+                    }
+                });
+                
+                // Store the sorted order with selected campaigns first
+                const sortedOrder = [...selected, ...unselected].map(c => c._id);
+                setCampaignOrder(sortedOrder);
+            } else {
+                // No initial selections (create mode), use the original order
+                setCampaignOrder(campaigns.map(c => c._id));
+            }
+            sortAppliedRef.current = true;
+        }
+    }, [campaigns]); // Only depend on campaigns
     
     // Filter campaigns based on search query
     const filteredCampaigns = useMemo(() => {
@@ -50,7 +88,34 @@ export function CampaignSelectionCard({
         );
     }, [campaigns, searchQuery]);
     
-    // Use shared selection logic
+    // Apply the stable sort order to filtered campaigns
+    const sortedCampaigns = useMemo(() => {
+        if (!filteredCampaigns || filteredCampaigns.length === 0) return [];
+        
+        // If we have a campaign order, use it to sort the filtered results
+        if (campaignOrder.length > 0) {
+            // Create a map for quick lookup
+            const campaignMap = new Map<string, Doc<"campaigns">>();
+            filteredCampaigns.forEach(c => campaignMap.set(c._id, c));
+            
+            const sorted: typeof filteredCampaigns = [];
+            
+            // Add campaigns in the stored order
+            for (const id of campaignOrder) {
+                const campaign = campaignMap.get(id);
+                if (campaign) {
+                    sorted.push(campaign);
+                }
+            }
+            
+            return sorted;
+        }
+        
+        // No custom order, use the filtered campaigns as-is
+        return filteredCampaigns;
+    }, [filteredCampaigns, campaignOrder]);
+    
+    // Use shared selection logic with sorted campaigns
     const {
         selectedIds,
         setSelectedIds,
@@ -62,31 +127,36 @@ export function CampaignSelectionCard({
         itemRefs,
         isSelecting,
         selectionRectStyle,
-    } = useSelectionLogic({ items: filteredCampaigns });
+    } = useSelectionLogic({ items: sortedCampaigns });
     
-    // Sync external selection state with internal state
-    useMemo(() => {
+    // Sync external selection state with internal state (parent → internal)
+    useEffect(() => {
         setSelectedIds(new Set(selectedCampaignIds));
     }, [selectedCampaignIds, setSelectedIds]);
     
-    // Wrap handlers to sync with parent component
-    const handleItemSelectWrapper = (campaignId: string, selected: boolean) => {
-        handleItemSelect(campaignId, selected);
-        onToggleCampaign(campaignId, selected);
-    };
+    // Sync internal selection state with parent (internal → parent)
+    // This ensures drag selection and other internal changes sync back
+    useEffect(() => {
+        const currentParentIds = new Set(selectedCampaignIds);
+        const internalIds = selectedIds;
+        
+        // Find differences
+        const toAdd = Array.from(internalIds).filter(id => !currentParentIds.has(id));
+        const toRemove = Array.from(currentParentIds).filter(id => !internalIds.has(id));
+        
+        // Sync changes to parent
+        toAdd.forEach(id => onToggleCampaign(id, true));
+        toRemove.forEach(id => onToggleCampaign(id, false));
+    }, [selectedIds]); // Intentionally not including dependencies to avoid infinite loop
     
+    // Since we have bidirectional sync via useEffect, we can use the original handlers
     const handleSelectAllWrapper = (selected: boolean) => {
         handleSelectAll(selected);
-        if (selected) {
-            onSelectAll();
-        } else {
-            onClearAll();
-        }
     };
     
     const handleClearSelectionWrapper = () => {
         setSelectedIds(new Set());
-        onClearAll();
+        onClearAll(); // Call the parent's clear all function
     };
     
     const emptyState = (
@@ -127,7 +197,7 @@ export function CampaignSelectionCard({
                             containerRef={containerRef}
                             onMouseDown={handleMouseDown}
                             onItemClick={handleItemClick}
-                            onItemSelect={handleItemSelectWrapper}
+                            onItemSelect={handleItemSelect}
                             itemRefs={itemRefs}
                             selectionRect={selectionRect}
                         />
@@ -149,12 +219,12 @@ export function CampaignSelectionCard({
                                 
                                 <SelectionControls
                                     selectedCount={selectedIds.size}
-                                    totalCount={filteredCampaigns.length}
+                                    totalCount={sortedCampaigns.length}
                                     onSelectAll={handleSelectAllWrapper}
                                     onClearSelection={handleClearSelectionWrapper}
                                 >
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <span>Showing {filteredCampaigns.length} campaigns</span>
+                                        <span>Showing {sortedCampaigns.length} campaigns</span>
                                         {selectedIds.size > 0 && (
                                             <>
                                                 <span>•</span>
@@ -167,14 +237,14 @@ export function CampaignSelectionCard({
                             
                             {/* Campaigns Grid */}
                             <SelectableCampaignGrid
-                                campaigns={filteredCampaigns}
+                                campaigns={sortedCampaigns}
                                 selectedIds={selectedIds}
                                 isLoading={false}
                                 emptyState={emptyState}
                                 containerRef={containerRef}
                                 onMouseDown={handleMouseDown}
                                 onItemClick={handleItemClick}
-                                onItemSelect={handleItemSelectWrapper}
+                                onItemSelect={handleItemSelect}
                                 itemRefs={itemRefs}
                                 selectionRect={selectionRect}
                             />

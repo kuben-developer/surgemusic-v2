@@ -36,7 +36,7 @@ export function SelectableCampaignGrid({
         <div className="p-6">
           <div 
             ref={containerRef}
-            className="relative select-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+            className="relative select-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
             onMouseDown={onMouseDown}
           >
             {isLoading ? (
