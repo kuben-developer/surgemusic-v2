@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
-import { action, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 function generateShareId(): string {
   return crypto.randomUUID().replace(/-/g, '');
@@ -86,9 +85,17 @@ export const list = query({
           })
         );
 
+        const validCampaigns = campaigns.filter(c => c !== null);
+        
+        // Log if orphaned campaign IDs were found (can't patch in a query)
+        if (validCampaigns.length !== report.campaignIds.length) {
+          console.warn(`Report ${report._id} has ${report.campaignIds.length - validCampaigns.length} orphaned campaign ID(s)`);
+        }
+
         return {
           ...report,
-          campaigns: campaigns.filter(c => c !== null),
+          campaignIds: validCampaigns.map(c => c!.id),
+          campaigns: validCampaigns,
         };
       })
     );
@@ -127,9 +134,19 @@ export const get = query({
       report.campaignIds.map(id => ctx.db.get(id))
     );
 
+    // Filter out null campaigns (deleted campaigns)
+    const validCampaigns = campaigns.filter(c => c !== null);
+    const validCampaignIds = validCampaigns.map(c => c!._id);
+    
+    // Log if orphaned campaign IDs were found (can't patch in a query)
+    if (validCampaignIds.length !== report.campaignIds.length) {
+      console.warn(`Report ${args.id} has ${report.campaignIds.length - validCampaignIds.length} orphaned campaign ID(s)`);
+    }
+
     return {
       ...report,
-      campaigns: campaigns.filter(c => c !== null),
+      campaignIds: validCampaignIds, // Return the cleaned up IDs
+      campaigns: validCampaigns,
     };
   },
 });
@@ -183,12 +200,23 @@ export const update = mutation({
         args.campaignIds.map(id => ctx.db.get(id))
       );
 
-      const userCampaigns = campaigns.filter(c => c && c.userId === user._id);
-      if (userCampaigns.length !== args.campaignIds.length) {
-        throw new Error("One or more campaign IDs are invalid or do not belong to the user.");
+      // Filter out null campaigns (deleted) and campaigns not belonging to the user
+      const validCampaigns = campaigns.filter(c => c && c.userId === user._id);
+      
+      if (validCampaigns.length === 0) {
+        throw new Error("No valid campaigns found. All selected campaigns may have been deleted or do not belong to you.");
+      }
+      
+      // Extract valid campaign IDs
+      const validCampaignIds = validCampaigns.map(c => c!._id);
+      
+      // Log a warning if some campaigns were filtered out
+      if (validCampaignIds.length !== args.campaignIds.length) {
+        const removedCount = args.campaignIds.length - validCampaignIds.length;
+        console.warn(`Filtered out ${removedCount} invalid or deleted campaign(s) during report update for report ${args.id}`);
       }
 
-      updateData.campaignIds = args.campaignIds;
+      updateData.campaignIds = validCampaignIds;
     }
 
     await ctx.db.patch(args.id, updateData);
@@ -353,5 +381,106 @@ export const getReportWithCampaigns = internalQuery({
     if (!report || report.userId !== user._id) return null;
 
     return report;
+  },
+})
+
+// Mutation to clean up orphaned campaign IDs from a specific report
+export const cleanupOrphanedCampaigns = mutation({
+  args: {
+    reportId: v.id("reports"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const report = await ctx.db.get(args.reportId);
+    if (!report) {
+      throw new Error("Report not found.");
+    }
+
+    if (report.userId !== user._id) {
+      throw new Error("You do not have permission to access this report.");
+    }
+
+    // Check which campaigns still exist
+    const campaigns = await Promise.all(
+      report.campaignIds.map(id => ctx.db.get(id))
+    );
+
+    const validCampaignIds = campaigns
+      .filter(c => c !== null)
+      .map(c => c!._id);
+
+    if (validCampaignIds.length !== report.campaignIds.length) {
+      const removedCount = report.campaignIds.length - validCampaignIds.length;
+      
+      await ctx.db.patch(args.reportId, {
+        campaignIds: validCampaignIds
+      });
+      
+      console.log(`Cleaned up ${removedCount} orphaned campaign ID(s) from report ${args.reportId}`);
+      
+      return {
+        cleanedUp: true,
+        removedCount,
+        remainingCampaigns: validCampaignIds.length
+      };
+    }
+
+    return {
+      cleanedUp: false,
+      removedCount: 0,
+      remainingCampaigns: report.campaignIds.length
+    };
+  },
+});
+
+// Helper function to clean up campaign references when a campaign is deleted
+// This should be called whenever a campaign is deleted
+export const removeCampaignFromReports = internalMutation({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args) => {
+    // Find all reports that contain this campaign
+    const allReports = await ctx.db
+      .query("reports")
+      .collect();
+    
+    const affectedReports = allReports.filter(report => 
+      report.campaignIds.includes(args.campaignId)
+    );
+    
+    // Update each affected report to remove the deleted campaign
+    for (const report of affectedReports) {
+      const updatedCampaignIds = report.campaignIds.filter(
+        id => id !== args.campaignId
+      );
+      
+      // Only keep reports with at least one campaign
+      if (updatedCampaignIds.length > 0) {
+        await ctx.db.patch(report._id, {
+          campaignIds: updatedCampaignIds
+        });
+        
+        console.log(`Removed deleted campaign ${args.campaignId} from report ${report._id}`);
+      } else {
+        // Optionally: delete the report if it has no campaigns left
+        console.warn(`Report ${report._id} would have no campaigns after removing ${args.campaignId}. Consider deleting or handling this case.`);
+      }
+    }
+    
+    return affectedReports.length;
   },
 })

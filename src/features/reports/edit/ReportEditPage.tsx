@@ -49,9 +49,10 @@ export default function ReportEditPage() {
     }
 
     // Prepare initial data for the form
+    // Use campaignIds from the report which are now cleaned up automatically
     const initialFormData = {
         name: reportData.name,
-        campaignIds: reportData.campaigns.map((c: { _id: string }) => c._id)
+        campaignIds: reportData.campaignIds || reportData.campaigns.map((c: { _id: string }) => c._id)
     };
 
     return (

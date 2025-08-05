@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
@@ -34,91 +34,39 @@ export function CampaignSelectionCard({
     error,
 }: CampaignSelectionCardProps) {
     const [searchQuery, setSearchQuery] = useState("");
-    const [campaignOrder, setCampaignOrder] = useState<string[]>([]);
-    const initialSelectionsRef = useRef<string[] | null>(null);
-    const sortAppliedRef = useRef(false);
     
-    // Capture initial selections on first render
-    if (initialSelectionsRef.current === null) {
-        initialSelectionsRef.current = selectedCampaignIds;
-    }
-    
-    // Apply initial sorting only once when component first loads with campaigns
-    useEffect(() => {
-        if (!sortAppliedRef.current && campaigns && campaigns.length > 0) {
-            const initialSelections = initialSelectionsRef.current;
+    // Sort campaigns: selected ones first, then unselected
+    const sortedCampaigns = useMemo(() => {
+        if (!campaigns) return [];
+        
+        const sorted = [...campaigns].sort((a, b) => {
+            const aSelected = selectedCampaignIds.includes(a._id);
+            const bSelected = selectedCampaignIds.includes(b._id);
             
-            // Check if we have initial selections (editing mode)
-            if (initialSelections && initialSelections.length > 0) {
-                // Sort campaigns with initially selected ones at the top
-                const selected: typeof campaigns = [];
-                const unselected: typeof campaigns = [];
-                
-                campaigns.forEach(campaign => {
-                    if (initialSelections.includes(campaign._id)) {
-                        selected.push(campaign);
-                    } else {
-                        unselected.push(campaign);
-                    }
-                });
-                
-                // Store the sorted order with selected campaigns first
-                const sortedOrder = [...selected, ...unselected].map(c => c._id);
-                setCampaignOrder(sortedOrder);
-            } else {
-                // No initial selections (create mode), use the original order
-                setCampaignOrder(campaigns.map(c => c._id));
-            }
-            sortAppliedRef.current = true;
-        }
-    }, [campaigns]); // Only depend on campaigns
+            if (aSelected && !bSelected) return -1;
+            if (!aSelected && bSelected) return 1;
+            return 0; // Keep original order for items with same selection status
+        });
+        
+        return sorted;
+    }, [campaigns, selectedCampaignIds]);
     
     // Filter campaigns based on search query
     const filteredCampaigns = useMemo(() => {
-        if (!campaigns) return [];
+        if (!sortedCampaigns) return [];
         
-        if (!searchQuery.trim()) return campaigns;
+        if (!searchQuery.trim()) return sortedCampaigns;
         
         const query = searchQuery.toLowerCase();
-        return campaigns.filter(campaign =>
+        return sortedCampaigns.filter(campaign =>
             campaign.campaignName.toLowerCase().includes(query) ||
             campaign.songName.toLowerCase().includes(query) ||
             campaign.artistName.toLowerCase().includes(query) ||
             campaign.genre.toLowerCase().includes(query)
         );
-    }, [campaigns, searchQuery]);
+    }, [sortedCampaigns, searchQuery]);
     
-    // Apply the stable sort order to filtered campaigns
-    const sortedCampaigns = useMemo(() => {
-        if (!filteredCampaigns || filteredCampaigns.length === 0) return [];
-        
-        // If we have a campaign order, use it to sort the filtered results
-        if (campaignOrder.length > 0) {
-            // Create a map for quick lookup
-            const campaignMap = new Map<string, Doc<"campaigns">>();
-            filteredCampaigns.forEach(c => campaignMap.set(c._id, c));
-            
-            const sorted: typeof filteredCampaigns = [];
-            
-            // Add campaigns in the stored order
-            for (const id of campaignOrder) {
-                const campaign = campaignMap.get(id);
-                if (campaign) {
-                    sorted.push(campaign);
-                }
-            }
-            
-            return sorted;
-        }
-        
-        // No custom order, use the filtered campaigns as-is
-        return filteredCampaigns;
-    }, [filteredCampaigns, campaignOrder]);
-    
-    // Track if we're doing a bulk operation to prevent state reset
-    const isBulkOperationRef = useRef(false);
-    
-    // Use shared selection logic with sorted campaigns and parent sync
+    // Use shared selection logic with filtered campaigns
     const {
         selectedIds,
         setSelectedIds,
@@ -131,70 +79,29 @@ export function CampaignSelectionCard({
         isSelecting,
         selectionRectStyle,
     } = useSelectionLogic({ 
-        items: sortedCampaigns,
-        onItemSelect: (itemId, selected) => {
-            // Skip parent sync if we're in a bulk operation
-            if (!isBulkOperationRef.current) {
-                onToggleCampaign(itemId, selected);
-            }
-        }
+        items: filteredCampaigns,
+        onItemSelect: onToggleCampaign
     });
     
-    // Initialize internal state from parent state
+    // Keep internal state in sync with parent state
     useEffect(() => {
-        // Skip if we're in a bulk operation
-        if (!isBulkOperationRef.current) {
-            setSelectedIds(new Set(selectedCampaignIds));
-        }
+        setSelectedIds(new Set(selectedCampaignIds));
     }, [selectedCampaignIds, setSelectedIds]);
     
-    // Item selection is now handled by the hook with parent sync
-    const handleItemSelectWrapper = handleItemSelect;
-    
-    // Use the hook's click handler directly since it now syncs with parent
-    const handleItemClickWrapper = handleItemClick;
-    
-    // Handle select all with proper parent sync
+    // Handle select all with simplified logic
     const handleSelectAllWrapper = (selected: boolean) => {
-        // Set flag to prevent duplicate parent sync and state reset
-        isBulkOperationRef.current = true;
-        
         if (selected) {
-            // Select all visible campaigns
-            const allVisibleIds = sortedCampaigns.map(c => c._id);
-            
-            // The hook will handle internal state, we just need to sync with parent
-            allVisibleIds.forEach(id => {
-                handleItemSelect(id, true);
-            });
-            
-            // Reset flag after a delay to allow state to settle
-            setTimeout(() => {
-                isBulkOperationRef.current = false;
-            }, 100);
+            // Get all visible campaign IDs
+            const allVisibleIds = filteredCampaigns.map(c => c._id);
+            // Call onSelectAll with all IDs at once instead of toggling individually
+            onSelectAll();
         } else {
-            // Clear all selections
-            setSelectedIds(new Set());
             onClearAll();
-            
-            setTimeout(() => {
-                isBulkOperationRef.current = false;
-            }, 100);
         }
     };
     
     const handleClearSelectionWrapper = () => {
-        // Set flag to prevent state reset
-        isBulkOperationRef.current = true;
-        
-        // Clear both internal and parent state
-        setSelectedIds(new Set());
         onClearAll();
-        
-        // Reset flag after a delay
-        setTimeout(() => {
-            isBulkOperationRef.current = false;
-        }, 100);
     };
     
     const emptyState = (
@@ -234,8 +141,8 @@ export function CampaignSelectionCard({
                             emptyState={emptyState}
                             containerRef={containerRef}
                             onMouseDown={handleMouseDown}
-                            onItemClick={handleItemClickWrapper}
-                            onItemSelect={handleItemSelectWrapper}
+                            onItemClick={handleItemClick}
+                            onItemSelect={handleItemSelect}
                             itemRefs={itemRefs}
                             selectionRect={selectionRect}
                         />
@@ -257,12 +164,12 @@ export function CampaignSelectionCard({
                                 
                                 <SelectionControls
                                     selectedCount={selectedIds.size}
-                                    totalCount={sortedCampaigns.length}
+                                    totalCount={filteredCampaigns.length}
                                     onSelectAll={handleSelectAllWrapper}
                                     onClearSelection={handleClearSelectionWrapper}
                                 >
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <span>Showing {sortedCampaigns.length} campaigns</span>
+                                        <span>Showing {filteredCampaigns.length} campaigns</span>
                                         {selectedIds.size > 0 && (
                                             <>
                                                 <span>•</span>
@@ -275,14 +182,14 @@ export function CampaignSelectionCard({
                             
                             {/* Campaigns Grid */}
                             <SelectableCampaignGrid
-                                campaigns={sortedCampaigns}
+                                campaigns={filteredCampaigns}
                                 selectedIds={selectedIds}
                                 isLoading={false}
                                 emptyState={emptyState}
                                 containerRef={containerRef}
                                 onMouseDown={handleMouseDown}
-                                onItemClick={handleItemClickWrapper}
-                                onItemSelect={handleItemSelectWrapper}
+                                onItemClick={handleItemClick}
+                                onItemSelect={handleItemSelect}
                                 itemRefs={itemRefs}
                                 selectionRect={selectionRect}
                             />

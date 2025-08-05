@@ -14,6 +14,8 @@ export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProp
   const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<{x: number, y: number} | null>(null);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [dragSelectedIds, setDragSelectedIds] = useState<Set<string>>(new Set());
+  const [initialSelectedIds, setInitialSelectedIds] = useState<Set<string>>(new Set());
   
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -63,7 +65,10 @@ export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProp
     setIsSelecting(true);
     setSelectionStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     setSelectionEnd({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  }, []);
+    // Store the initial selection state when drag starts
+    setInitialSelectedIds(new Set(selectedIds));
+    setDragSelectedIds(new Set());
+  }, [selectedIds]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isSelecting || !selectionStart || !containerRef.current) return;
@@ -78,7 +83,7 @@ export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProp
     const maxY = Math.max(selectionStart.y, e.clientY - rect.top);
     
     // Check which items are within the selection
-    const newSelected = new Set(selectedIds);
+    const itemsInDragRect = new Set<string>();
     
     itemRefs.current.forEach((element, itemId) => {
       const elemRect = element.getBoundingClientRect();
@@ -92,23 +97,44 @@ export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProp
         elemY + elemRect.height > minY;
       
       if (inSelection) {
-        newSelected.add(itemId);
+        itemsInDragRect.add(itemId);
       }
     });
     
-    // Update selection
-    newSelected.forEach(id => {
+    // Track items that are being drag-selected
+    setDragSelectedIds(itemsInDragRect);
+    
+    // Combine initial selection with drag selection
+    const combinedSelection = new Set([...initialSelectedIds, ...itemsInDragRect]);
+    
+    // Update the selection - only call callbacks for actual changes
+    combinedSelection.forEach(id => {
       if (!selectedIds.has(id)) {
-        handleItemSelect(id, true);
+        if (onItemSelect) {
+          onItemSelect(id, true);
+        }
       }
     });
-  }, [isSelecting, selectionStart, selectedIds, handleItemSelect]);
+    
+    // Update internal state
+    setSelectedIds(combinedSelection);
+  }, [isSelecting, selectionStart, initialSelectedIds, selectedIds, onItemSelect]);
 
   const handleMouseUp = useCallback(() => {
+    // Finalize the selection
+    if (isSelecting && dragSelectedIds.size > 0) {
+      // Ensure all drag-selected items are properly added
+      const finalSelection = new Set([...initialSelectedIds, ...dragSelectedIds]);
+      setSelectedIds(finalSelection);
+    }
+    
+    // Reset drag selection state
     setIsSelecting(false);
     setSelectionStart(null);
     setSelectionEnd(null);
-  }, []);
+    setDragSelectedIds(new Set());
+    setInitialSelectedIds(new Set());
+  }, [isSelecting, dragSelectedIds, initialSelectedIds]);
 
   // Handle click selection
   const handleItemClick = useCallback((index: number, item: Doc<"campaigns">, e: React.MouseEvent) => {

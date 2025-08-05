@@ -52,9 +52,12 @@ export function ReportForm({
 
     const handleToggleCampaign = (campaignId: string, checked: boolean) => {
         if (checked) {
-            setCampaignIds(prev => [...prev, campaignId]);
+            // Only add if not already selected to prevent duplicates
+            if (!campaignIds.includes(campaignId)) {
+                setCampaignIds([...campaignIds, campaignId]);
+            }
         } else {
-            setCampaignIds(prev => prev.filter(id => id !== campaignId));
+            setCampaignIds(campaignIds.filter(id => id !== campaignId));
         }
     };
 
