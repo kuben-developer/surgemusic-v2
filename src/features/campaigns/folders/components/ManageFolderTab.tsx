@@ -12,10 +12,10 @@ import {
   X,
   FolderOpen
 } from "lucide-react";
-import { CampaignGrid } from "./CampaignGrid";
-import { SelectionControls } from "./SelectionControls";
-import { useSelectionLogic } from "../../hooks/useSelectionLogic";
-import type { UseFolderManagerLogicReturn } from "../../types/folder-manager.types";
+import { CampaignGrid } from "@/features/campaigns/list/components/folder-manager/CampaignGrid";
+import { SelectionControls } from "@/features/campaigns/list/components/folder-manager/SelectionControls";
+import { useSelectionLogic } from "@/features/campaigns/list/hooks/useSelectionLogic";
+import type { UseFolderManagerLogicReturn } from "../types/folder-manager.types";
 import {
   DropdownMenu,
   DropdownMenuContent,

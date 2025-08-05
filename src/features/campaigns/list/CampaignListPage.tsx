@@ -1,13 +1,13 @@
 'use client';
 
-import { FolderManagerDialog } from "./components/FolderManagerDialog";
+import { FolderManagerDialog } from "@/features/campaigns/folders";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
-import { FolderNavigation } from "./components/FolderNavigation";
+import { FolderNavigation } from "@/features/campaigns/folders";
 import { CampaignGridView } from "./components/CampaignGridView";
 import { CampaignTableView } from "./components/CampaignTableView";
 import { type ViewMode } from "@/features/campaigns";

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 
 interface CreateFolderDialogProps {
   open: boolean;

@@ -13,12 +13,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FolderOpen, Plus, Archive, Folder, Settings } from "lucide-react";
-import { WelcomeView } from "./folder-manager";
+import { WelcomeView } from "./WelcomeView";
 import { cn } from "@/lib/utils";
 import type { UseFolderManagerLogicReturn } from "../types/folder-manager.types";
-import { AddToFolderTab } from "./folder-manager/AddToFolderTab";
-import { ManageFolderTab } from "./folder-manager/ManageFolderTab";
-import { CreateFolderDialog } from "./folder-manager/CreateFolderDialog";
+import { AddToFolderTab } from "./AddToFolderTab";
+import { ManageFolderTab } from "./ManageFolderTab";
+import { CreateFolderDialog } from "../dialogs/CreateFolderDialog";
 
 interface FolderManagerDialogContentProps {
   folderLogic: UseFolderManagerLogicReturn;

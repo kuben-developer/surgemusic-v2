@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useFolderManagerLogic } from "../hooks/useFolderManagerLogic";
-import { FolderManagerDialogContent } from "./FolderManagerDialogContent";
+import { FolderManagerDialogContent } from "../components/FolderManagerDialogContent";
 import { FolderDeleteDialog } from "./FolderDeleteDialog";
 import type { FolderManagerDialogProps } from "../types/folder-manager.types";
 

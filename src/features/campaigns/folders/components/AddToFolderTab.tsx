@@ -4,11 +4,11 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
-import { CampaignFilters, type FilterState } from "./CampaignFilters";
-import { CampaignGrid } from "./CampaignGrid";
-import { SelectionControls } from "./SelectionControls";
-import { useSelectionLogic } from "../../hooks/useSelectionLogic";
-import type { UseFolderManagerLogicReturn } from "../../types/folder-manager.types";
+import { CampaignFilters, type FilterState } from "@/features/campaigns/list/components/folder-manager/CampaignFilters";
+import { CampaignGrid } from "@/features/campaigns/list/components/folder-manager/CampaignGrid";
+import { SelectionControls } from "@/features/campaigns/list/components/folder-manager/SelectionControls";
+import { useSelectionLogic } from "@/features/campaigns/list/hooks/useSelectionLogic";
+import type { UseFolderManagerLogicReturn } from "../types/folder-manager.types";
 import { isWithinInterval } from "date-fns";
 
 interface AddToFolderTabProps {

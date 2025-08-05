@@ -12,9 +12,9 @@ import {
   Folder
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Doc, Id } from "../../../../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { useMutation } from "convex/react";
-import { api } from "../../../../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 
 interface FolderHeaderProps {
   selectedFolder: Doc<"folders"> | undefined;
