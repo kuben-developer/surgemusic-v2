@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
@@ -34,22 +34,39 @@ export function CampaignSelectionCard({
     error,
 }: CampaignSelectionCardProps) {
     const [searchQuery, setSearchQuery] = useState("");
+    const [fixedCampaignOrder, setFixedCampaignOrder] = useState<Doc<"campaigns">[] | null>(null);
+    const hasInitialSelections = useRef(false);
     
-    // Sort campaigns: selected ones first, then unselected
+    // Set the fixed order only once when campaigns first load
+    useEffect(() => {
+        if (!fixedCampaignOrder && campaigns && campaigns.length > 0) {
+            // Check if we have initial selections (edit mode)
+            if (selectedCampaignIds.length > 0 && !hasInitialSelections.current) {
+                hasInitialSelections.current = true;
+                // Sort with selected campaigns first ONLY on initial load
+                const selected: Doc<"campaigns">[] = [];
+                const unselected: Doc<"campaigns">[] = [];
+                
+                campaigns.forEach(campaign => {
+                    if (selectedCampaignIds.includes(campaign._id)) {
+                        selected.push(campaign);
+                    } else {
+                        unselected.push(campaign);
+                    }
+                });
+                
+                setFixedCampaignOrder([...selected, ...unselected]);
+            } else {
+                // No initial selections, use original order
+                setFixedCampaignOrder([...campaigns]);
+            }
+        }
+    }, [campaigns, selectedCampaignIds, fixedCampaignOrder]);
+    
+    // Use fixed order instead of re-sorting on every selection change
     const sortedCampaigns = useMemo(() => {
-        if (!campaigns) return [];
-        
-        const sorted = [...campaigns].sort((a, b) => {
-            const aSelected = selectedCampaignIds.includes(a._id);
-            const bSelected = selectedCampaignIds.includes(b._id);
-            
-            if (aSelected && !bSelected) return -1;
-            if (!aSelected && bSelected) return 1;
-            return 0; // Keep original order for items with same selection status
-        });
-        
-        return sorted;
-    }, [campaigns, selectedCampaignIds]);
+        return fixedCampaignOrder || campaigns || [];
+    }, [fixedCampaignOrder, campaigns]);
     
     // Filter campaigns based on search query
     const filteredCampaigns = useMemo(() => {
@@ -76,8 +93,6 @@ export function CampaignSelectionCard({
         handleItemClick,
         containerRef,
         itemRefs,
-        isSelecting,
-        selectionRectStyle,
     } = useSelectionLogic({ 
         items: filteredCampaigns,
         onItemSelect: onToggleCampaign
@@ -120,13 +135,6 @@ export function CampaignSelectionCard({
             </p>
         </div>
     );
-    
-    const selectionRect = isSelecting && selectionRectStyle && (
-        <div
-            className="absolute border-2 border-primary bg-primary/10 pointer-events-none rounded-md"
-            style={selectionRectStyle}
-        />
-    );
 
     return (
         <div className="space-y-2">
@@ -144,7 +152,7 @@ export function CampaignSelectionCard({
                             onItemClick={handleItemClick}
                             onItemSelect={handleItemSelect}
                             itemRefs={itemRefs}
-                            selectionRect={selectionRect}
+                            selectionRect={null}
                         />
                     ) : campaignsError ? (
                         <div className="p-6 text-center text-muted-foreground">
@@ -191,7 +199,7 @@ export function CampaignSelectionCard({
                                 onItemClick={handleItemClick}
                                 onItemSelect={handleItemSelect}
                                 itemRefs={itemRefs}
-                                selectionRect={selectionRect}
+                                selectionRect={null}
                             />
                         </div>
                     )}

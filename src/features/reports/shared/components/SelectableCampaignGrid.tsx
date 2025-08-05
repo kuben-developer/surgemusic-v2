@@ -36,8 +36,7 @@ export function SelectableCampaignGrid({
         <div className="p-6">
           <div 
             ref={containerRef}
-            className="relative select-none grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
-            onMouseDown={onMouseDown}
+            className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
           >
             {isLoading ? (
               // Loading skeleton
@@ -73,8 +72,6 @@ export function SelectableCampaignGrid({
             ) : (
               emptyState
             )}
-            
-            {selectionRect}
           </div>
         </div>
       </ScrollArea>
