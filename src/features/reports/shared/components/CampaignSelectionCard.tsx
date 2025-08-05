@@ -115,6 +115,14 @@ export function CampaignSelectionCard({
         return filteredCampaigns;
     }, [filteredCampaigns, campaignOrder]);
     
+    // Track if we're doing a bulk operation to prevent state reset
+    const isBulkOperationRef = useRef(false);
+    
+    // Custom handleItemSelect that syncs with parent
+    const customHandleItemSelect = (itemId: string, selected: boolean) => {
+        onToggleCampaign(itemId, selected);
+    };
+    
     // Use shared selection logic with sorted campaigns
     const {
         selectedIds,
@@ -129,34 +137,96 @@ export function CampaignSelectionCard({
         selectionRectStyle,
     } = useSelectionLogic({ items: sortedCampaigns });
     
-    // Sync external selection state with internal state (parent → internal)
+    // Initialize internal state from parent state
     useEffect(() => {
-        setSelectedIds(new Set(selectedCampaignIds));
+        // Skip if we're in a bulk operation
+        if (!isBulkOperationRef.current) {
+            setSelectedIds(new Set(selectedCampaignIds));
+        }
     }, [selectedCampaignIds, setSelectedIds]);
     
-    // Sync internal selection state with parent (internal → parent)
-    // This ensures drag selection and other internal changes sync back
-    useEffect(() => {
-        const currentParentIds = new Set(selectedCampaignIds);
-        const internalIds = selectedIds;
-        
-        // Find differences
-        const toAdd = Array.from(internalIds).filter(id => !currentParentIds.has(id));
-        const toRemove = Array.from(currentParentIds).filter(id => !internalIds.has(id));
-        
-        // Sync changes to parent
-        toAdd.forEach(id => onToggleCampaign(id, true));
-        toRemove.forEach(id => onToggleCampaign(id, false));
-    }, [selectedIds]); // Intentionally not including dependencies to avoid infinite loop
+    // Wrap individual item selection to sync with parent
+    const handleItemSelectWrapper = (campaignId: string, selected: boolean) => {
+        handleItemSelect(campaignId, selected);
+        onToggleCampaign(campaignId, selected);
+    };
     
-    // Since we have bidirectional sync via useEffect, we can use the original handlers
+    // Wrap item click to sync with parent 
+    const handleItemClickWrapper = (index: number, campaign: Doc<"campaigns">, e: React.MouseEvent) => {
+        if (e.shiftKey && selectedIds.size > 0) {
+            // Shift-click for range selection
+            const selectedArray = Array.from(selectedIds);
+            const lastSelectedId = selectedArray[selectedArray.length - 1];
+            const lastIndex = sortedCampaigns.findIndex(c => c._id === lastSelectedId);
+            
+            if (lastIndex !== -1) {
+                const start = Math.min(lastIndex, index);
+                const end = Math.max(lastIndex, index);
+                
+                for (let i = start; i <= end; i++) {
+                    const item = sortedCampaigns[i];
+                    if (item && !selectedIds.has(item._id)) {
+                        handleItemSelectWrapper(item._id, true);
+                    }
+                }
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            // Ctrl/Cmd click - for drag selection, do nothing
+            return;
+        } else {
+            // Normal click - toggle selection
+            const isCurrentlySelected = selectedIds.has(campaign._id);
+            handleItemSelectWrapper(campaign._id, !isCurrentlySelected);
+        }
+    };
+    
+    // Handle select all with proper parent sync
     const handleSelectAllWrapper = (selected: boolean) => {
-        handleSelectAll(selected);
+        // Set flag to prevent state reset from parent update
+        isBulkOperationRef.current = true;
+        
+        if (selected) {
+            // Select all visible campaigns
+            const allVisibleIds = sortedCampaigns.map(c => c._id);
+            
+            // Update internal state
+            const newSelection = new Set(allVisibleIds);
+            setSelectedIds(newSelection);
+            
+            // Update parent state for each campaign
+            allVisibleIds.forEach(id => {
+                if (!selectedCampaignIds.includes(id)) {
+                    onToggleCampaign(id, true);
+                }
+            });
+            
+            // Reset flag after a delay to allow state to settle
+            setTimeout(() => {
+                isBulkOperationRef.current = false;
+            }, 100);
+        } else {
+            // Clear all selections
+            setSelectedIds(new Set());
+            onClearAll();
+            
+            setTimeout(() => {
+                isBulkOperationRef.current = false;
+            }, 100);
+        }
     };
     
     const handleClearSelectionWrapper = () => {
+        // Set flag to prevent state reset
+        isBulkOperationRef.current = true;
+        
+        // Clear both internal and parent state
         setSelectedIds(new Set());
-        onClearAll(); // Call the parent's clear all function
+        onClearAll();
+        
+        // Reset flag after a delay
+        setTimeout(() => {
+            isBulkOperationRef.current = false;
+        }, 100);
     };
     
     const emptyState = (
@@ -196,8 +266,8 @@ export function CampaignSelectionCard({
                             emptyState={emptyState}
                             containerRef={containerRef}
                             onMouseDown={handleMouseDown}
-                            onItemClick={handleItemClick}
-                            onItemSelect={handleItemSelect}
+                            onItemClick={handleItemClickWrapper}
+                            onItemSelect={handleItemSelectWrapper}
                             itemRefs={itemRefs}
                             selectionRect={selectionRect}
                         />
@@ -243,8 +313,8 @@ export function CampaignSelectionCard({
                                 emptyState={emptyState}
                                 containerRef={containerRef}
                                 onMouseDown={handleMouseDown}
-                                onItemClick={handleItemClick}
-                                onItemSelect={handleItemSelect}
+                                onItemClick={handleItemClickWrapper}
+                                onItemSelect={handleItemSelectWrapper}
                                 itemRefs={itemRefs}
                                 selectionRect={selectionRect}
                             />
