@@ -118,12 +118,7 @@ export function CampaignSelectionCard({
     // Track if we're doing a bulk operation to prevent state reset
     const isBulkOperationRef = useRef(false);
     
-    // Custom handleItemSelect that syncs with parent
-    const customHandleItemSelect = (itemId: string, selected: boolean) => {
-        onToggleCampaign(itemId, selected);
-    };
-    
-    // Use shared selection logic with sorted campaigns
+    // Use shared selection logic with sorted campaigns and parent sync
     const {
         selectedIds,
         setSelectedIds,
@@ -135,7 +130,15 @@ export function CampaignSelectionCard({
         itemRefs,
         isSelecting,
         selectionRectStyle,
-    } = useSelectionLogic({ items: sortedCampaigns });
+    } = useSelectionLogic({ 
+        items: sortedCampaigns,
+        onItemSelect: (itemId, selected) => {
+            // Skip parent sync if we're in a bulk operation
+            if (!isBulkOperationRef.current) {
+                onToggleCampaign(itemId, selected);
+            }
+        }
+    });
     
     // Initialize internal state from parent state
     useEffect(() => {
@@ -145,59 +148,24 @@ export function CampaignSelectionCard({
         }
     }, [selectedCampaignIds, setSelectedIds]);
     
-    // Wrap individual item selection to sync with parent
-    const handleItemSelectWrapper = (campaignId: string, selected: boolean) => {
-        handleItemSelect(campaignId, selected);
-        onToggleCampaign(campaignId, selected);
-    };
+    // Item selection is now handled by the hook with parent sync
+    const handleItemSelectWrapper = handleItemSelect;
     
-    // Wrap item click to sync with parent 
-    const handleItemClickWrapper = (index: number, campaign: Doc<"campaigns">, e: React.MouseEvent) => {
-        if (e.shiftKey && selectedIds.size > 0) {
-            // Shift-click for range selection
-            const selectedArray = Array.from(selectedIds);
-            const lastSelectedId = selectedArray[selectedArray.length - 1];
-            const lastIndex = sortedCampaigns.findIndex(c => c._id === lastSelectedId);
-            
-            if (lastIndex !== -1) {
-                const start = Math.min(lastIndex, index);
-                const end = Math.max(lastIndex, index);
-                
-                for (let i = start; i <= end; i++) {
-                    const item = sortedCampaigns[i];
-                    if (item && !selectedIds.has(item._id)) {
-                        handleItemSelectWrapper(item._id, true);
-                    }
-                }
-            }
-        } else if (e.ctrlKey || e.metaKey) {
-            // Ctrl/Cmd click - for drag selection, do nothing
-            return;
-        } else {
-            // Normal click - toggle selection
-            const isCurrentlySelected = selectedIds.has(campaign._id);
-            handleItemSelectWrapper(campaign._id, !isCurrentlySelected);
-        }
-    };
+    // Use the hook's click handler directly since it now syncs with parent
+    const handleItemClickWrapper = handleItemClick;
     
     // Handle select all with proper parent sync
     const handleSelectAllWrapper = (selected: boolean) => {
-        // Set flag to prevent state reset from parent update
+        // Set flag to prevent duplicate parent sync and state reset
         isBulkOperationRef.current = true;
         
         if (selected) {
             // Select all visible campaigns
             const allVisibleIds = sortedCampaigns.map(c => c._id);
             
-            // Update internal state
-            const newSelection = new Set(allVisibleIds);
-            setSelectedIds(newSelection);
-            
-            // Update parent state for each campaign
+            // The hook will handle internal state, we just need to sync with parent
             allVisibleIds.forEach(id => {
-                if (!selectedCampaignIds.includes(id)) {
-                    onToggleCampaign(id, true);
-                }
+                handleItemSelect(id, true);
             });
             
             // Reset flag after a delay to allow state to settle

@@ -52,9 +52,9 @@ export function ReportForm({
 
     const handleToggleCampaign = (campaignId: string, checked: boolean) => {
         if (checked) {
-            setCampaignIds([...campaignIds, campaignId]);
+            setCampaignIds(prev => [...prev, campaignId]);
         } else {
-            setCampaignIds(campaignIds.filter(id => id !== campaignId));
+            setCampaignIds(prev => prev.filter(id => id !== campaignId));
         }
     };
 

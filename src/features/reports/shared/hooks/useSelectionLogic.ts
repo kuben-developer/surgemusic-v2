@@ -5,9 +5,10 @@ import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface UseSelectionLogicProps {
   items: Doc<"campaigns">[];
+  onItemSelect?: (itemId: string, selected: boolean) => void;
 }
 
-export function useSelectionLogic({ items }: UseSelectionLogicProps) {
+export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
@@ -28,7 +29,12 @@ export function useSelectionLogic({ items }: UseSelectionLogicProps) {
       }
       return newSet;
     });
-  }, []);
+    
+    // Call the external callback if provided
+    if (onItemSelect) {
+      onItemSelect(itemId, selected);
+    }
+  }, [onItemSelect]);
 
   const handleSelectAll = useCallback((selected: boolean) => {
     if (selected) {
