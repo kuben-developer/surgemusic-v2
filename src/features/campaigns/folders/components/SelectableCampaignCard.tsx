@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Music } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Doc } from "../../../../../../convex/_generated/dataModel";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { format } from "date-fns";
 import Image from "next/image";
 
-interface CampaignCardProps {
+interface SelectableCampaignCardProps {
   campaign: Doc<"campaigns">;
   isSelected: boolean;
   onSelect: (campaignId: string, selected: boolean) => void;
@@ -16,13 +16,13 @@ interface CampaignCardProps {
   cardRef?: (el: HTMLDivElement | null) => void;
 }
 
-export function CampaignCard({ 
+export function SelectableCampaignCard({ 
   campaign, 
   isSelected, 
   onSelect, 
   onClick,
   cardRef 
-}: CampaignCardProps) {
+}: SelectableCampaignCardProps) {
   return (
     <div
       ref={cardRef}

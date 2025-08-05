@@ -2,15 +2,15 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CampaignCard } from "./CampaignCard";
-import type { Doc } from "../../../../../../convex/_generated/dataModel";
+import { SelectableCampaignCard } from "./SelectableCampaignCard";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
 
-interface CampaignGridProps {
+interface SelectableCampaignGridProps {
   campaigns: Doc<"campaigns">[];
   selectedIds: Set<string>;
   isLoading: boolean;
   emptyState: React.ReactNode;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onMouseDown: (e: React.MouseEvent) => void;
   onItemClick: (index: number, campaign: Doc<"campaigns">, e: React.MouseEvent) => void;
   onItemSelect: (campaignId: string, selected: boolean) => void;
@@ -18,7 +18,7 @@ interface CampaignGridProps {
   selectionRect?: React.ReactNode;
 }
 
-export function CampaignGrid({
+export function SelectableCampaignGrid({
   campaigns,
   selectedIds,
   isLoading,
@@ -29,7 +29,7 @@ export function CampaignGrid({
   onItemSelect,
   itemRefs,
   selectionRect,
-}: CampaignGridProps) {
+}: SelectableCampaignGridProps) {
   return (
     <div className="flex-1 overflow-hidden">
       <ScrollArea className="h-full">
@@ -58,7 +58,7 @@ export function CampaignGrid({
               ))
             ) : campaigns.length > 0 ? (
               campaigns.map((campaign, index) => (
-                <CampaignCard
+                <SelectableCampaignCard
                   key={campaign._id}
                   campaign={campaign}
                   isSelected={selectedIds.has(campaign._id)}

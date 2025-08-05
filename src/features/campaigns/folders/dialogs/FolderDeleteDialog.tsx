@@ -16,17 +16,17 @@ import type { Doc } from "../../../../../convex/_generated/dataModel";
 interface FolderDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedFolder: Doc<"folders"> | undefined;
+  folder: Doc<"folders"> | undefined;
   isDeleting: boolean;
-  onDeleteFolder: () => Promise<void>;
+  onDelete: () => Promise<void>;
 }
 
 export function FolderDeleteDialog({
   open,
   onOpenChange,
-  selectedFolder,
+  folder,
   isDeleting,
-  onDeleteFolder,
+  onDelete,
 }: FolderDeleteDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -34,14 +34,14 @@ export function FolderDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Folder</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the folder "{selectedFolder?.name}"? 
+            Are you sure you want to delete the folder "{folder?.name}"? 
             This action cannot be undone. All campaigns will be removed from this folder but won't be deleted.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onDeleteFolder}
+            onClick={onDelete}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

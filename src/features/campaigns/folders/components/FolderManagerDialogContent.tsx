@@ -12,13 +12,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FolderOpen, Plus, Archive, Folder, Settings } from "lucide-react";
+import { FolderOpen, Plus, Archive, Folder, Settings, Trash2, Loader2 } from "lucide-react";
 import { WelcomeView } from "./WelcomeView";
 import { cn } from "@/lib/utils";
 import type { UseFolderManagerLogicReturn } from "../types/folder-manager.types";
 import { AddToFolderTab } from "./AddToFolderTab";
 import { ManageFolderTab } from "./ManageFolderTab";
 import { CreateFolderDialog } from "../dialogs/CreateFolderDialog";
+import { FolderDeleteDialog } from "../dialogs/FolderDeleteDialog";
 
 interface FolderManagerDialogContentProps {
   folderLogic: UseFolderManagerLogicReturn;
@@ -34,10 +35,17 @@ export function FolderManagerDialogContent({
     folders,
     isLoading,
     handleFolderSelect,
+    isDeleting,
   } = folderLogic;
 
   const [activeTab, setActiveTab] = useState<"add" | "manage">("add");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  // Reset search query when switching tabs
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "add" | "manage");
+    folderLogic.setCampaignSearchQuery("");
+  };
 
   return (
     <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] lg:max-w-[1400px] h-[90vh] max-h-[900px] p-0 flex flex-col">
@@ -55,15 +63,33 @@ export function FolderManagerDialogContent({
       <div className="px-6 pb-4 border-b flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-muted-foreground">Select a folder</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCreateDialog(true)}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            New Folder
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateDialog(true)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              New Folder
+            </Button>
+            {selectedFolderId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => folderLogic.setShowDeleteDialog(true)}
+                disabled={isDeleting}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {isDeleting ? "Deleting..." : "Delete Selected Folder"}
+              </Button>
+            )}
+          </div>
         </div>
         
         <ScrollArea className="w-full">
@@ -120,7 +146,7 @@ export function FolderManagerDialogContent({
         {!selectedFolderId ? (
           <WelcomeView onCreateFolder={() => setShowCreateDialog(true)} />
         ) : (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "add" | "manage")} className="h-full flex flex-col">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <div className="px-6 pt-4 flex-shrink-0">
               <TabsList className="grid w-full max-w-md grid-cols-2">
                 <TabsTrigger value="add" className="flex items-center gap-2">
@@ -157,6 +183,15 @@ export function FolderManagerDialogContent({
       <CreateFolderDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+      
+      {/* Delete Folder Dialog */}
+      <FolderDeleteDialog
+        folder={folderLogic.selectedFolder}
+        open={folderLogic.showDeleteDialog}
+        onOpenChange={folderLogic.setShowDeleteDialog}
+        onDelete={folderLogic.handleDeleteFolder}
+        isDeleting={folderLogic.isDeleting}
       />
     </DialogContent>
   );

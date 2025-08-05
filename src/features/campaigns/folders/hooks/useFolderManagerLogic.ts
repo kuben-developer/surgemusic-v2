@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { useFolderData } from "./useFolderData";
 
 interface UseFolderManagerLogicProps {
   open: boolean;
@@ -18,18 +19,15 @@ export function useFolderManagerLogic({ open }: UseFolderManagerLogicProps) {
   const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
 
-  // Data queries
-  const folders = useQuery(api.folders.list, open ? {} : "skip");
-  const isLoading = folders === undefined;
-
-  const allCampaigns = useQuery(api.campaigns.getAll, open ? {} : "skip");
-  const campaignsLoading = allCampaigns === undefined;
-
-  const folderCampaigns = useQuery(
-    api.folders.getCampaigns, 
-    open && selectedFolderId ? { folderId: selectedFolderId as Id<"folders">, page: 1, limit: 100 } : "skip"
-  );
-  const folderCampaignsLoading = folderCampaigns === undefined;
+  // Use useFolderData hook for data fetching
+  const {
+    folders,
+    isLoading,
+    allCampaigns,
+    campaignsLoading,
+    folderCampaigns,
+    folderCampaignsLoading
+  } = useFolderData({ isOpen: open, selectedFolderId });
 
   // Mutations
   const deleteFolderMutation = useMutation(api.folders.deleteFolder);
@@ -62,7 +60,7 @@ export function useFolderManagerLogic({ open }: UseFolderManagerLogicProps) {
       setSelectedFolderId(null);
       setShowDeleteDialog(false);
       setIsDeleting(false);
-      toast.success("✅ Folder deleted successfully");
+      toast.success("Folder deleted successfully");
     } catch (error) {
       console.error("Failed to delete folder:", error);
       setIsDeleting(false);
@@ -79,7 +77,7 @@ export function useFolderManagerLogic({ open }: UseFolderManagerLogicProps) {
         folderId: selectedFolderId as Id<"folders">,
         campaignId: campaignId as Id<"campaigns">,
       });
-      toast.success("✅ Campaign removed successfully");
+      toast.success("Campaign removed successfully");
     } catch (error) {
       console.error("Failed to remove campaign from folder:", error);
       toast.error("❌ Failed to remove campaign");
@@ -116,7 +114,7 @@ export function useFolderManagerLogic({ open }: UseFolderManagerLogicProps) {
         campaignIds: Array.from(selectedCampaignIds) as Id<"campaigns">[],
       });
       setSelectedCampaignIds(new Set());
-      toast.success("✅ Campaigns added successfully");
+      toast.success("Campaigns added successfully");
     } catch (error) {
       console.error("Failed to add campaigns:", error);
       toast.error("❌ Failed to add campaigns");

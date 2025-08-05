@@ -68,7 +68,7 @@ export function CreateFolderDialog({ open, onOpenChange }: CreateFolderDialogPro
       await createFolderMutation({ name: folderName.trim() });
       setFolderName("");
       onOpenChange(false);
-      toast.success("✅ Folder created successfully");
+      toast.success("Folder created successfully");
     } catch (error) {
       console.error("Failed to create folder:", error);
       toast.error("❌ Failed to create folder");

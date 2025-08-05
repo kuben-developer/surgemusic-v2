@@ -50,9 +50,9 @@ export function FolderManagerDialog({
       <FolderDeleteDialog
         open={folderLogic.showDeleteDialog}
         onOpenChange={folderLogic.setShowDeleteDialog}
-        selectedFolder={folderLogic.selectedFolder}
+        folder={folderLogic.selectedFolder}
         isDeleting={folderLogic.isDeleting}
-        onDeleteFolder={folderLogic.handleDeleteFolder}
+        onDelete={folderLogic.handleDeleteFolder}
       />
     </>
   );
