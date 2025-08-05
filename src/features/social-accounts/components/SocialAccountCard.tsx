@@ -18,9 +18,9 @@ export function SocialAccountCard({ account }: SocialAccountCardProps) {
         <Image
           src={account.userImage}
           alt={`${account.username} avatar`}
-          width={40}
-          height={40}
-          className="rounded-full object-cover"
+          width={32}
+          height={32}
+          className="w-8 h-8 rounded-full object-cover"
         />
       ) : (
         <PlatformIcon platform={account.platform} />
@@ -40,7 +40,7 @@ export function SocialAccountCard({ account }: SocialAccountCardProps) {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Connected {new Date(account._creationTime).toLocaleDateString()}
+          Connected {new Date(account._creationTime).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
       <Badge className={`${getPlatformBadgeClass(account.platform)} text-xs px-2 py-0.5`}>

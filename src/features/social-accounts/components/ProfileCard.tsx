@@ -15,36 +15,38 @@ interface ProfileCardProps {
   isGeneratingUrl?: boolean
 }
 
-export function ProfileCard({ 
-  profile, 
-  isExpanded, 
-  onToggleExpand, 
-  onDelete, 
+export function ProfileCard({
+  profile,
+  isExpanded,
+  onToggleExpand,
+  onDelete,
   onOpenManager,
   isGeneratingUrl = false
 }: ProfileCardProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <ProfileHeader profile={profile} />
+    <Card className="overflow-hidden space-y-0 px-2 py-1">
+      <CardHeader className="px-2 py-0 pt-2 ">
+        <div className="flex items-center justify-between">
+          <ProfileHeader
+            profile={profile}
+            isExpanded={isExpanded}
+            onToggleExpand={onToggleExpand}
+          />
           <ProfileActions
             profileName={profile.profileName}
             profileKey={profile.profileKey ?? ''}
-            isExpanded={isExpanded}
             isGeneratingUrl={isGeneratingUrl}
-            onToggleExpand={onToggleExpand}
             onDelete={onDelete}
             onOpenManager={onOpenManager}
           />
         </div>
       </CardHeader>
-      
+
       {isExpanded && (
-        <CardContent className="pt-0">
-          <ProfileContent 
-            profile={profile} 
-            onOpenManager={onOpenManager} 
+        <CardContent className="pb-2 ">
+          <ProfileContent
+            profile={profile}
+            onOpenManager={onOpenManager}
           />
         </CardContent>
       )}

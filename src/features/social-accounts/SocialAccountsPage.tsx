@@ -9,7 +9,6 @@ import { useProfileSync } from './hooks/useProfileSync'
 import { useProfileActions } from './hooks/useProfileActions'
 import { useExpandedProfiles } from './hooks/useExpandedProfiles'
 import { ProfileList } from './components/ProfileList'
-import { ProfileStats } from './components/ProfileStats'
 import { CreateProfileDialog } from './dialogs/CreateProfileDialog'
 import { DeleteProfileDialog } from './dialogs/DeleteProfileDialog'
 import { SyncDialog } from './dialogs/SyncDialog'
@@ -58,11 +57,11 @@ export function SocialAccountsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-5xl">
-      <div className="flex justify-between items-center mb-4">
+    <div className="container mx-auto py-4 max-w-5xl">
+      <div className="flex justify-between items-center mb-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Social Accounts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl font-bold tracking-tight">Social Accounts</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Connect and manage your social media accounts by user profiles
           </p>
         </div>
@@ -91,10 +90,7 @@ export function SocialAccountsPage() {
         </div>
       </div>
 
-      <Separator className="my-4" />
-
-      {/* Summary Stats */}
-      <ProfileStats profileCount={profiles.length} />
+      <Separator className="my-3" />
 
       {/* Profile List */}
       {isLoading ? (

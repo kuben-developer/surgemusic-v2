@@ -12,11 +12,13 @@ interface ProfileContentProps {
 export function ProfileContent({ profile, onOpenManager }: ProfileContentProps) {
   if (profile.socialAccounts.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p className="text-sm">No social accounts connected yet.</p>
+      <div className="flex flex-col items-center justify-center py-3 text-center">
+        <p className="text-muted-foreground text-xs">
+          No accounts connected to this profile.
+        </p>
         <Button
           variant="link"
-          className="p-0 h-auto text-sm"
+          className="p-0 h-auto text-xs"
           onClick={() => onOpenManager(profile.profileKey ?? '')}
         >
           Connect an account
