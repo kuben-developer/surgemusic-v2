@@ -43,7 +43,7 @@ export function ProfileCard({
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="py-2">
+        <CardContent className="pt-2 pb-2.5">
           <ProfileContent
             profile={profile}
             onOpenManager={onOpenManager}

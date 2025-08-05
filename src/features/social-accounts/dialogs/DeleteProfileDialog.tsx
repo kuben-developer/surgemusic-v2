@@ -10,8 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Loader2 } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 import { toast } from "sonner"
+import { InlineLoader } from "@/components/loaders"
 import type { ProfileWithAccounts } from '../types/social-accounts.types'
 
 interface DeleteProfileDialogProps {
@@ -91,7 +92,7 @@ export function DeleteProfileDialog({
           >
             {isDeleting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <InlineLoader size="sm" className="mr-2" />
                 Deleting...
               </>
             ) : hasConnectedAccounts ? (

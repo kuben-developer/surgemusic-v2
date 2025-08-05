@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Loader2, Trash2 } from "lucide-react"
+import { ExternalLink, Trash2 } from "lucide-react"
+import { InlineLoader } from "@/components/loaders"
 
 interface ProfileActionsProps {
   profileName: string
@@ -28,7 +29,7 @@ export function ProfileActions({
         disabled={isGeneratingUrl}
       >
         {isGeneratingUrl ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <InlineLoader size="sm" />
         ) : (
           <ExternalLink className="h-3 w-3" />
         )}

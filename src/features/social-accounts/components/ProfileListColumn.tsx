@@ -1,6 +1,7 @@
 "use client"
 
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { InlineLoader } from "@/components/loaders";
 import type { ProfileCheckResult } from '../types/social-accounts.types';
 
 interface ProfileItemProps {
@@ -13,7 +14,7 @@ function ProfileItem({ result, index, onRef }: ProfileItemProps) {
   const getStatusIcon = () => {
     switch (result.status) {
       case 'pending':
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+        return <InlineLoader size="sm" className="text-blue-500" />;
       case 'success':
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       default:

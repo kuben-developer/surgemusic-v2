@@ -13,8 +13,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UserPlus, Loader2 } from "lucide-react"
+import { UserPlus } from "lucide-react"
 import { toast } from "sonner"
+import { InlineLoader } from "@/components/loaders"
 
 interface CreateProfileDialogProps {
   isOpen: boolean
@@ -83,7 +84,7 @@ export function CreateProfileDialog({ isOpen, onOpenChange, onCreate }: CreatePr
           >
             {isCreating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <InlineLoader size="sm" className="mr-2" />
                 Creating...
               </>
             ) : (

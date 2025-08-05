@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Loader2 } from "lucide-react"
+import { PageLoader, InlineLoader } from "@/components/loaders"
 import { useProfiles } from './hooks/useProfiles'
 import { useProfileSync } from './hooks/useProfileSync'
 import { useProfileActions } from './hooks/useProfileActions'
@@ -75,7 +75,7 @@ export function SocialAccountsPage() {
           >
             {isSyncingInProgress ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <InlineLoader size="sm" />
                 Syncing...
               </>
             ) : (
@@ -94,9 +94,7 @@ export function SocialAccountsPage() {
 
       {/* Profile List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PageLoader text="Loading social accounts..." minHeight="40vh" />
       ) : (
         <ProfileList
           profiles={profiles}
