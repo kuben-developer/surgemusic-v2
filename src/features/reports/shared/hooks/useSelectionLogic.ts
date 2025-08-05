@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 interface UseSelectionLogicProps {
@@ -10,6 +10,7 @@ interface UseSelectionLogicProps {
 
 export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -40,17 +41,45 @@ export function useSelectionLogic({ items, onItemSelect }: UseSelectionLogicProp
     }
   }, [items]);
 
-  // Simple click selection - just toggle the item
+  // Handle click selection with shift-click support
   const handleItemClick = useCallback((index: number, item: Doc<"campaigns">, e: React.MouseEvent) => {
     // Prevent event from bubbling up
     e.stopPropagation();
     
-    // Simple toggle selection
-    handleItemSelect(item._id, !selectedIds.has(item._id));
-  }, [handleItemSelect, selectedIds]);
+    if (e.shiftKey && lastSelectedIndex !== null && lastSelectedIndex !== index) {
+      // Shift-click: select range
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      
+      // We need the current items array, which will be passed through the context
+      // Since items can change due to filtering, we'll use the items prop directly
+      // Get fresh items from the current render
+      const currentItems = items;
+      
+      // Select all items in the range
+      for (let i = start; i <= end; i++) {
+        const rangeItem = currentItems[i];
+        if (rangeItem) {
+          // Always select items in range, don't check if already selected
+          handleItemSelect(rangeItem._id, true);
+        }
+      }
+      // Update lastSelectedIndex to the new position
+      setLastSelectedIndex(index);
+    } else if (!e.shiftKey) {
+      // Normal click: toggle selection
+      handleItemSelect(item._id, !selectedIds.has(item._id));
+      setLastSelectedIndex(index);
+    }
+  }, [handleItemSelect, selectedIds, lastSelectedIndex, items]);
+
+  // Reset lastSelectedIndex when items change (e.g., after filtering)
+  useEffect(() => {
+    setLastSelectedIndex(null);
+  }, [items]);
 
   // Dummy handler for compatibility (no longer needed but kept for interface)
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback(() => {
     // Do nothing - drag selection removed
   }, []);
 

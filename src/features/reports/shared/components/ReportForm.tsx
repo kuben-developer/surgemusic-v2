@@ -51,14 +51,17 @@ export function ReportForm({
     };
 
     const handleToggleCampaign = (campaignId: string, checked: boolean) => {
-        if (checked) {
-            // Only add if not already selected to prevent duplicates
-            if (!campaignIds.includes(campaignId)) {
-                setCampaignIds([...campaignIds, campaignId]);
+        setCampaignIds(prevIds => {
+            if (checked) {
+                // Only add if not already selected to prevent duplicates
+                if (!prevIds.includes(campaignId)) {
+                    return [...prevIds, campaignId];
+                }
+                return prevIds;
+            } else {
+                return prevIds.filter(id => id !== campaignId);
             }
-        } else {
-            setCampaignIds(campaignIds.filter(id => id !== campaignId));
-        }
+        });
     };
 
     return (
