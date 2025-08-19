@@ -11,12 +11,9 @@ import {
 import { UserButton } from "@clerk/nextjs"
 import type { LayoutWrapperProps } from "../types/navigation.types"
 
-interface CustomSidebarProps extends LayoutWrapperProps {
-  /** Whether to show the credits display in header */
-  showCredits?: boolean
-}
+type CustomSidebarProps = LayoutWrapperProps
 
-function SidebarHeader({ showCredits = false }: { showCredits?: boolean }) {
+function SidebarHeader() {
   return (
     <header 
       className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
@@ -32,7 +29,7 @@ function SidebarHeader({ showCredits = false }: { showCredits?: boolean }) {
           role="toolbar"
           aria-label="User controls"
         >
-          {showCredits && <CreditsDisplay />}
+          <CreditsDisplay />
           <ThemeSwitcher />
           <UserButton 
             appearance={{
@@ -48,14 +45,13 @@ function SidebarHeader({ showCredits = false }: { showCredits?: boolean }) {
 }
 
 export default function Sidebar({ 
-  children, 
-  showCredits = false 
+  children
 }: CustomSidebarProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SidebarHeader showCredits={showCredits} />
+        <SidebarHeader />
         <main 
           className="flex flex-1 flex-col gap-4 p-4 pt-0"
           role="main"
