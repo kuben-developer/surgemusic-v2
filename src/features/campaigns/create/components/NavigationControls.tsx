@@ -28,7 +28,7 @@ export function NavigationControls({
   const isLastStep = currentSection === sections.length - 1;
 
   return (
-    <div className="fixed bottom-0 left-0 md:left-[13rem] right-0 bg-background/80 backdrop-blur-sm border-t z-50">
+    <div className="fixed bottom-0 left-0 md:left-[16rem] right-0 bg-background/80 backdrop-blur-sm border-t z-50">
       <div className="container max-w-5xl mx-auto py-4 px-4">
         <div className="flex justify-between items-center gap-4">
           <Button
