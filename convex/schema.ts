@@ -158,19 +158,4 @@ export default defineSchema({
     campaignIds: v.array(v.id('campaigns')),
   })
     .index("by_userId", ["userId"]),
-
-  // Temporary tables for migration
-  migrationMappings: defineTable({
-    type: v.string(),
-    data: v.any(),
-  }),
-
-  migrationProgress: defineTable({
-    type: v.string(),
-    offset: v.number(),
-    processedCount: v.number(),
-    skippedCount: v.number(),
-    errors: v.array(v.string()),
-    timestamp: v.number(),
-  })
 })
