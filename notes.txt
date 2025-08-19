@@ -15,3 +15,6 @@ Go through all features and sub-feature inside src/features and refactor the cod
   If there are no refactoring needed, you can skip that feature. 
 
   Please remember to not fall into over refactoring or over engineering trap. I rather you not do anything then over engineering my codebase
+
+
+  Add a copy reference_id button to the campaign detail page

@@ -29,6 +29,7 @@ export function VideoSection({
   downloadingVideos,
   onDownloadVideo,
   onDownloadAll,
+  downloadingAll,
 }: VideoSectionProps) {
   if (!campaign) return null;
 
@@ -71,6 +72,7 @@ export function VideoSection({
           onViewModeChange={onViewModeChange}
           onDownloadAll={onDownloadAll}
           hasVideos={filteredVideos.length > 0}
+          downloadingAll={downloadingAll}
         />
 
         {/* Pagination - Only for grid view */}

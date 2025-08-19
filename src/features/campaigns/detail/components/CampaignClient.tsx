@@ -143,6 +143,7 @@ export default function CampaignClient() {
             downloadingVideos={downloadingVideos}
             onDownloadVideo={handleDownloadVideo}
             onDownloadAll={handleDownloadAll}
+            downloadingAll={downloadingAll}
           />
         )}
       </motion.div>

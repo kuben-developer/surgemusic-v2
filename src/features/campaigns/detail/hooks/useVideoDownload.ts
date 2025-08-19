@@ -44,8 +44,11 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
     }
   };
 
-  const handleDownloadAll = async () => {
-    if (!generatedVideos?.length || !campaign) {
+  const handleDownloadAll = async (videos?: Doc<"generatedVideos">[]) => {
+    // If no specific videos provided, use ALL videos from the campaign
+    const videosToDownload = videos || generatedVideos;
+    
+    if (!videosToDownload?.length || !campaign) {
       toast.error("No videos to download");
       return;
     }
@@ -55,12 +58,12 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
 
     try {
       const zip = new JSZip();
-      const totalVideos = generatedVideos.length;
+      const totalVideos = videosToDownload.length;
 
       toast.info("Starting download of all videos...");
 
-      for (let i = 0; i < generatedVideos.length; i++) {
-        const video = generatedVideos[i];
+      for (let i = 0; i < videosToDownload.length; i++) {
+        const video = videosToDownload[i];
         if (!video?.video?.url || !video?.video?.name) {
           console.warn(`Skipping video ${i}: missing video data`);
           continue;
@@ -68,7 +71,7 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
         try {
           const response = await fetch(video.video.url);
           const blob = await response.blob();
-          zip.file(`${video.video.name}.mp4`, blob);
+          zip.file(`${video.video.name}_${video._id}.mp4`, blob);
           
           // Update progress
           const currentProgress = Math.round(((i + 1) / totalVideos) * 100);

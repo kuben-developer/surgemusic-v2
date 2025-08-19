@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Video, Download } from "lucide-react";
+import { Video, Download, Loader2 } from "lucide-react";
 import { ViewToggle } from "@/features/campaigns/videos";
 
 type ViewMode = "table" | "grid";
@@ -21,6 +21,7 @@ interface VideoSectionHeaderProps {
   onViewModeChange: (mode: ViewMode) => void;
   onDownloadAll: () => void;
   hasVideos: boolean;
+  downloadingAll?: boolean;
 }
 
 export function VideoSectionHeader({
@@ -31,6 +32,7 @@ export function VideoSectionHeader({
   onViewModeChange,
   onDownloadAll,
   hasVideos,
+  downloadingAll = false,
 }: VideoSectionHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -68,11 +70,16 @@ export function VideoSectionHeader({
         {hasVideos && (
           <Button
             variant="outline"
-            onClick={onDownloadAll}
+            onClick={() => onDownloadAll()}
+            disabled={downloadingAll}
             className="gap-2 bg-background/50 hover:bg-background border-primary/20 hover:border-primary/40"
           >
-            <Download className="w-4 h-4" />
-            Download All
+            {downloadingAll ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {downloadingAll ? "Downloading..." : "Download All"}
           </Button>
         )}
       </div>

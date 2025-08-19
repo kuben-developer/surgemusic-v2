@@ -20,7 +20,8 @@ export interface VideoSectionProps {
   videosPerPage: number;
   downloadingVideos: Record<string, boolean>;
   onDownloadVideo: (url: string, name: string, id: string) => void;
-  onDownloadAll: () => void;
+  onDownloadAll: (videos?: Doc<"generatedVideos">[]) => void;
+  downloadingAll?: boolean;
 }
 
 export interface ProgressSectionProps {

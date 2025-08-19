@@ -78,7 +78,16 @@ export function VideoSectionContent({
         videos={filteredVideos}
         downloadingVideos={downloadingVideos}
         handleDownloadVideo={onDownloadVideo}
-        handleDownloadAll={async (videos) => onDownloadAll(videos)}
+        handleDownloadAll={async (videos) => {
+          // For table view, pass selected videos for "Download Selected" button
+          // The table's handleDownloadSelected will call this with selected videos
+          if (videos && videos.length > 0) {
+            onDownloadAll(videos);
+          } else {
+            // If no videos specified, download all
+            onDownloadAll();
+          }
+        }}
         songName={campaign?.songName || ""}
         artistName={campaign?.artistName || ""}
         genre={campaign?.genre || ""}
