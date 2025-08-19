@@ -12,7 +12,7 @@ interface UseReportVideoManagementProps {
 
 export function useReportVideoManagement({ reportId }: UseReportVideoManagementProps) {
     const [isEditVideosModalOpen, setIsEditVideosModalOpen] = useState(false);
-    const updateHiddenVideosMutation = useMutation(api.reports.updateHiddenVideos);
+    const updateHiddenVideosMutation = useMutation(api.app.reports.updateHiddenVideos);
 
     const handleSaveHiddenVideos = async (
         newHiddenVideoIds: string[], 

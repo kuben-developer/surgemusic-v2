@@ -10,7 +10,7 @@ import type { ReportFormValues } from '../../shared/types/report.types';
 
 export function useCreateReport() {
     const router = useRouter();
-    const createMutation = useMutation(api.reports.create);
+    const createMutation = useMutation(api.app.reports.create);
     const [isCreating, setIsCreating] = useState(false);
 
     const createReport = async (values: ReportFormValues) => {

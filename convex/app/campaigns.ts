@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
-import { internalAction, internalQuery, mutation, query } from "./_generated/server";
+import { internal } from "../_generated/api";
+import { internalAction, internalQuery, mutation, query } from "../_generated/server";
 
 function numericUuid() {
   const timestamp = Date.now().toString();
@@ -56,7 +56,7 @@ export const create = mutation({
       status: "pending",
     });
 
-    await ctx.scheduler.runAfter(0, internal.campaigns.sendWebhook, {
+    await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
       campaignId,
       referenceId,
       ...args,

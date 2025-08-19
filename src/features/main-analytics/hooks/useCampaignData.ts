@@ -21,7 +21,7 @@ interface UseCampaignDataReturn {
  */
 export function useCampaignData(): UseCampaignDataReturn {
   // Fetch campaigns data from Convex
-  const rawCampaigns = useQuery(api.campaigns.getAll);
+  const rawCampaigns = useQuery(api.app.campaigns.getAll);
   const isCampaignsLoading = rawCampaigns === undefined;
 
   // Transform campaigns data to the expected format

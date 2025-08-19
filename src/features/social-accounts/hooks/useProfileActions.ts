@@ -5,9 +5,9 @@ import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
 
 export function useProfileActions() {
-  const createProfileMutation = useMutation(api.ayrshare.createProfile)
-  const deleteProfileMutation = useMutation(api.ayrshare.deleteProfileMutation)
-  const generateUrlMutation = useMutation(api.ayrshare.generateProfileManagerUrl)
+  const createProfileMutation = useMutation(api.app.ayrshare.createProfile)
+  const deleteProfileMutation = useMutation(api.app.ayrshare.deleteProfileMutation)
+  const generateUrlMutation = useMutation(api.app.ayrshare.generateProfileManagerUrl)
 
   const createProfile = async (profileName: string) => {
     try {

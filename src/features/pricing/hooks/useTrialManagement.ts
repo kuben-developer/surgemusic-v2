@@ -11,7 +11,7 @@ import type { UseTrialManagementReturn } from '../types/pricing.types';
  */
 export function useTrialManagement(): UseTrialManagementReturn {
   const [convertedToPaidPlanLoading, setConvertedToPaidPlanLoading] = useState(false);
-  const endTrialImmediatelyAction = useAction(api.stripe.endTrialImmediately);
+  const endTrialImmediatelyAction = useAction(api.app.stripe.endTrialImmediately);
   
   const endTrialImmediately = async (): Promise<boolean> => {
     // Prevent multiple simultaneous requests

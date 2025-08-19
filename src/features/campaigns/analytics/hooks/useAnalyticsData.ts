@@ -17,7 +17,7 @@ export function useAnalyticsData({ campaignId }: UseAnalyticsDataProps) {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
-  const getAnalytics = useAction(api.analytics.getAnalytics);
+  const getAnalytics = useAction(api.app.analytics.getAnalytics);
 
   // Fetch analytics data on mount and when dependencies change
   useEffect(() => {

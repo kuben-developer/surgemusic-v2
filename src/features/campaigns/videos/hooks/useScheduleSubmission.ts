@@ -20,7 +20,7 @@ export function useScheduleSubmission({
   setShowProgressModal,
   onScheduleComplete,
 }: UseScheduleSubmissionProps) {
-  const schedulePost = useAction(api.ayrshare.schedulePost);
+  const schedulePost = useAction(api.app.ayrshare.schedulePost);
 
   const batchSchedule = async () => {
     if (schedules.length === 0) {

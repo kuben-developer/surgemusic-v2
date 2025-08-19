@@ -33,7 +33,7 @@ export function ScheduleDialog({
   selectedVideos 
 }: ScheduleDialogProps) {
   // Fetch profiles from the API
-  const profiles = useQuery(api.ayrshare.getProfiles);
+  const profiles = useQuery(api.app.ayrshare.getProfiles);
   const isLoadingProfiles = profiles === undefined;
 
   // Dialog state management

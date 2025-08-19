@@ -33,7 +33,7 @@ export function FolderHeader({
   const [renameFolderName, setRenameFolderName] = useState(selectedFolder?.name || "");
   const [isRenaming, setIsRenaming] = useState(false);
 
-  const updateFolderMutation = useMutation(api.folders.update);
+  const updateFolderMutation = useMutation(api.app.folders.update);
 
   // Validation helper
   const validateFolderName = (name: string): string | null => {

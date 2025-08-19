@@ -6,7 +6,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { SharedReportData, PublicReportError } from '../types';
 
 export const useSharedReport = (shareId: string, dateRange: string) => {
-  const getSharedReport = useAction(api.public.getSharedReport);
+  const getSharedReport = useAction(api.app.public.getSharedReport);
   const [data, setData] = useState<SharedReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);

@@ -18,7 +18,7 @@ interface UseAnalyticsDataReturn {
 }
 
 export function useAnalyticsData({ selectedCampaigns, dateRange }: UseAnalyticsDataOptions): UseAnalyticsDataReturn {
-  const getCombinedAnalytics = useAction(api.analytics.getCombinedAnalytics);
+  const getCombinedAnalytics = useAction(api.app.analytics.getCombinedAnalytics);
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

@@ -18,7 +18,7 @@ interface UseCampaignSelectionReturn {
 
 export function useCampaignSelection(): UseCampaignSelectionReturn {
   // Fetch campaigns for selection
-  const campaignsResult = useQuery(api.campaigns.getAll);
+  const campaignsResult = useQuery(api.app.campaigns.getAll);
   const isLoadingCampaigns = campaignsResult === undefined;
   const campaigns = campaignsResult ?? [];
   const campaignsError = null; // Convex doesn't expose errors the same way

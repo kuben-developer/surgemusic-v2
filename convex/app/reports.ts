@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 
 function generateShareId(): string {
   return crypto.randomUUID().replace(/-/g, '');

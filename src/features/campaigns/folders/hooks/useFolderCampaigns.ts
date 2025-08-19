@@ -6,9 +6,9 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 export function useFolderCampaigns() {
-  const addCampaignMutation = useMutation(api.folders.addCampaign);
-  const addCampaignsMutation = useMutation(api.folders.addCampaigns);
-  const removeCampaignMutation = useMutation(api.folders.removeCampaign);
+  const addCampaignMutation = useMutation(api.app.folders.addCampaign);
+  const addCampaignsMutation = useMutation(api.app.folders.addCampaigns);
+  const removeCampaignMutation = useMutation(api.app.folders.removeCampaign);
 
   const handleAddCampaign = async (campaignId: string, selectedFolderId: string) => {
     try {

@@ -26,8 +26,8 @@ export function CreateFolderDialog({ open, onOpenChange }: CreateFolderDialogPro
   const [folderName, setFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const folders = useQuery(api.folders.list, {});
-  const createFolderMutation = useMutation(api.folders.create);
+  const folders = useQuery(api.app.folders.list, {});
+  const createFolderMutation = useMutation(api.app.folders.create);
 
   const validateFolderName = (name: string): string | null => {
     const trimmedName = name.trim();

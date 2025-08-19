@@ -1,7 +1,7 @@
 // import { createClient } from '@clickhouse/client';
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
-import { action, internalAction } from "./_generated/server";
+import { api, internal } from "../_generated/api";
+import { action, internalAction } from "../_generated/server";
 
 // Initialize ClickHouse client
 const getClickHouseClient = () => {
@@ -24,7 +24,7 @@ export const getAnalytics = action({
     }
 
     // Get campaign from database to validate ownership
-    const campaign = await ctx.runQuery(internal.campaigns.getCampaignWithUser, {
+    const campaign = await ctx.runQuery(internal.app.campaigns.getCampaignWithUser, {
       campaignId: args.campaignId as any,
       clerkId: identity.subject,
     });
@@ -34,7 +34,7 @@ export const getAnalytics = action({
     }
 
     // Get videos and analytics data
-    const { analytics } = await ctx.runAction(internal.analytics.fetchCampaignAnalytics, {
+    const { analytics } = await ctx.runAction(internal.app.analytics.fetchCampaignAnalytics, {
       campaignId: args.campaignId,
       days: args.days,
     });
@@ -73,7 +73,7 @@ export const getReportAnalytics = action({
     }
 
     // Fall back to real-time calculation
-    const report = await ctx.runQuery(internal.reports.getReportWithCampaigns, {
+    const report = await ctx.runQuery(internal.app.reports.getReportWithCampaigns, {
       reportId: args.id as any,
       clerkId: identity.subject,
     });
@@ -96,7 +96,7 @@ export const getReportAnalytics = action({
     }
 
     // Use the fetchCombinedAnalytics action
-    const analyticsData = await ctx.runAction(internal.analytics.fetchCombinedAnalytics, {
+    const analyticsData = await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
       campaignIds: campaignIds as any,
       days: args.days,
       clerkId: identity.subject,
@@ -135,7 +135,7 @@ export const getCombinedAnalytics = action({
     }
 
     // Fetch real-time analytics
-    return await ctx.runAction(internal.analytics.fetchCombinedAnalytics, {
+    return await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
       campaignIds: args.campaignIds,
       days,
       clerkId: identity.subject,
@@ -160,7 +160,7 @@ export const fetchCampaignAnalytics = internalAction({
   }> => {
     try {
       // 1. Fetch campaign and videos from Convex
-      const campaign = await ctx.runQuery(api.campaigns.get, {
+      const campaign = await ctx.runQuery(api.app.campaigns.get, {
         campaignId: args.campaignId as any,
       });
 
@@ -168,7 +168,7 @@ export const fetchCampaignAnalytics = internalAction({
         throw new Error('Campaign not found');
       }
 
-      const videos: any[] = await ctx.runQuery(api.campaigns.getGeneratedVideos, {
+      const videos: any[] = await ctx.runQuery(api.app.campaigns.getGeneratedVideos, {
         campaignId: args.campaignId as any,
       });
 
@@ -346,7 +346,7 @@ export const fetchCombinedAnalytics = internalAction({
   handler: async (ctx, args) => {
     try {
       // Get user to verify access
-      const user = await ctx.runQuery(internal.users.getByClerkId, {
+      const user = await ctx.runQuery(internal.app.users.getByClerkId, {
         clerkId: args.clerkId,
       });
 
@@ -357,7 +357,7 @@ export const fetchCombinedAnalytics = internalAction({
       // Get all user campaigns if no specific ones requested
       let campaignIds = args.campaignIds;
       if (!campaignIds || campaignIds.length === 0) {
-        const allCampaigns = await ctx.runQuery(api.campaigns.getAll, {});
+        const allCampaigns = await ctx.runQuery(api.app.campaigns.getAll, {});
         campaignIds = allCampaigns.map((c: any) => c._id);
       }
 
@@ -377,13 +377,13 @@ export const fetchCombinedAnalytics = internalAction({
       const campaigns: any[] = [];
 
       for (const campaignId of campaignIds) {
-        const campaign = await ctx.runQuery(api.campaigns.get, {
+        const campaign = await ctx.runQuery(api.app.campaigns.get, {
           campaignId: campaignId as any,
         });
 
         if (campaign) {
           campaigns.push(campaign);
-          const videos = await ctx.runQuery(api.campaigns.getGeneratedVideos, {
+          const videos = await ctx.runQuery(api.app.campaigns.getGeneratedVideos, {
             campaignId: campaignId as any,
           });
           allVideos.push(...videos);

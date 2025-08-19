@@ -22,8 +22,8 @@ export function useFolderModify({ folders, validateFolderName, isDuplicateName }
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const updateFolderMutation = useMutation(api.folders.update);
-  const deleteFolderMutation = useMutation(api.folders.deleteFolder);
+  const updateFolderMutation = useMutation(api.app.folders.update);
+  const deleteFolderMutation = useMutation(api.app.folders.deleteFolder);
 
   const handleRenameFolder = async (selectedFolder: Doc<"folders">) => {
     if (!selectedFolder) return;

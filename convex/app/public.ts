@@ -1,6 +1,6 @@
-import { action, internalQuery } from "./_generated/server";
+import { action, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal } from "../_generated/api";
 
 export const getSharedReport = action({
   args: {
@@ -10,7 +10,7 @@ export const getSharedReport = action({
   handler: async (ctx, args): Promise<any> => {
     try {
       // Find the report by its public share ID
-      const report = await ctx.runQuery(internal.public.getReportByShareId, {
+      const report = await ctx.runQuery(internal.app.public.getReportByShareId, {
         shareId: args.shareId,
       });
 
@@ -37,12 +37,12 @@ export const getSharedReport = action({
       }
 
       // Get campaign details
-      const campaigns = await ctx.runQuery(internal.public.getCampaignsByIds, {
+      const campaigns = await ctx.runQuery(internal.app.public.getCampaignsByIds, {
         campaignIds: report.campaignIds,
       });
 
       // Use the existing fetchCombinedAnalytics function from analytics
-      const analyticsData = await ctx.runAction(internal.analytics.fetchCombinedAnalytics, {
+      const analyticsData = await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
         campaignIds: campaignIds as any,
         days: args.days,
         clerkId: report.userId as any, // Pass the report owner's ID

@@ -15,7 +15,7 @@ import type { UnscheduleDialogProps } from "../types/unschedule.types";
 
 export function UnscheduleDialog({ isOpen, onOpenChange, campaignId, onUnscheduleComplete }: UnscheduleDialogProps) {
   // Fetch scheduled videos
-  const scheduledVideos = useQuery(api.campaigns.getScheduledVideos, isOpen ? { campaignId: campaignId as Id<"campaigns"> } : "skip");
+  const scheduledVideos = useQuery(api.app.campaigns.getScheduledVideos, isOpen ? { campaignId: campaignId as Id<"campaigns"> } : "skip");
   const isLoading = scheduledVideos === undefined;
 
   // Use custom hook for unschedule logic

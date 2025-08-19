@@ -17,7 +17,7 @@ export function useUnscheduleLogic() {
   const [isUnscheduling, setIsUnscheduling] = useState(false);
   const [unscheduleResults, setUnscheduleResults] = useState<UnscheduleResult[]>([]);
 
-  const unschedulePost = useMutation(api.ayrshare.unschedulePost);
+  const unschedulePost = useMutation(api.app.ayrshare.unschedulePost);
 
   const toggleSelectAll = (scheduledVideos?: ScheduledVideo[]) => {
     if (!scheduledVideos) return;

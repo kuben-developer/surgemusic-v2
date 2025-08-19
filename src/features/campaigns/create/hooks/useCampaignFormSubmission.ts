@@ -24,7 +24,7 @@ interface SubmissionProps {
 
 export function useCampaignFormSubmission({ setIsPending }: SubmissionProps) {
   const router = useRouter();
-  const createCampaignMutation = useMutation(api.campaigns.create);
+  const createCampaignMutation = useMutation(api.app.campaigns.create);
 
   const createCampaign = async (data: CreateCampaignData) => {
     setIsPending(true);

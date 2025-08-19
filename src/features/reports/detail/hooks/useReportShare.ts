@@ -16,7 +16,7 @@ export function useReportShare({ reportId }: UseReportShareProps) {
     const [isSharing, setIsSharing] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     
-    const shareReportMutation = useMutation(api.reports.share);
+    const shareReportMutation = useMutation(api.app.reports.share);
 
     const handleShareReport = async () => {
         if (!reportId) {

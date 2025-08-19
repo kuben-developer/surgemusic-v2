@@ -13,15 +13,15 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as analytics from "../analytics.js";
-import type * as ayrshare from "../ayrshare.js";
-import type * as campaigns from "../campaigns.js";
-import type * as folders from "../folders.js";
+import type * as app_analytics from "../app/analytics.js";
+import type * as app_ayrshare from "../app/ayrshare.js";
+import type * as app_campaigns from "../app/campaigns.js";
+import type * as app_folders from "../app/folders.js";
+import type * as app_public from "../app/public.js";
+import type * as app_reports from "../app/reports.js";
+import type * as app_stripe from "../app/stripe.js";
+import type * as app_users from "../app/users.js";
 import type * as http from "../http.js";
-import type * as public_ from "../public.js";
-import type * as reports from "../reports.js";
-import type * as stripe from "../stripe.js";
-import type * as users from "../users.js";
 import type * as webhooks_ayrshare from "../webhooks/ayrshare.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_make from "../webhooks/make.js";
@@ -37,15 +37,15 @@ import type * as webhooks_test from "../webhooks/test.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  analytics: typeof analytics;
-  ayrshare: typeof ayrshare;
-  campaigns: typeof campaigns;
-  folders: typeof folders;
+  "app/analytics": typeof app_analytics;
+  "app/ayrshare": typeof app_ayrshare;
+  "app/campaigns": typeof app_campaigns;
+  "app/folders": typeof app_folders;
+  "app/public": typeof app_public;
+  "app/reports": typeof app_reports;
+  "app/stripe": typeof app_stripe;
+  "app/users": typeof app_users;
   http: typeof http;
-  public: typeof public_;
-  reports: typeof reports;
-  stripe: typeof stripe;
-  users: typeof users;
   "webhooks/ayrshare": typeof webhooks_ayrshare;
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/make": typeof webhooks_make;

@@ -42,7 +42,7 @@ export function useReportAnalyticsData({
     isRefreshing: false,
   });
 
-  const getReportAnalytics = useAction(api.analytics.getReportAnalytics);
+  const getReportAnalytics = useAction(api.app.analytics.getReportAnalytics);
 
   const calculateGrowthData = useCallback((data: ReportAnalyticsData): AnalyticsGrowthData => {
     // Calculate growth metrics based on the data

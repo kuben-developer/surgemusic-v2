@@ -15,7 +15,7 @@ interface UseReportDeleteProps {
 export function useReportDelete({ reportId, reportName }: UseReportDeleteProps) {
     const router = useRouter();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const deleteReportMutation = useMutation(api.reports.deleteReport);
+    const deleteReportMutation = useMutation(api.app.reports.deleteReport);
     
     const handleDeleteReport = async () => {
         if (!reportId) {

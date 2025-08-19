@@ -11,7 +11,7 @@ import type { PricingInterval, UsePricingPlansReturn } from '../types/pricing.ty
  */
 export function usePricingPlans(): UsePricingPlansReturn {
   const [interval, setInterval] = useState<PricingInterval>('month');
-  const user = useQuery(api.users.getCurrentUser);
+  const user = useQuery(api.app.users.getCurrentUser);
   const isLoading = user === undefined;
 
   // Auto-select interval based on user's current subscription

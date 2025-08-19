@@ -11,7 +11,7 @@ export default function CampaignCreatePage() {
   const formData = useCampaignForm();
 
   // Fetch user data
-  const userData = useQuery(api.users.getCurrentUser);
+  const userData = useQuery(api.app.users.getCurrentUser);
   const totalCredits = (userData?.videoGenerationCredit ?? 0) + (userData?.videoGenerationAdditionalCredit ?? 0);
   const isSubscribed = Boolean(userData?.subscriptionPriceId);
 

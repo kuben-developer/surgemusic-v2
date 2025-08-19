@@ -11,7 +11,7 @@ import type { UseCheckoutSessionReturn, CheckoutSessionParams } from '../types/p
  */
 export function useCheckoutSession(): UseCheckoutSessionReturn {
   const router = useRouter();
-  const createCheckoutSessionAction = useAction(api.stripe.createCheckoutSession);
+  const createCheckoutSessionAction = useAction(api.app.stripe.createCheckoutSession);
   
   const createCheckoutSession = async (params: CheckoutSessionParams): Promise<void> => {
     // Validate parameters

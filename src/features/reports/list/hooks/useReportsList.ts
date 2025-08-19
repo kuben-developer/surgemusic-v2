@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import type { Report } from '../../shared/types/report.types';
 
 export function useReportsList() {
-    const reports = useQuery(api.reports.list);
+    const reports = useQuery(api.app.reports.list);
     const isLoading = reports === undefined;
-    const deleteReport = useMutation(api.reports.deleteReport);
+    const deleteReport = useMutation(api.app.reports.deleteReport);
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<Report | null>(null);

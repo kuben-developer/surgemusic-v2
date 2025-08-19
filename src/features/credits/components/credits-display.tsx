@@ -16,8 +16,8 @@ export function CreditsDisplay({ className }: CreditsDisplayProps = {}) {
   const router = useRouter();
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   
-  const user = useQuery(api.users.getCurrentUser);
-  const createCheckoutSession = useAction(api.stripe.createCheckoutSession);
+  const user = useQuery(api.app.users.getCurrentUser);
+  const createCheckoutSession = useAction(api.app.stripe.createCheckoutSession);
 
   const handleCreateCheckoutSession = async (priceId: string) => {
     if (!user) {

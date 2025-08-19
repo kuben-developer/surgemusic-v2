@@ -30,9 +30,9 @@ export function useFolderManagerLogic({ open }: UseFolderManagerLogicProps) {
   } = useFolderData({ isOpen: open, selectedFolderId });
 
   // Mutations
-  const deleteFolderMutation = useMutation(api.folders.deleteFolder);
-  const addCampaignsMutation = useMutation(api.folders.addCampaigns);
-  const removeCampaignMutation = useMutation(api.folders.removeCampaign);
+  const deleteFolderMutation = useMutation(api.app.folders.deleteFolder);
+  const addCampaignsMutation = useMutation(api.app.folders.addCampaigns);
+  const removeCampaignMutation = useMutation(api.app.folders.removeCampaign);
 
   // Derived data
   const selectedFolder = folders?.find(folder => folder._id === selectedFolderId);

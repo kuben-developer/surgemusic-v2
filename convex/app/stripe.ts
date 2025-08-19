@@ -1,6 +1,6 @@
-import { action } from "./_generated/server";
+import { action } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal } from "../_generated/api";
 import Stripe from 'stripe';
 
 // Stripe will be initialized inside the actions
@@ -25,7 +25,7 @@ export const createCheckoutSession = action({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.runQuery(internal.users.getByClerkId, {
+    const user = await ctx.runQuery(internal.app.users.getByClerkId, {
       clerkId: identity.subject,
     });
 
@@ -46,7 +46,7 @@ export const createCheckoutSession = action({
         },
       });
 
-      await ctx.runMutation(internal.users.updateStripeCustomerId, {
+      await ctx.runMutation(internal.app.users.updateStripeCustomerId, {
         userId: user._id,
         stripeCustomerId: newCustomer.id,
       });
@@ -99,7 +99,7 @@ export const createCustomerPortalSession = action({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.runQuery(internal.users.getByClerkId, {
+    const user = await ctx.runQuery(internal.app.users.getByClerkId, {
       clerkId: identity.subject,
     });
 
@@ -125,7 +125,7 @@ export const endTrialImmediately = action({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.runQuery(internal.users.getByClerkId, {
+    const user = await ctx.runQuery(internal.app.users.getByClerkId, {
       clerkId: identity.subject,
     });
 
@@ -151,7 +151,7 @@ export const endTrialImmediately = action({
     });
 
     if (updatedSubscription.status === 'active') {
-      await ctx.runMutation(internal.users.updateTrial, {
+      await ctx.runMutation(internal.app.users.updateTrial, {
         userId: user._id,
         isTrial: false,
       });

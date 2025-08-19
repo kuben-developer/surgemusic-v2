@@ -106,7 +106,7 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
         let credits = isTrial ? 5 : (subscriptionCredits[subscriptionPriceId] ?? 0);
         
         // Handle cancellation of other subscriptions
-        const user = await ctx.runQuery(internal.users.getByClerkId, {
+        const user = await ctx.runQuery(internal.app.users.getByClerkId, {
           clerkId: customer.metadata.clerkId || "",
         });
         

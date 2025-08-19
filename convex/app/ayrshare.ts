@@ -1,6 +1,6 @@
-import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
+import { query, mutation, action, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { api, internal } from "../_generated/api";
 
 const AYRSHARE_API_KEY = process.env.AYRSHARE_API_KEY || "";
 const AYRSHARE_DOMAIN = "id-jgi1t";
@@ -102,7 +102,7 @@ export const checkProfiles = mutation({
     }
 
     // Schedule action to check profile
-    await ctx.scheduler.runAfter(0, api.ayrshare.checkProfileWithAPI, {
+    await ctx.scheduler.runAfter(0, api.app.ayrshare.checkProfileWithAPI, {
       profileId: profile._id,
       profileKey: profile.profileKey,
     });
@@ -133,7 +133,7 @@ export const createProfile = mutation({
     const profileName = args.profileName + "|" + crypto.randomUUID();
 
     // Schedule action to create profile via API
-    await ctx.scheduler.runAfter(0, api.ayrshare.createProfileWithAPI, {
+    await ctx.scheduler.runAfter(0, api.app.ayrshare.createProfileWithAPI, {
       profileName,
       userId: user._id,
     });
@@ -181,7 +181,7 @@ export const deleteProfileMutation = mutation({
     }
 
     // Schedule action to delete profile via API
-    await ctx.scheduler.runAfter(0, api.ayrshare.deleteProfileWithAPI, {
+    await ctx.scheduler.runAfter(0, api.app.ayrshare.deleteProfileWithAPI, {
       profileId: profile._id,
       profileKey: profile.profileKey,
     });
@@ -196,7 +196,7 @@ export const generateProfileManagerUrl = mutation({
   },
   handler: async (ctx, args) => {
     // Schedule action to generate URL
-    await ctx.scheduler.runAfter(0, api.ayrshare.generateProfileManagerUrlWithAPI, {
+    await ctx.scheduler.runAfter(0, api.app.ayrshare.generateProfileManagerUrlWithAPI, {
       profileKey: args.profileKey,
     });
 
@@ -222,7 +222,7 @@ export const schedulePost = action({
     console.log(`[schedulePost] Starting to schedule ${schedules.length} videos at ${new Date().toISOString()}`);
     
     const videoIds = schedules.map(schedule => schedule.videoId);
-    const existingVideos = await ctx.runQuery(internal.ayrshare.getVideosByIds, { videoIds });
+    const existingVideos = await ctx.runQuery(internal.app.ayrshare.getVideosByIds, { videoIds });
     const existingVideoIds = new Set(existingVideos.map((v: any) => v._id));
 
     const processSchedule = async (schedule: typeof schedules[0]) => {
@@ -264,7 +264,7 @@ export const schedulePost = action({
           ? Object.values(schedule.socialAccountIds).filter(id => id && id.trim() !== '')
           : [];
 
-        await ctx.runMutation(internal.ayrshare.updateVideoSchedule, {
+        await ctx.runMutation(internal.app.ayrshare.updateVideoSchedule, {
           videoId: schedule.videoId,
           scheduledAt: new Date(schedule.scheduleDate).getTime(),
           postId: result.posts[0].id,
@@ -370,7 +370,7 @@ export const unschedulePost = mutation({
     }
 
     // Schedule action to unschedule posts
-    await ctx.scheduler.runAfter(0, api.ayrshare.unschedulePostsWithAPI, {
+    await ctx.scheduler.runAfter(0, api.app.ayrshare.unschedulePostsWithAPI, {
       postIds: args.postIds,
       userId: user._id,
     });
@@ -398,7 +398,7 @@ export const checkProfileWithAPI = action({
     const result = await response.json();
     
     if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
-      await ctx.runMutation(internal.ayrshare.deleteProfileAndAccounts, {
+      await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
         profileId: args.profileId,
       });
       return { message: "Deleted" };
@@ -435,7 +435,7 @@ export const createProfileWithAPI = action({
       throw new Error(result.message || "Failed to create Ayrshare profile");
     }
 
-    await ctx.runMutation(internal.ayrshare.saveProfile, {
+    await ctx.runMutation(internal.app.ayrshare.saveProfile, {
       profileName: args.profileName,
       profileKey: result.profileKey,
       userId: args.userId,
@@ -466,7 +466,7 @@ export const deleteProfileWithAPI = action({
       throw new Error(result.message || "Failed to delete Ayrshare profile");
     }
 
-    await ctx.runMutation(internal.ayrshare.deleteProfileAndAccounts, {
+    await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
       profileId: args.profileId,
     });
 
@@ -512,7 +512,7 @@ export const unschedulePostsWithAPI = action({
     console.log(`[unschedulePost] Starting to unschedule ${args.postIds.length} posts`);
     
     // Get videos with the given postIds
-    const videos = await ctx.runQuery(internal.ayrshare.getVideosByPostIds, {
+    const videos = await ctx.runQuery(internal.app.ayrshare.getVideosByPostIds, {
       postIds: args.postIds,
       userId: args.userId,
     });
@@ -529,7 +529,7 @@ export const unschedulePostsWithAPI = action({
       let profileKey: string | null = null;
 
       if (video.tiktokUpload?.socialAccountId) {
-        const account = await ctx.runQuery(internal.ayrshare.getSocialAccountWithProfile, {
+        const account = await ctx.runQuery(internal.app.ayrshare.getSocialAccountWithProfile, {
           accountId: video.tiktokUpload.socialAccountId,
         });
         if (account) {
@@ -585,7 +585,7 @@ export const unschedulePostsWithAPI = action({
 
         // Update videos in database
         const videoIds = profileVideos.map(v => v._id);
-        await ctx.runMutation(internal.ayrshare.clearVideoSchedules, {
+        await ctx.runMutation(internal.app.ayrshare.clearVideoSchedules, {
           videoIds,
         });
 

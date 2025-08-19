@@ -30,10 +30,10 @@ export default function CampaignClient() {
   const [currentPage, setCurrentPage] = useState(1)
   const videosPerPage = 8
 
-  const campaign = useQuery(api.campaigns.get, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
+  const campaign = useQuery(api.app.campaigns.get, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
   const isCampaignLoading = campaign === undefined
 
-  const generatedVideos = useQuery(api.campaigns.getGeneratedVideos, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
+  const generatedVideos = useQuery(api.app.campaigns.getGeneratedVideos, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
   const isVideosLoading = generatedVideos === undefined
 
   const {

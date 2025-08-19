@@ -10,7 +10,7 @@ import type { ReportFormValues } from '../../shared/types/report.types';
 
 export function useEditReport(reportId: string) {
     const router = useRouter();
-    const updateMutation = useMutation(api.reports.update);
+    const updateMutation = useMutation(api.app.reports.update);
     const [isUpdating, setIsUpdating] = useState(false);
 
     const updateReport = async (values: ReportFormValues) => {

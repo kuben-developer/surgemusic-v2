@@ -26,7 +26,7 @@ export function ReportAnalyticsClient() {
     const reportId = params.id as string;
     
     // Fetch report details
-    const report = useQuery(api.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
+    const report = useQuery(api.app.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
     const isLoadingReport = report === undefined;
 
     // Transform report data for the hook

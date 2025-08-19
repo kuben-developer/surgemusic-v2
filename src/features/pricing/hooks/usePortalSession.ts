@@ -11,7 +11,7 @@ import type { UsePortalSessionReturn } from '../types/pricing.types';
  */
 export function usePortalSession(): UsePortalSessionReturn {
   const router = useRouter();
-  const createPortalSessionAction = useAction(api.stripe.createCustomerPortalSession);
+  const createPortalSessionAction = useAction(api.app.stripe.createCustomerPortalSession);
   
   const createPortalSession = async (): Promise<void> => {
     try {

@@ -23,10 +23,10 @@ export default function AnalyticsClient() {
     const [currentPage, setCurrentPage] = useState(0)
     const [itemsPerPage] = useState(5)
     
-    const campaign = useQuery(api.campaigns.get, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
+    const campaign = useQuery(api.app.campaigns.get, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
     const isCampaignLoading = campaign === undefined
 
-    const generatedVideos = useQuery(api.campaigns.getPostedVideos, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
+    const generatedVideos = useQuery(api.app.campaigns.getPostedVideos, campaignId ? { campaignId: campaignId as Id<"campaigns"> } : "skip")
 
     const {
         dateRange,

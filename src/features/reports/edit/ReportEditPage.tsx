@@ -14,7 +14,7 @@ export default function ReportEditPage() {
     const reportId = params.id as string;
 
     // Fetch existing report data
-    const reportData = useQuery(api.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
+    const reportData = useQuery(api.app.reports.get, reportId ? { id: reportId as Id<"reports"> } : "skip");
     const isLoadingReport = reportData === undefined;
     const reportError = null;
 

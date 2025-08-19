@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import type { ProfileCheckResult, ProfileWithAccounts, CheckProfilesResult } from '../types/social-accounts.types'
 
 export function useProfileSync() {
-  const checkProfilesMutation = useMutation(api.ayrshare.checkProfiles)
+  const checkProfilesMutation = useMutation(api.app.ayrshare.checkProfiles)
   
   const [profileCheckResults, setProfileCheckResults] = useState<ProfileCheckResult[]>([])
   const [currentCheckIndex, setCurrentCheckIndex] = useState(-1)

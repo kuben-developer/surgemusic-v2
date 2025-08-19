@@ -23,7 +23,7 @@ export default function CampaignListPage() {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">('all');
 
   // Fetch folder and campaign data using Convex
-  const folderData = useQuery(api.campaigns.getAllWithFolders);
+  const folderData = useQuery(api.app.campaigns.getAllWithFolders);
   const isLoading = folderData === undefined;
   const error = null; // Convex handles errors differently
 

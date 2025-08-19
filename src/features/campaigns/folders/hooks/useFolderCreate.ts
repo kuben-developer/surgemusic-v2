@@ -15,7 +15,7 @@ export function useFolderCreate({ folders }: UseFolderCreateProps) {
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const createFolderMutation = useMutation(api.folders.create);
+  const createFolderMutation = useMutation(api.app.folders.create);
 
   const validateFolderName = (name: string): string | null => {
     const trimmedName = name.trim();

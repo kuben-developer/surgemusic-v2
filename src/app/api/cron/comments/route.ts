@@ -106,7 +106,7 @@ export async function GET() {
             // Step 3: Fetch comments from Ayrshare API
             try {
                 const commentsResponse = await fetch(
-                    `https://api.ayrshare.com/api/comments/${postId}`,
+                    `https://api.app.ayrshare.com/api/comments/${postId}`,
                     {
                         method: "GET",
                         headers: {
