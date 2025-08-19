@@ -62,7 +62,7 @@ export const create = mutation({
       ...args,
     });
 
-    return referenceId;
+    return campaignId;
   },
 });
 
