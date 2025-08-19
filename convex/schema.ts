@@ -49,6 +49,19 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_userId_status", ["userId", "status"]),
 
+  campaignVideoDailyStats: defineTable({
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    date: v.string(), // 24-11-2023
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_campaignId", ["campaignId"]),
+
   ayrshareProfiles: defineTable({
     profileName: v.string(),
     profileKey: v.string(),
