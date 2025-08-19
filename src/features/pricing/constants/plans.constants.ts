@@ -13,14 +13,14 @@ interface BasePlanConfig {
 // Stripe price ID environment variables mapping
 const STRIPE_PRICE_IDS = {
   monthly: {
-    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID!,
-    Professional: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID!,
-    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_MONTHLY_PRICE_ID!,
+    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_M_PRICE!,
+    Professional: process.env.NEXT_PUBLIC_STRIPE_PRO_M_PRICE!,
+    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_M_PRICE!,
   },
   yearly: {
-    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID!,
-    Professional: process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_YEARLY_PRICE_ID!,
-    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_YEARLY_PRICE_ID!,
+    Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_Y_PRICE!,
+    Professional: process.env.NEXT_PUBLIC_STRIPE_PRO_Y_PRICE!,
+    Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_Y_PRICE!,
   },
 } as const;
 

@@ -11,19 +11,19 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
   
   const creditAmounts: Record<string, number> = {
-    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_30_PRICE_ID!]: 30,
-    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_60_PRICE_ID!]: 60,
-    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_90_PRICE_ID!]: 90,
-    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_120_PRICE_ID!]: 120,
+    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_30_PRICE!]: 30,
+    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_60_PRICE!]: 60,
+    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_90_PRICE!]: 90,
+    [process.env.NEXT_PUBLIC_STRIPE_CREDITS_120_PRICE!]: 120,
   };
   
   const subscriptionCredits: Record<string, number> = {
-    [process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID!]: 30,
-    [process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID!]: 120,
-    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_MONTHLY_PRICE_ID!]: 360,
-    [process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID!]: 30 * 12,
-    [process.env.NEXT_PUBLIC_STRIPE_PROFESSIONAL_YEARLY_PRICE_ID!]: 120 * 12,
-    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_YEARLY_PRICE_ID!]: 360 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_STARTER_M_PRICE!]: 30,
+    [process.env.NEXT_PUBLIC_STRIPE_PRO_M_PRICE!]: 120,
+    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_M_PRICE!]: 360,
+    [process.env.NEXT_PUBLIC_STRIPE_STARTER_Y_PRICE!]: 30 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_PRO_Y_PRICE!]: 120 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_Y_PRICE!]: 360 * 12,
   };
   const body = await request.text();
   const signature = request.headers.get("Stripe-Signature") ?? "";
