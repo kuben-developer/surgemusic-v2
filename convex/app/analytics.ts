@@ -641,14 +641,14 @@ export const storeVideoComments = internalMutation({
   handler: async (ctx, args) => {
     let newCommentsCount = 0;
     let updatedCommentsCount = 0;
-    
+
     for (const comment of args.comments) {
       // Check if comment already exists
       const existingComment = await ctx.db
         .query("comments")
         .withIndex("by_commentId", (q) => q.eq("commentId", comment.commentId))
         .unique();
-      
+
       if (!existingComment) {
         // Insert new comment
         await ctx.db.insert("comments", {
@@ -669,11 +669,134 @@ export const storeVideoComments = internalMutation({
         updatedCommentsCount++;
       }
     }
-    
-    return { 
-      newComments: newCommentsCount, 
+
+    return {
+      newComments: newCommentsCount,
       existingComments: updatedCommentsCount,
-      totalComments: args.comments.length 
+      totalComments: args.comments.length
+    };
+  },
+});
+
+export const aggregateCampaignPerformance = internalMutation({
+  args: {
+    campaignId: v.optional(v.id("campaigns")),
+  },
+  handler: async (ctx, args) => {
+    // Get current date in DD-MM-YYYY format
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateString = `${day}-${month}-${year}`;
+
+    // Determine which campaigns to aggregate
+    let campaignIds: Id<"campaigns">[] = [];
+
+    if (args.campaignId) {
+      // Aggregate specific campaign
+      campaignIds = [args.campaignId];
+    } else {
+      // Aggregate all campaigns
+      const allCampaigns = await ctx.db
+        .query("campaigns")
+        .filter((q) => q.neq(q.field("isDeleted"), true))
+        .collect();
+      campaignIds = allCampaigns.map(c => c._id);
+    }
+
+    const results = [];
+
+    for (const campaignId of campaignIds) {
+      // Get the campaign to get userId
+      const campaign = await ctx.db.get(campaignId);
+      if (!campaign) continue;
+
+      // Get all manually posted videos for this campaign
+      const videos = await ctx.db
+        .query("manuallyPostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      if (videos.length === 0) {
+        // No videos to aggregate for this campaign
+        continue;
+      }
+
+      // Aggregate metrics across all videos
+      const aggregatedMetrics = videos.reduce(
+        (acc, video) => ({
+          posts: acc.posts + 1,
+          views: acc.views + video.views,
+          likes: acc.likes + video.likes,
+          comments: acc.comments + video.comments,
+          shares: acc.shares + video.shares,
+          saves: acc.saves + video.saves,
+        }),
+        {
+          posts: 0,
+          views: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          saves: 0,
+        }
+      );
+
+      // Check if a snapshot already exists for this campaign and date
+      const existingSnapshot = await ctx.db
+        .query("campaignPerformanceSnapshots")
+        .withIndex("by_campaignId_date", (q) =>
+          q.eq("campaignId", campaignId).eq("date", dateString)
+        )
+        .unique();
+
+      if (existingSnapshot) {
+        // Update existing snapshot
+        await ctx.db.patch(existingSnapshot._id, {
+          posts: aggregatedMetrics.posts,
+          views: aggregatedMetrics.views,
+          likes: aggregatedMetrics.likes,
+          comments: aggregatedMetrics.comments,
+          shares: aggregatedMetrics.shares,
+          saves: aggregatedMetrics.saves,
+          updatedAt: Date.now(),
+        });
+
+        results.push({
+          campaignId,
+          action: "updated",
+          date: dateString,
+          metrics: aggregatedMetrics,
+        });
+      } else {
+        // Create new snapshot
+        await ctx.db.insert("campaignPerformanceSnapshots", {
+          campaignId,
+          userId: campaign.userId,
+          date: dateString,
+          posts: aggregatedMetrics.posts,
+          views: aggregatedMetrics.views,
+          likes: aggregatedMetrics.likes,
+          comments: aggregatedMetrics.comments,
+          shares: aggregatedMetrics.shares,
+          saves: aggregatedMetrics.saves,
+          updatedAt: Date.now(),
+        });
+
+        results.push({
+          campaignId,
+          action: "created",
+          date: dateString,
+          metrics: aggregatedMetrics,
+        });
+      }
+    }
+
+    return {
+      date: dateString,
+      campaignsProcessed: results.length,
+      results,
     };
   },
 });
