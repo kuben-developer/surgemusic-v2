@@ -12,7 +12,6 @@ This is a SurgeLight application built with:
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **State Management**: React hooks with Convex real-time queries
 - **File Uploads**: UploadThing
-- **Analytics**: ClickHouse integration
 
 ## Common Development Commands
 

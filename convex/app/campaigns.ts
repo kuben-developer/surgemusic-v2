@@ -599,4 +599,20 @@ export const getCampaignWithUser = internalQuery({
   },
 })
 
+export const getAllWithCaptions = internalQuery({
+  args: {},
+  handler: async (ctx, args) => {
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("caption"), undefined),
+          q.neq(q.field("isDeleted"), true)
+        )
+      )
+      .collect();
+    return campaigns;
+  },
+})
+
 

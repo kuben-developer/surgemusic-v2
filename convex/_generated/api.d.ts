@@ -20,6 +20,7 @@ import type * as app_folders from "../app/folders.js";
 import type * as app_public from "../app/public.js";
 import type * as app_reports from "../app/reports.js";
 import type * as app_stripe from "../app/stripe.js";
+import type * as app_tiktok from "../app/tiktok.js";
 import type * as app_users from "../app/users.js";
 import type * as http from "../http.js";
 import type * as webhooks_ayrshare from "../webhooks/ayrshare.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "app/public": typeof app_public;
   "app/reports": typeof app_reports;
   "app/stripe": typeof app_stripe;
+  "app/tiktok": typeof app_tiktok;
   "app/users": typeof app_users;
   http: typeof http;
   "webhooks/ayrshare": typeof webhooks_ayrshare;

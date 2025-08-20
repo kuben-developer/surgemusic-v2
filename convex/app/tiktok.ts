@@ -1,0 +1,445 @@
+import { v } from "convex/values";
+import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { internalAction } from "../_generated/server";
+
+const encodeCaption = (caption: string): string => {
+  let hex = '';
+  for (let i = 0; i < caption.length; i++) {
+    hex += caption.charCodeAt(i).toString(16).padStart(4, '0');
+  }
+  return hex;
+};
+
+const TOKAPI_KEY = "7d9b644435e645dcbd714a90a400e18e"
+const TIKTOK_ACCOUNTS = [
+  "MelodyVibes238",
+  "melodywhisperer",
+  "lyricvibesoulx",
+  "songgazerx",
+  "lyricdancer8",
+  "trackriderx",
+  "musictrekker",
+  "rhythmswayx",
+  "trackvibe2",
+  "echoexplorersoul",
+  "purerhythm",
+  "lyricbenderx",
+  "lyricdream8",
+  "melodyswerve",
+  "melodydive",
+  "melodysoulseeker",
+  "tracksoulmatex",
+  "musiccraze50",
+  "vibechaserz8",
+  "jamflow72",
+  "jamsoulx",
+  "audiorider",
+  "SonicWhisper",
+  "LyricDreamerX",
+  "BeatBenderX",
+  "NoteVibes",
+  "SonicRiderX",
+  "SonicAddictX",
+  "TrackLoverX",
+  "JamTunerX",
+  "MelodyTunerX",
+  "EchoDreamer",
+  "JamJunkie",
+  "trackwhisperx",
+  "sonicsway6",
+  "sonicwavex",
+  "noteseeker",
+  "tracksoulmate",
+  "echobeats461",
+  "vibefusion951",
+  "sonicrhythmx",
+  "songsoulx6",
+  "songwave56",
+  "sonicwhispersoul",
+  "echowanderer50",
+  "trackseekerx",
+  "trackvibesoul",
+  "songswaysoul",
+  "sonicsoulmatex",
+  "musicseeker21",
+  "sinicsoul54",
+  "rhythmdreamer7",
+  "jamvibex",
+  "echovibes235",
+  "lyricvoyager0",
+  "lyricexplorerx",
+  "lyricljunkie1",
+  "beatlover32",
+  "rhythmseeker2",
+  "melodytreksoulx",
+  "lyrictunerx",
+  "musicchaser1",
+  "rhythmsoulmate",
+  "musicflowr",
+  "sonicexplorersoul",
+  "echowave303",
+  "tracksoul0",
+  "jamvibes6",
+  "lyricjunkiez",
+  "echotreksoul",
+  "melodygazer7",
+  "lyricbender",
+  "soundgazer1",
+  "vibegazer4",
+  "tuneflow94",
+  "lyriclover779",
+  "sonicdreamer7",
+  "songchasersoul",
+  "beatsoul12",
+  "rhythmexplorer31",
+  "sonicdrifter6",
+  "musicsoulmate1",
+  "songswayer",
+  "melodyhopper",
+  "sonicsoulexplorer",
+  "songvibesoul",
+  "songsoulmatex",
+  "songdrift1",
+  "echovibesoul",
+  "beatjunkiex",
+  "beatmaven",
+  "songgazer0",
+  "beattreksoul",
+  "viberider79",
+  "echovibe332",
+  "songgazerx6",
+  "jamrider6",
+  "melodysoulz",
+  "vibesoulx1",
+  "echosoulmate",
+  "trackflow8",
+  "lyricdreamersoul",
+  "songexplorersoul",
+  "lyricaddictx",
+  "beatvibez0",
+  "echoexplorer54",
+  "sonicchasersoul",
+  "melodywalker83",
+  "jamsoul7",
+  "melodytuner7",
+  "melodysoul26",
+  "sonicsoulz",
+  "songwhisper8",
+  "musicvibes7655",
+  "melodyexplorerx",
+  "lyricadventurer",
+  "echotrekker5",
+  "trackwhisper18",
+  "trackwhisperer5",
+  "songvibesoulx",
+  "beatbender4",
+  "beatadventurer0",
+  "ravijggehzo",
+  "TrackTrekX",
+  "LyricGazerSoul",
+  "TrackDrifterSoul",
+  "lyrichopper",
+  "notewanderer8",
+  "echoriderx",
+  "echosoulmate8",
+  "rhythmgazer",
+  "vipingsounds",
+  "echosonic97",
+  "vibeexplorer53",
+  "melodyseeker6",
+  "soundtrackstar6",
+  "echochaserx",
+  "vibedreamer8",
+  "sonicwanderer0",
+  "audioswayx",
+  "notewhisperer1",
+  "sonicseeker81",
+  "trackdrifter",
+  "jamflowx",
+  "melodyjourney53",
+  "jamvibessoul",
+  "balvieohetm",
+  "sonicvibeexplorer",
+  "melodyseekersoul",
+  "melodyswervex",
+  "songhopper",
+  "jamsoulmatex",
+  "lyricexplorerx5",
+  "songsway7"
+];
+
+
+export const getTikTokUserVideos = internalAction({
+  args: {
+    username: v.string(),
+    maxCursor: v.union(v.number(), v.null()),
+  },
+  handler: async (_, args): Promise<{
+    maxCursor: number | null;
+    hasMore: boolean;
+    videos: {
+      videoId: string;
+      postedAt: number;
+      videoUrl: string;
+      mediaUrl?: string;
+      thumbnailUrl: string;
+      description: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    }[];
+  }> => {
+    const videos: {
+      videoId: string;
+      postedAt: number;
+      videoUrl: string;
+      mediaUrl?: string;
+      thumbnailUrl: string;
+      description: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    }[] = [];
+
+    let requestUrl = `http://api.tokapi.online/v1/post/user/posts?username=${args.username}&count=20`;
+    if (args.maxCursor) {
+      requestUrl += `$offset=${args.maxCursor}`;
+    }
+
+    const response = await fetch(requestUrl, {
+      method: "GET",
+      headers: {
+        'accept': 'application/json',
+        'x-project-name': 'tokapi',
+        'x-api-key': TOKAPI_KEY
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.status_msg.length > 0) {
+      return {
+        maxCursor: null,
+        hasMore: false,
+        videos: []
+      };
+    }
+
+    const maxCursor = data.max_cursor
+    const hasMore = data.has_more === 1
+
+    for (const video of data.aweme_list) {
+      const thumbnail_url = video.video.cover.url_list[0];
+
+      videos.push({
+        videoId: video.aweme_id.toString(),
+        postedAt: video.create_time,
+        videoUrl: `https://www.tiktok.com/@/video/${video.aweme_id}`,
+        thumbnailUrl: thumbnail_url,
+        description: video.desc || '',
+        views: video.statistics.play_count,
+        likes: video.statistics.digg_count,
+        comments: video.statistics.comment_count,
+        shares: video.statistics.share_count,
+        saves: video.statistics.collect_count,
+      })
+    }
+
+    return {
+      maxCursor, hasMore, videos
+    };
+  },
+});
+
+
+export const getTikTokVideoComments = internalAction({
+  args: {
+    videoId: v.string(),
+  },
+  handler: async (_, args): Promise<{
+    comments: {
+      commentId: string;
+      text: string;
+      authorUsername: string;
+      authorNickname: string;
+      authorProfilePicUrl: string;
+      createdAt: number;
+    }[];
+  }> => {
+    const comments: {
+      commentId: string;
+      text: string;
+      authorUsername: string;
+      authorNickname: string;
+      authorProfilePicUrl: string;
+      createdAt: number;
+    }[] = [];
+
+    let requestUrl = `http://api.tokapi.online/v1/post/${args.videoId}/comments`;
+    const response = await fetch(requestUrl, {
+      method: "GET",
+      headers: {
+        'accept': 'application/json',
+        'x-project-name': 'tokapi',
+        'x-api-key': TOKAPI_KEY
+      },
+    });
+
+    const data = await response.json();
+
+    for (const comment of data.comments) {
+      comments.push({
+        commentId: comment.cid.toString(),
+        text: comment.text,
+        authorUsername: comment.user.unique_id,
+        authorNickname: comment.user.nickname,
+        authorProfilePicUrl: comment.user.avatar_thumb.url_list[0],
+        createdAt: comment.create_time,
+      })
+    }
+
+    return {
+      comments
+    };
+  },
+});
+
+
+export const scrapeManuallyPostedVideos = internalAction({
+  args: {
+    username: v.string(),
+    captionToCampaignMap: v.record(v.string(), v.object({
+      campaignId: v.id("campaigns"),
+      userId: v.id("users"),
+    })),
+  },
+  handler: async (ctx, args) => {
+    let currentMaxCursor: number | null = null;
+    while (true) {
+
+      const result: {
+        maxCursor: number | null;
+        hasMore: boolean;
+        videos: Array<{
+          videoId: string;
+          postedAt: number;
+          videoUrl: string;
+          mediaUrl?: string;
+          thumbnailUrl: string;
+          views: number;
+          likes: number;
+          comments: number;
+          shares: number;
+          saves: number;
+          description: string;
+        }>;
+      } = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
+        username: args.username,
+        maxCursor: currentMaxCursor
+      });
+      const { maxCursor, hasMore, videos } = result;
+      console.log(`Fetched ${videos.length} videos for account ${args.username} currentMaxCursor: ${currentMaxCursor}, hasMore: ${hasMore}, maxCursor: ${maxCursor}`);
+
+      for (const video of videos) {
+        // Encode the video description to match the encoded keys in the map
+        const encodedDescription = encodeCaption(video.description.trim());
+        const campaignData = args.captionToCampaignMap[encodedDescription];
+        if (campaignData) {
+          console.log(`Found matching campaign for video ${video.videoId}:`, campaignData);
+
+          try {
+            const result = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+              campaignId: campaignData.campaignId,
+              userId: campaignData.userId,
+              videoId: video.videoId,
+              postedAt: video.postedAt,
+              videoUrl: video.videoUrl,
+              mediaUrl: video.mediaUrl,
+              thumbnailUrl: video.thumbnailUrl,
+              views: video.views,
+              likes: video.likes,
+              comments: video.comments,
+              shares: video.shares,
+              saves: video.saves,
+              socialPlatform: "tiktok",
+            });
+
+            console.log(`Video ${video.videoId} ${result.action} for campaign ${campaignData.campaignId}`);
+
+            // Fetch and store comments for this video
+            if (result.videoId && video.comments > 0) {
+              try {
+                const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                  videoId: video.videoId,
+                });
+
+                if (commentsData.comments && commentsData.comments.length > 0) {
+                  const commentsResult = await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                    campaignId: campaignData.campaignId,
+                    userId: campaignData.userId,
+                    videoId: result.videoId,
+                    socialPlatform: "tiktok",
+                    comments: commentsData.comments,
+                  });
+
+                  console.log(`Stored ${commentsResult.newComments} new comments for video ${video.videoId}`);
+                }
+              } catch (commentError) {
+                console.error(`Failed to fetch/store comments for video ${video.videoId}:`, commentError);
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to store video ${video.videoId}:`, error);
+          }
+        }
+      }
+
+      if (!hasMore) break;
+      currentMaxCursor = maxCursor;
+    }
+  },
+});
+
+
+export const monitorManuallyPostedVideos = internalAction({
+  handler: async (ctx, _) => {
+    const campaigns = await ctx.runQuery(internal.app.campaigns.getAllWithCaptions);
+    const captionToCampaignMap = new Map<string, { campaignId: Id<"campaigns">, userId: Id<"users"> }>();
+
+    for (const campaign of campaigns) {
+      if (campaign.caption) {
+        // Use encoded caption as key to avoid issues with special characters
+        const encodedCaption = encodeCaption(campaign.caption);
+        captionToCampaignMap.set(encodedCaption, {
+          campaignId: campaign._id,
+          userId: campaign.userId
+        });
+      }
+    }
+
+    console.log(`Found ${captionToCampaignMap.size} campaigns with captions`);
+
+    const BATCH_SIZE = 90;
+    const BATCH_DELAY_MS = 60000; // 1 minute in milliseconds
+
+    for (let i = 0; i < TIKTOK_ACCOUNTS.length; i += BATCH_SIZE) {
+      const batch = TIKTOK_ACCOUNTS.slice(i, i + BATCH_SIZE);
+      const batchDelay = Math.floor(i / BATCH_SIZE) * BATCH_DELAY_MS;
+
+      for (const username of batch) {
+        await ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
+          username: username,
+          captionToCampaignMap: Object.fromEntries(captionToCampaignMap),
+        });
+      }
+
+      console.log(`Deployed batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} scrapers scheduled to run after ${batchDelay}ms`);
+    }
+
+  },
+});

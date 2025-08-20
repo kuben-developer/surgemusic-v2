@@ -1,5 +1,5 @@
-import { defineSchema, defineTable } from 'convex/server'
-import { v } from 'convex/values'
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
 
 const socialPlatforms = v.union(
   v.literal("tiktok"),
@@ -52,18 +52,59 @@ export default defineSchema({
     .index("by_userId_status", ["userId", "status"])
     .index("by_caption", ["caption"]),
 
-  campaignVideoDailyStats: defineTable({
+  campaignPerformanceSnapshots: defineTable({
     campaignId: v.id('campaigns'),
     userId: v.id('users'),
     date: v.string(), // 24-11-2023
+    posts: v.number(),
     views: v.number(),
     likes: v.number(),
     comments: v.number(),
     shares: v.number(),
     saves: v.number(),
+    updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_campaignId", ["campaignId"]),
+    .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_date", ["campaignId", "date"]),
+
+  manuallyPostedVideos: defineTable({
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    socialPlatform: socialPlatforms,
+    videoId: v.string(),
+    postedAt: v.number(),
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    thumbnailUrl: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_userId", ["userId"])
+    .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
+
+  comments: defineTable({
+    commentId: v.string(),
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    videoId: v.id('manuallyPostedVideos'),
+    socialPlatform: socialPlatforms,
+    text: v.string(),
+    authorUsername: v.string(),
+    authorNickname: v.string(),
+    authorProfilePicUrl: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_commentId", ["commentId"])
+    .index("by_campaignId", ["campaignId"])
+    .index("by_userId", ["userId"])
+    .index("by_socialPlatform", ["socialPlatform"]),
+
 
   ayrshareProfiles: defineTable({
     profileName: v.string(),

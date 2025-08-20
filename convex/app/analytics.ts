@@ -1,7 +1,8 @@
 // import { createClient } from '@clickhouse/client';
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
-import { action, internalAction } from "../_generated/server";
+import { action, internalAction, internalMutation } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 // Initialize ClickHouse client
 const getClickHouseClient = () => {
@@ -557,5 +558,122 @@ export const fetchCombinedAnalytics = internalAction({
         lastUpdatedAt: null,
       };
     }
+  },
+});
+
+export const storeManuallyPostedVideo = internalMutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    userId: v.id("users"),
+    videoId: v.string(),
+    postedAt: v.number(),
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    thumbnailUrl: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    socialPlatform: v.union(v.literal("tiktok"), v.literal("instagram"), v.literal("youtube")),
+  },
+  handler: async (ctx, args) => {
+    // Check if video already exists for this campaign and platform
+    const existingVideo = await ctx.db
+      .query("manuallyPostedVideos")
+      .withIndex("by_videoId_socialPlatform", (q) =>
+        q.eq("videoId", args.videoId).eq("socialPlatform", args.socialPlatform)
+      )
+      .filter((q) => q.eq(q.field("campaignId"), args.campaignId))
+      .unique();
+
+    if (existingVideo) {
+      // Update existing video with latest metrics
+      await ctx.db.patch(existingVideo._id, {
+        views: args.views,
+        likes: args.likes,
+        comments: args.comments,
+        shares: args.shares,
+        saves: args.saves,
+        updatedAt: Date.now(),
+      });
+
+      return { action: "updated", videoId: existingVideo._id };
+    } else {
+      // Insert new video
+      const videoId = await ctx.db.insert("manuallyPostedVideos", {
+        campaignId: args.campaignId,
+        userId: args.userId,
+        socialPlatform: "tiktok",
+        videoId: args.videoId,
+        postedAt: args.postedAt,
+        videoUrl: args.videoUrl,
+        mediaUrl: args.mediaUrl,
+        thumbnailUrl: args.thumbnailUrl,
+        views: args.views,
+        likes: args.likes,
+        comments: args.comments,
+        shares: args.shares,
+        saves: args.saves,
+        updatedAt: Date.now(),
+      });
+
+      return { action: "created", videoId };
+    }
+  },
+});
+
+export const storeVideoComments = internalMutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    userId: v.id("users"),
+    videoId: v.id("manuallyPostedVideos"),
+    socialPlatform: v.union(v.literal("tiktok"), v.literal("instagram"), v.literal("youtube")),
+    comments: v.array(v.object({
+      commentId: v.string(),
+      text: v.string(),
+      authorUsername: v.string(),
+      authorNickname: v.string(),
+      authorProfilePicUrl: v.string(),
+      createdAt: v.number(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    let newCommentsCount = 0;
+    let updatedCommentsCount = 0;
+    
+    for (const comment of args.comments) {
+      // Check if comment already exists
+      const existingComment = await ctx.db
+        .query("comments")
+        .withIndex("by_commentId", (q) => q.eq("commentId", comment.commentId))
+        .unique();
+      
+      if (!existingComment) {
+        // Insert new comment
+        await ctx.db.insert("comments", {
+          commentId: comment.commentId,
+          campaignId: args.campaignId,
+          userId: args.userId,
+          videoId: args.videoId,
+          socialPlatform: args.socialPlatform,
+          text: comment.text,
+          authorUsername: comment.authorUsername,
+          authorNickname: comment.authorNickname,
+          authorProfilePicUrl: comment.authorProfilePicUrl,
+          createdAt: comment.createdAt,
+        });
+        newCommentsCount++;
+      } else {
+        // Comment already exists, could update if needed
+        updatedCommentsCount++;
+      }
+    }
+    
+    return { 
+      newComments: newCommentsCount, 
+      existingComments: updatedCommentsCount,
+      totalComments: args.comments.length 
+    };
   },
 });
