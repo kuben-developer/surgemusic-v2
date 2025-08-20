@@ -209,6 +209,50 @@ export const deleteCampaign = mutation({
   },
 });
 
+export const renameCampaign = mutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    newName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    if (campaign.userId !== user._id) {
+      throw new Error("Unauthorized");
+    }
+
+    if (campaign.isDeleted === true) {
+      throw new Error("Cannot rename deleted campaign");
+    }
+
+    const trimmedName = args.newName.trim();
+    if (!trimmedName) {
+      throw new Error("Campaign name cannot be empty");
+    }
+
+    await ctx.db.patch(args.campaignId, { campaignName: trimmedName });
+
+    return { success: true };
+  },
+});
+
 export const getGeneratedVideos = query({
   args: {
     campaignId: v.id("campaigns"),

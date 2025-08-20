@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Globe, Music, Sparkles, Shapes } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import type { Id } from "../../../../../convex/_generated/dataModel"
+import { CampaignActions } from "./CampaignActions"
+import { DeleteCampaignDialog } from "./DeleteCampaignDialog"
+import { RenameCampaignDialog } from "./RenameCampaignDialog"
 
 const COLORS = [
   'text-blue-500',
@@ -40,13 +44,24 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign }: CampaignCardProps) {
   const router = useRouter()
   const color = getRandomColor()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   
   return (
-    <Card className="group relative overflow-hidden border-primary/10 bg-card/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
-      <CardContent className="p-0">
-        <div className="relative aspect-[3/4] bg-muted/30">
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60 z-10" />
-          <div className="absolute bottom-4 left-4 right-4 z-20 space-y-3">
+    <>
+      <Card className="group relative overflow-hidden border-primary/10 bg-card/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+        <CardContent className="p-0">
+          <div className="relative aspect-[3/4] bg-muted/30">
+            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60 z-10" />
+            <div className="absolute top-3 right-3 z-30">
+              <CampaignActions
+                campaignId={campaign._id}
+                campaignName={campaign.campaignName}
+                onDelete={() => setDeleteDialogOpen(true)}
+                onRename={() => setRenameDialogOpen(true)}
+              />
+            </div>
+            <div className="absolute bottom-4 left-4 right-4 z-20 space-y-3">
             <div className="flex items-center gap-2">
               <div className="bg-background/50 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-medium border border-primary/10">
                 {campaign.videoCount} VIDEOS
@@ -125,5 +140,20 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         </Button>
       </CardFooter>
     </Card>
+    
+    <DeleteCampaignDialog
+      isOpen={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      campaignId={campaign._id}
+      campaignName={campaign.campaignName}
+    />
+    
+    <RenameCampaignDialog
+      isOpen={renameDialogOpen}
+      onOpenChange={setRenameDialogOpen}
+      campaignId={campaign._id}
+      currentName={campaign.campaignName}
+    />
+  </>
   )
 }
