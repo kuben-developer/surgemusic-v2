@@ -76,6 +76,7 @@ export const createGeneratedVideo = internalMutation({
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_referenceId", (q) => q.eq("referenceId", args.campaignReferenceId))
+      .filter((q) => q.neq(q.field("isDeleted"), true))
       .unique();
 
     if (!campaign) {
@@ -105,6 +106,7 @@ export const checkCampaignCompletion = internalMutation({
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_referenceId", (q) => q.eq("referenceId", args.campaignReferenceId))
+      .filter((q) => q.neq(q.field("isDeleted"), true))
       .unique();
 
     if (!campaign) {

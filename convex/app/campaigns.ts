@@ -86,11 +86,49 @@ export const get = query({
     }
 
     const campaign = await ctx.db.get(args.campaignId);
-    if (!campaign || campaign.userId !== user._id) {
+    if (!campaign || campaign.userId !== user._id || campaign.isDeleted === true) {
       return null;
     }
 
     return campaign;
+  },
+});
+
+export const deleteCampaign = mutation({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    if (campaign.userId !== user._id) {
+      throw new Error("Unauthorized");
+    }
+
+    if (campaign.isDeleted === true) {
+      throw new Error("Campaign already deleted");
+    }
+
+    await ctx.db.patch(args.campaignId, { isDeleted: true });
+
+    return { success: true };
   },
 });
 
@@ -188,6 +226,7 @@ export const getAll = query({
     const campaigns = await ctx.db
       .query("campaigns")
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .filter((q) => q.neq(q.field("isDeleted"), true))
       .collect();
 
     return campaigns.sort((a, b) => b._creationTime - a._creationTime);
@@ -222,6 +261,7 @@ export const getAllWithFolders = query({
       ctx.db
         .query("campaigns")
         .withIndex("by_userId", (q) => q.eq("userId", user._id))
+        .filter((q) => q.neq(q.field("isDeleted"), true))
         .collect()
     ]);
 

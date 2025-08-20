@@ -2,10 +2,26 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Zap, Music, User, Tag, Calendar, BarChart2, ChevronRight } from "lucide-react";
+import { Zap, Music, User, Tag, Calendar, BarChart2, ChevronRight, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { CampaignHeaderProps } from "../types/campaign-detail.types";
+import type { Id } from "../../../../../convex/_generated/dataModel";
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -22,7 +38,27 @@ const staggerContainer = {
 };
 
 export function CampaignHeader({ campaign, campaignId, generatedVideos }: CampaignHeaderProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteCampaign = useMutation(api.app.campaigns.deleteCampaign);
+  const router = useRouter();
+
   if (!campaign) return null;
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteCampaign({ campaignId: campaignId as Id<"campaigns"> });
+      toast.success("Campaign deleted successfully");
+      router.push("/campaign");
+    } catch (error) {
+      toast.error("Failed to delete campaign");
+      console.error("Error deleting campaign:", error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
 
   return (
     <motion.section
@@ -30,6 +66,20 @@ export function CampaignHeader({ campaign, campaignId, generatedVideos }: Campai
       className="relative overflow-hidden rounded-2xl p-10 shadow-xl border border-primary/10"
     >
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
+      
+      {/* Delete button positioned at top-right */}
+      <div className="absolute top-4 right-4 z-10">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteDialog(true)}
+          className="gap-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span className="font-medium">Delete</span>
+        </Button>
+      </div>
+
       <div className="relative space-y-8">
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-4">
@@ -127,6 +177,28 @@ export function CampaignHeader({ campaign, campaignId, generatedVideos }: Campai
           </motion.div>
         </motion.div>
       </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will delete the campaign "{campaign.campaignName}" and cannot be undone.
+              All associated data will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete Campaign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.section>
   );
 }

@@ -43,6 +43,7 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("failed"),
     ),
+    isDeleted: v.optional(v.boolean()),
   })
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])
