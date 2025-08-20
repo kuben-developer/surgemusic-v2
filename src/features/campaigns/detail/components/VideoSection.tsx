@@ -73,6 +73,7 @@ export function VideoSection({
           onDownloadAll={onDownloadAll}
           hasVideos={filteredVideos.length > 0}
           downloadingAll={downloadingAll}
+          campaign={campaign}
         />
 
         {/* Pagination - Only for grid view */}

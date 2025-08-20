@@ -20,6 +20,7 @@ export const create = mutation({
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
     lyricVideoUrl: v.optional(v.string()),
+    caption: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -54,6 +55,7 @@ export const create = mutation({
       genre: args.genre,
       themes: args.themes,
       status: "pending",
+      caption: args.caption,
     });
 
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
@@ -91,6 +93,41 @@ export const get = query({
     }
 
     return campaign;
+  },
+});
+
+export const updateCaption = mutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    caption: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    if (campaign.userId !== user._id) {
+      throw new Error("Unauthorized");
+    }
+
+    await ctx.db.patch(args.campaignId, { caption: args.caption });
+
+    return { success: true };
   },
 });
 

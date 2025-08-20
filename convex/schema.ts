@@ -44,6 +44,7 @@ export default defineSchema({
       v.literal("failed"),
     ),
     isDeleted: v.optional(v.boolean()),
+    caption: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])
