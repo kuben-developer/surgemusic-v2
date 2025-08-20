@@ -42,6 +42,27 @@ export const create = mutation({
       throw new Error("Insufficient video generation credits");
     }
 
+    // Check if caption is unique before creating campaign
+    if (args.caption) {
+      const trimmedCaption = args.caption.trim();
+      if (trimmedCaption) {
+        // Check if another campaign already uses this caption
+        const existingCampaigns = await ctx.db
+          .query("campaigns")
+          .withIndex("by_caption", (q) => q.eq("caption", trimmedCaption))
+          .collect();
+
+        // Filter out deleted campaigns
+        const conflictingCampaign = existingCampaigns.find(
+          c => c.isDeleted !== true
+        );
+
+        if (conflictingCampaign) {
+          throw new Error("This caption is already used by another campaign. Please choose a unique caption.");
+        }
+      }
+    }
+
     const referenceId = numericUuid();
 
     const campaignId = await ctx.db.insert("campaigns", {
@@ -55,7 +76,7 @@ export const create = mutation({
       genre: args.genre,
       themes: args.themes,
       status: "pending",
-      caption: args.caption,
+      caption: args.caption ? args.caption.trim() : undefined,
     });
 
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
@@ -125,7 +146,26 @@ export const updateCaption = mutation({
       throw new Error("Unauthorized");
     }
 
-    await ctx.db.patch(args.campaignId, { caption: args.caption });
+    // Check if caption is not empty and is unique
+    const trimmedCaption = args.caption.trim();
+    if (trimmedCaption) {
+      // Check if another campaign already uses this caption
+      const existingCampaigns = await ctx.db
+        .query("campaigns")
+        .withIndex("by_caption", (q) => q.eq("caption", trimmedCaption))
+        .collect();
+
+      // Filter out the current campaign and deleted campaigns
+      const conflictingCampaign = existingCampaigns.find(
+        c => c._id !== args.campaignId && c.isDeleted !== true
+      );
+
+      if (conflictingCampaign) {
+        throw new Error("This caption is already used by another campaign. Please choose a unique caption.");
+      }
+    }
+
+    await ctx.db.patch(args.campaignId, { caption: trimmedCaption });
 
     return { success: true };
   },

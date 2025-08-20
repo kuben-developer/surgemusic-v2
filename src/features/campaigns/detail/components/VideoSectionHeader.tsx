@@ -71,7 +71,12 @@ export function VideoSectionHeader({
       toast.success("Caption updated");
       setIsEditingCaption(false);
     } catch (error) {
-      toast.error("Failed to update caption");
+      // Check if it's a uniqueness error
+      if (error instanceof Error && error.message.includes("already used")) {
+        toast.error("This caption is already taken");
+      } else {
+        toast.error("Failed to update caption");
+      }
     } finally {
       setIsSaving(false);
     }

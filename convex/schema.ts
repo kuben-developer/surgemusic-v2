@@ -49,7 +49,8 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])
     .index("by_status", ["status"])
-    .index("by_userId_status", ["userId", "status"]),
+    .index("by_userId_status", ["userId", "status"])
+    .index("by_caption", ["caption"]),
 
   campaignVideoDailyStats: defineTable({
     campaignId: v.id('campaigns'),
