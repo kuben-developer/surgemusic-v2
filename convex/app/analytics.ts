@@ -1,565 +1,111 @@
-// import { createClient } from '@clickhouse/client';
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
-import { action, internalAction, internalMutation } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
+import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
+import type { Id, Doc } from "../_generated/dataModel";
 
-// Initialize ClickHouse client
-const getClickHouseClient = () => {
-  if (!process.env.CLICKHOUSE_HOST || !process.env.CLICKHOUSE_DATABASE) {
-    throw new Error('ClickHouse configuration is missing');
-  }
+// Type definitions for analytics return values
+export interface AnalyticsMetrics {
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  posts: number;
+  engagementRate: number;
+}
 
-  return 1 as any
-};
+export interface DailyMetric {
+  date: string;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  posts: number;
+}
 
-export const getAnalytics = action({
-  args: {
-    campaignId: v.string(),
-    days: v.number(),
-  },
-  handler: async (ctx, args): Promise<any> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+export interface VideoMetric {
+  videoId: string;
+  campaignId: string;
+  campaignName: string;
+  platform: string;
+  thumbnailUrl: string;
+  videoUrl: string;
+  postedAt: number;
+  metrics: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+  };
+}
 
-    // Get campaign from database to validate ownership
-    const campaign = await ctx.runQuery(internal.app.campaigns.getCampaignWithUser, {
-      campaignId: args.campaignId as any,
-      clerkId: identity.subject,
-    });
+export interface CampaignInfo {
+  id: string;
+  name: string;
+  videoCount: number;
+  status: string;
+}
 
-    if (!campaign) {
-      throw new Error("Campaign not found or access denied");
-    }
-
-    // Get videos and analytics data
-    const { analytics } = await ctx.runAction(internal.app.analytics.fetchCampaignAnalytics, {
-      campaignId: args.campaignId,
-      days: args.days,
-    });
-
-    return analytics;
-  },
-});
-
-export const getReportAnalytics = action({
-  args: {
-    id: v.string(),
-    days: v.number(),
-  },
-  handler: async (ctx, args): Promise<any> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // If days=30, try to fetch from blob storage first
-    if (args.days === 30) {
-      try {
-        const blobUrl = `https://zessa1ux5tl2b8nb.public.blob.vercel-storage.com/report-analytics/${args.id}.json`;
-        const response = await fetch(blobUrl);
-
-        if (response.ok) {
-          const blobData = await response.json();
-          console.log(`Analytics fetched from blob for report ${args.id}`);
-
-          const { reportId, processedAt, ...analyticsData } = blobData;
-          return analyticsData;
-        }
-      } catch (error) {
-        console.log(`Failed to fetch from blob for report ${args.id}, falling back to real-time calculation`);
-      }
-    }
-
-    // Fall back to real-time calculation
-    const report = await ctx.runQuery(internal.app.reports.getReportWithCampaigns, {
-      reportId: args.id as any,
-      clerkId: identity.subject,
-    });
-
-    if (!report) {
-      throw new Error("Report not found or access denied");
-    }
-
-    const campaignIds = report.campaignIds;
-    if (campaignIds.length === 0) {
-      return {
-        dailyData: [],
-        totals: { views: 0, likes: 0, comments: 0, shares: 0 },
-        avgEngagementRate: "0.00",
-        videoMetrics: [],
-        campaigns: [],
-        hiddenVideoIds: report.hiddenVideoIds,
-        lastUpdatedAt: null
-      };
-    }
-
-    // Use the fetchCombinedAnalytics action
-    const analyticsData = await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
-      campaignIds: campaignIds as any,
-      days: args.days,
-      clerkId: identity.subject,
-    });
-
-    return {
-      ...analyticsData,
-      hiddenVideoIds: report.hiddenVideoIds,
+export interface AnalyticsResponse {
+  metrics: AnalyticsMetrics;
+  dailyMetrics: DailyMetric[];
+  videoMetrics: VideoMetric[];
+  campaigns: CampaignInfo[];
+  metadata: {
+    lastUpdatedAt: number;
+    dateRange: {
+      start: string;
+      end: string;
     };
-  },
-});
+    totalVideos: number;
+    reportId?: Id<"reports">;
+    hiddenVideoIds?: string[];
+  };
+}
 
-export const getCombinedAnalytics = action({
-  args: {
-    campaignIds: v.optional(v.array(v.string())),
-    days: v.number(),
-  },
-  handler: async (ctx, args): Promise<any> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const days = args.days || 30;
-
-    // Check if we should use cached data
-    if (!args.campaignIds?.length && days === 30) {
-      try {
-        const response = await fetch('https://zessa1ux5tl2b8nb.public.blob.vercel-storage.com/getCombinedAnalytics.json');
-        if (response.ok) {
-          return await response.json();
-        }
-      } catch (error) {
-        console.error("Failed to fetch cached analytics:", error);
-      }
-    }
-
-    // Fetch real-time analytics
-    return await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
-      campaignIds: args.campaignIds,
-      days,
-      clerkId: identity.subject,
-    });
-  },
-});
-
-export const fetchCampaignAnalytics = internalAction({
-  args: {
-    campaignId: v.string(),
-    days: v.number(),
-  },
-  handler: async (ctx, args): Promise<{
-    videos: any[];
-    analytics: {
-      dailyData: any[];
-      totals: { views: number; likes: number; comments: number; shares: number };
-      avgEngagementRate: string;
-      videoMetrics: any[];
-      lastUpdatedAt: number | null;
+interface CommentsResponse {
+  comments: Array<{
+    id: string;
+    videoId: Id<"manuallyPostedVideos">;
+    campaignId: Id<"campaigns">;
+    campaignName: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+    platform: string;
+    comment: {
+      commentId: string;
+      text: string;
+      authorUsername: string;
+      authorNickname: string;
+      authorProfilePicUrl: string;
+      createdAt: number;
     };
-  }> => {
-    try {
-      // 1. Fetch campaign and videos from Convex
-      const campaign = await ctx.runQuery(api.app.campaigns.get, {
-        campaignId: args.campaignId as any,
-      });
+  }>;
+  metadata: {
+    totalComments: number;
+    lastUpdatedAt: number;
+  };
+}
 
-      if (!campaign) {
-        throw new Error('Campaign not found');
-      }
-
-      const videos: any[] = await ctx.runQuery(api.app.campaigns.getGeneratedVideos, {
-        campaignId: args.campaignId as any,
-      });
-
-      if (videos.length === 0) {
-        return {
-          videos: [],
-          analytics: {
-            dailyData: [],
-            totals: { views: 0, likes: 0, comments: 0, shares: 0 },
-            avgEngagementRate: "0.00",
-            videoMetrics: [],
-            lastUpdatedAt: null,
-          },
-        };
-      }
-
-      // 2. Query ClickHouse for analytics data
-      const client = getClickHouseClient();
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - args.days);
-
-      // Get video URLs for the query
-      const videoUrls = videos
-        .map((v: any) => [
-          v.tiktokUpload?.post?.url,
-          v.instagramUpload?.post?.url,
-          v.youtubeUpload?.post?.url
-        ])
-        .flat()
-        .filter((url: any) => url);
-
-      if (videoUrls.length === 0) {
-        return {
-          videos,
-          analytics: {
-            dailyData: [],
-            totals: { views: 0, likes: 0, comments: 0, shares: 0 },
-            avgEngagementRate: "0.00",
-            videoMetrics: [],
-            lastUpdatedAt: null,
-          },
-        };
-      }
-
-      // Query for daily aggregated data
-      const dailyQuery = `
-        SELECT 
-          toDate(created_at) as date,
-          sum(view_count) as views,
-          sum(like_count) as likes,
-          sum(comment_count) as comments,
-          sum(share_count) as shares
-        FROM video_analytics
-        WHERE 
-          video_url IN {videoUrls:Array(String)}
-          AND created_at >= {startDate:DateTime}
-          AND created_at <= {endDate:DateTime}
-        GROUP BY date
-        ORDER BY date ASC
-      `;
-
-      const dailyResult = await client.query({
-        query: dailyQuery,
-        query_params: {
-          videoUrls,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        },
-        format: 'JSONEachRow',
-      });
-
-      const dailyData = await dailyResult.json();
-
-      // Query for video-level metrics
-      const videoMetricsQuery = `
-        SELECT 
-          video_url,
-          sum(view_count) as views,
-          sum(like_count) as likes,
-          sum(comment_count) as comments,
-          sum(share_count) as shares,
-          max(created_at) as last_updated
-        FROM video_analytics
-        WHERE 
-          video_url IN {videoUrls:Array(String)}
-          AND created_at >= {startDate:DateTime}
-          AND created_at <= {endDate:DateTime}
-        GROUP BY video_url
-      `;
-
-      const videoMetricsResult = await client.query({
-        query: videoMetricsQuery,
-        query_params: {
-          videoUrls,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        },
-        format: 'JSONEachRow',
-      });
-
-      const videoMetricsData = await videoMetricsResult.json();
-
-      // 3. Process and aggregate the data
-      const totals = (dailyData as any[]).reduce(
-        (acc: any, day: any) => ({
-          views: acc.views + (day.views || 0),
-          likes: acc.likes + (day.likes || 0),
-          comments: acc.comments + (day.comments || 0),
-          shares: acc.shares + (day.shares || 0),
-        }),
-        { views: 0, likes: 0, comments: 0, shares: 0 }
-      );
-
-      // Calculate engagement rate
-      const avgEngagementRate = totals.views > 0
-        ? (((totals.likes + totals.comments + totals.shares) / totals.views) * 100).toFixed(2)
-        : "0.00";
-
-      // Map video metrics to include video info
-      const videoMetrics = (videoMetricsData as any[]).map((metric: any) => {
-        const video = videos.find((v: any) =>
-          v.tiktokUpload?.post?.url === metric.video_url ||
-          v.instagramUpload?.post?.url === metric.video_url ||
-          v.youtubeUpload?.post?.url === metric.video_url
-        );
-
-        return {
-          videoInfo: video || { id: 'unknown', videoUrl: metric.video_url },
-          views: metric.views || 0,
-          likes: metric.likes || 0,
-          comments: metric.comments || 0,
-          shares: metric.shares || 0,
-          engagementRate: metric.views > 0
-            ? (((metric.likes + metric.comments + metric.shares) / metric.views) * 100).toFixed(2)
-            : "0.00",
-        };
-      });
-
-      await client.close();
-
-      return {
-        videos,
-        analytics: {
-          dailyData,
-          totals,
-          avgEngagementRate,
-          videoMetrics,
-          lastUpdatedAt: Date.now(),
-        },
-      };
-    } catch (error) {
-      console.error('Error fetching campaign analytics:', error);
-      // Return empty analytics on error
-      return {
-        videos: [],
-        analytics: {
-          dailyData: [],
-          totals: { views: 0, likes: 0, comments: 0, shares: 0 },
-          avgEngagementRate: "0.00",
-          videoMetrics: [],
-          lastUpdatedAt: null,
-        },
-      };
-    }
-  },
-});
-
-export const fetchCombinedAnalytics = internalAction({
-  args: {
-    campaignIds: v.optional(v.array(v.string())),
-    days: v.number(),
-    clerkId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    try {
-      // Get user to verify access
-      const user = await ctx.runQuery(internal.app.users.getByClerkId, {
-        clerkId: args.clerkId,
-      });
-
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      // Get all user campaigns if no specific ones requested
-      let campaignIds = args.campaignIds;
-      if (!campaignIds || campaignIds.length === 0) {
-        const allCampaigns = await ctx.runQuery(api.app.campaigns.getAll, {});
-        campaignIds = allCampaigns.map((c: any) => c._id);
-      }
-
-      if (!campaignIds || campaignIds.length === 0) {
-        return {
-          dailyData: [],
-          totals: { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 },
-          avgEngagementRate: "0.00",
-          videoMetrics: [],
-          campaigns: [],
-          lastUpdatedAt: null,
-        };
-      }
-
-      // Fetch all videos for these campaigns
-      const allVideos: any[] = [];
-      const campaigns: any[] = [];
-
-      for (const campaignId of campaignIds) {
-        const campaign = await ctx.runQuery(api.app.campaigns.get, {
-          campaignId: campaignId as any,
-        });
-
-        if (campaign) {
-          campaigns.push(campaign);
-          const videos = await ctx.runQuery(api.app.campaigns.getGeneratedVideos, {
-            campaignId: campaignId as any,
-          });
-          allVideos.push(...videos);
-        }
-      }
-
-      if (allVideos.length === 0) {
-        return {
-          dailyData: [],
-          totals: { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 },
-          avgEngagementRate: "0.00",
-          videoMetrics: [],
-          campaigns,
-          lastUpdatedAt: null,
-        };
-      }
-
-      // Query ClickHouse for combined analytics
-      const client = getClickHouseClient();
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - args.days);
-
-      // Get all video URLs
-      const videoUrls = allVideos
-        .map(v => [
-          v.tiktokUpload?.post?.url,
-          v.instagramUpload?.post?.url,
-          v.youtubeUpload?.post?.url
-        ])
-        .flat()
-        .filter((url: any) => url);
-
-      if (videoUrls.length === 0) {
-        return {
-          dailyData: [],
-          totals: { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: allVideos.length },
-          avgEngagementRate: "0.00",
-          videoMetrics: [],
-          campaigns,
-          lastUpdatedAt: null,
-        };
-      }
-
-      // Query for daily aggregated data
-      const dailyQuery = `
-        SELECT 
-          toDate(created_at) as date,
-          sum(view_count) as views,
-          sum(like_count) as likes,
-          sum(comment_count) as comments,
-          sum(share_count) as shares
-        FROM video_analytics
-        WHERE 
-          video_url IN {videoUrls:Array(String)}
-          AND created_at >= {startDate:DateTime}
-          AND created_at <= {endDate:DateTime}
-        GROUP BY date
-        ORDER BY date ASC
-      `;
-
-      const dailyResult = await client.query({
-        query: dailyQuery,
-        query_params: {
-          videoUrls,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        },
-        format: 'JSONEachRow',
-      });
-
-      const dailyData = await dailyResult.json();
-
-      // Query for video-level metrics
-      const videoMetricsQuery = `
-        SELECT 
-          video_url,
-          sum(view_count) as views,
-          sum(like_count) as likes,
-          sum(comment_count) as comments,
-          sum(share_count) as shares,
-          max(created_at) as last_updated
-        FROM video_analytics
-        WHERE 
-          video_url IN {videoUrls:Array(String)}
-          AND created_at >= {startDate:DateTime}
-          AND created_at <= {endDate:DateTime}
-        GROUP BY video_url
-      `;
-
-      const videoMetricsResult = await client.query({
-        query: videoMetricsQuery,
-        query_params: {
-          videoUrls,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        },
-        format: 'JSONEachRow',
-      });
-
-      const videoMetricsData = await videoMetricsResult.json();
-
-      // Process and aggregate the data
-      const totals: any = (dailyData as any[]).reduce(
-        (acc: any, day: any) => ({
-          views: acc.views + (day.views || 0),
-          likes: acc.likes + (day.likes || 0),
-          comments: acc.comments + (day.comments || 0),
-          shares: acc.shares + (day.shares || 0),
-        }),
-        { views: 0, likes: 0, comments: 0, shares: 0 }
-      );
-
-      // Add total videos count
-      totals.totalVideos = allVideos.length;
-
-      // Calculate engagement rate
-      const avgEngagementRate = totals.views > 0
-        ? (((totals.likes + totals.comments + totals.shares) / totals.views) * 100).toFixed(2)
-        : "0.00";
-
-      // Map video metrics to include video and campaign info
-      const videoMetrics = (videoMetricsData as any[]).map((metric: any) => {
-        const video = allVideos.find((v: any) =>
-          v.tiktokUpload?.post?.url === metric.video_url ||
-          v.instagramUpload?.post?.url === metric.video_url ||
-          v.youtubeUpload?.post?.url === metric.video_url
-        );
-
-        const campaign = video
-          ? campaigns.find((c: any) => c._id === video.campaignId)
-          : null;
-
-        return {
-          videoInfo: {
-            ...video,
-            campaign: campaign ? {
-              id: campaign._id,
-              campaignName: campaign.campaignName,
-            } : undefined,
-          },
-          views: metric.views || 0,
-          likes: metric.likes || 0,
-          comments: metric.comments || 0,
-          shares: metric.shares || 0,
-          engagementRate: metric.views > 0
-            ? (((metric.likes + metric.comments + metric.shares) / metric.views) * 100).toFixed(2)
-            : "0.00",
-        };
-      });
-
-      await client.close();
-
-      return {
-        dailyData,
-        totals,
-        avgEngagementRate,
-        videoMetrics,
-        campaigns,
-        lastUpdatedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error('Error fetching combined analytics:', error);
-      // Return empty analytics on error
-      return {
-        dailyData: [],
-        totals: { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 },
-        avgEngagementRate: "0.00",
-        videoMetrics: [],
-        campaigns: [],
-        lastUpdatedAt: null,
-      };
-    }
-  },
-});
+interface AggregationResult {
+  date: string;
+  campaignsProcessed: number;
+  results: Array<{
+    campaignId: Id<"campaigns">;
+    action: "created" | "updated";
+    date: string;
+    metrics: {
+      posts: number;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    };
+  }>;
+}
 
 export const storeManuallyPostedVideo = internalMutation({
   args: {
@@ -765,7 +311,7 @@ export const aggregateCampaignPerformance = internalMutation({
 
         results.push({
           campaignId,
-          action: "updated",
+          action: "updated" as const,
           date: dateString,
           metrics: aggregatedMetrics,
         });
@@ -786,7 +332,7 @@ export const aggregateCampaignPerformance = internalMutation({
 
         results.push({
           campaignId,
-          action: "created",
+          action: "created" as const,
           date: dateString,
           metrics: aggregatedMetrics,
         });
@@ -797,6 +343,485 @@ export const aggregateCampaignPerformance = internalMutation({
       date: dateString,
       campaignsProcessed: results.length,
       results,
+    };
+  },
+});
+
+export const aggregateAllCampaigns = action({
+  args: {},
+  handler: async (ctx): Promise<AggregationResult> => {
+    // This action can be called by a cron job or manually to aggregate all campaigns
+    const result = await ctx.runMutation(internal.app.analytics.aggregateCampaignPerformance, {});
+    return result;
+  },
+});
+
+export const aggregateSingleCampaign = action({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args): Promise<AggregationResult> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Verify the user owns this campaign
+    const campaign = await ctx.runQuery(internal.app.campaigns.getCampaignWithUser, {
+      campaignId: args.campaignId,
+      clerkId: identity.subject,
+    });
+
+    if (!campaign) {
+      throw new Error("Campaign not found or access denied");
+    }
+
+    // Aggregate the specific campaign
+    const result = await ctx.runMutation(internal.app.analytics.aggregateCampaignPerformance, {
+      campaignId: args.campaignId,
+    });
+    
+    return result;
+  },
+});
+
+// ==================== NEW SIMPLIFIED ANALYTICS FUNCTIONS ====================
+
+export const getCampaignAnalytics = action({
+  args: {
+    campaignIds: v.optional(v.array(v.string())),
+    days: v.number(),
+  },
+  handler: async (ctx, args): Promise<AnalyticsResponse> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.runQuery(internal.app.users.getByClerkId, {
+      clerkId: identity.subject,
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get campaign IDs to fetch
+    let campaignIds = args.campaignIds;
+    if (!campaignIds || campaignIds.length === 0) {
+      // Get all campaigns for the user
+      const userCampaigns: Doc<"campaigns">[] = await ctx.runQuery(api.app.campaigns.getAll, {});
+      campaignIds = userCampaigns.map((c) => c._id);
+    }
+
+    if (!campaignIds || campaignIds.length === 0) {
+      return {
+        metrics: {
+          views: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          saves: 0,
+          posts: 0,
+          engagementRate: 0,
+        },
+        dailyMetrics: [],
+        videoMetrics: [],
+        campaigns: [],
+        metadata: {
+          lastUpdatedAt: Date.now(),
+          dateRange: {
+            start: new Date(Date.now() - args.days * 24 * 60 * 60 * 1000).toISOString(),
+            end: new Date().toISOString(),
+          },
+          totalVideos: 0,
+        },
+      };
+    }
+
+    // Fetch analytics data from Convex tables
+    const result = await ctx.runAction(internal.app.analytics.fetchAnalyticsFromConvex, {
+      campaignIds,
+      days: args.days,
+      userId: user._id,
+    });
+
+    return result;
+  },
+});
+
+export const getReportAnalyticsV2 = action({
+  args: {
+    reportId: v.id("reports"),
+    days: v.number(),
+  },
+  handler: async (ctx, args): Promise<AnalyticsResponse> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Get the report and verify access
+    const report = await ctx.runQuery(internal.app.reports.getReportWithCampaigns, {
+      reportId: args.reportId,
+      clerkId: identity.subject,
+    });
+
+    if (!report) {
+      throw new Error("Report not found or access denied");
+    }
+
+    if (report.campaignIds.length === 0) {
+      return {
+        metrics: {
+          views: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          saves: 0,
+          posts: 0,
+          engagementRate: 0,
+        },
+        dailyMetrics: [],
+        videoMetrics: [],
+        campaigns: [],
+        metadata: {
+          lastUpdatedAt: Date.now(),
+          dateRange: {
+            start: new Date(Date.now() - args.days * 24 * 60 * 60 * 1000).toISOString(),
+            end: new Date().toISOString(),
+          },
+          totalVideos: 0,
+          reportId: args.reportId,
+          hiddenVideoIds: report.hiddenVideoIds || [],
+        },
+      };
+    }
+
+    // Get analytics for the report's campaigns
+    const analyticsData = await ctx.runAction(api.app.analytics.getCampaignAnalytics, {
+      campaignIds: report.campaignIds,
+      days: args.days,
+    });
+
+    // Add report-specific metadata
+    return {
+      ...analyticsData,
+      metadata: {
+        ...analyticsData.metadata,
+        reportId: args.reportId,
+        hiddenVideoIds: report.hiddenVideoIds || [],
+      },
+    };
+  },
+});
+
+export const getComments = action({
+  args: {
+    campaignIds: v.optional(v.array(v.string())),
+    limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<CommentsResponse> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.runQuery(internal.app.users.getByClerkId, {
+      clerkId: identity.subject,
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get campaign IDs to fetch comments for
+    let campaignIds = args.campaignIds;
+    if (!campaignIds || campaignIds.length === 0) {
+      // Get all campaigns for the user
+      const userCampaigns: Doc<"campaigns">[] = await ctx.runQuery(api.app.campaigns.getAll, {});
+      campaignIds = userCampaigns.map((c) => c._id);
+    }
+
+    if (!campaignIds || campaignIds.length === 0) {
+      return {
+        comments: [],
+        metadata: {
+          totalComments: 0,
+          lastUpdatedAt: Date.now(),
+        },
+      };
+    }
+
+    // Fetch comments from Convex
+    const result = await ctx.runQuery(internal.app.analytics.fetchCommentsFromConvex, {
+      campaignIds: campaignIds as Id<"campaigns">[],
+      userId: user._id,
+      limit: args.limit || 100,
+      offset: args.offset || 0,
+    });
+
+    return result;
+  },
+});
+
+// Internal helper to fetch analytics from Convex tables
+export const fetchAnalyticsFromConvex = internalAction({
+  args: {
+    campaignIds: v.array(v.string()),
+    days: v.number(),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<AnalyticsResponse> => {
+    const endDate = new Date();
+    const startDate = new Date(Date.now() - args.days * 24 * 60 * 60 * 1000);
+
+    // Fetch campaigns
+    const campaigns: Array<{
+      id: string;
+      name: string;
+      videoCount: number;
+      status: string;
+    }> = [];
+    for (const campaignId of args.campaignIds) {
+      const campaign = await ctx.runQuery(api.app.campaigns.get, {
+        campaignId: campaignId as Id<"campaigns">,
+      });
+      if (campaign) {
+        campaigns.push({
+          id: campaign._id,
+          name: campaign.campaignName,
+          videoCount: campaign.videoCount,
+          status: campaign.status,
+        });
+      }
+    }
+
+    // Fetch performance snapshots for date range
+    const snapshots = await ctx.runQuery(internal.app.analytics.getPerformanceSnapshots, {
+      campaignIds: args.campaignIds as Id<"campaigns">[],
+      startDate: startDate.getTime(),
+      endDate: endDate.getTime(),
+    });
+
+    // Fetch manually posted videos
+    const videos = await ctx.runQuery(internal.app.analytics.getManuallyPostedVideos, {
+      campaignIds: args.campaignIds as Id<"campaigns">[],
+    });
+
+    // Aggregate daily metrics from snapshots
+    const dailyMetricsMap = new Map<string, {
+      date: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+      posts: number;
+    }>();
+    
+    snapshots.forEach((snapshot: Doc<"campaignPerformanceSnapshots">) => {
+      // Convert DD-MM-YYYY to YYYY-MM-DD
+      const parts = snapshot.date.split('-');
+      if (parts.length !== 3) return;
+      const day = parts[0]!;
+      const month = parts[1]!;
+      const year = parts[2]!;
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      
+      const existing = dailyMetricsMap.get(isoDate) || {
+        date: isoDate,
+        views: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+        posts: 0,
+      };
+      
+      dailyMetricsMap.set(isoDate, {
+        date: isoDate,
+        views: existing.views + snapshot.views,
+        likes: existing.likes + snapshot.likes,
+        comments: existing.comments + snapshot.comments,
+        shares: existing.shares + snapshot.shares,
+        saves: existing.saves + snapshot.saves,
+        posts: existing.posts + snapshot.posts,
+      });
+    });
+
+    // Sort daily metrics by date
+    const dailyMetrics = Array.from(dailyMetricsMap.values()).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Process video metrics
+    const videoMetrics = videos.map((video: Doc<"manuallyPostedVideos">) => {
+      const campaign = campaigns.find(c => c.id === video.campaignId);
+      return {
+        videoId: video._id,
+        campaignId: video.campaignId,
+        campaignName: campaign?.name || '',
+        platform: video.socialPlatform,
+        thumbnailUrl: video.thumbnailUrl,
+        videoUrl: video.videoUrl,
+        postedAt: video.postedAt,
+        metrics: {
+          views: video.views,
+          likes: video.likes,
+          comments: video.comments,
+          shares: video.shares,
+          saves: video.saves,
+        },
+      };
+    });
+
+    // Calculate total metrics
+    const totalMetrics = videoMetrics.reduce(
+      (acc: { views: number; likes: number; comments: number; shares: number; saves: number; posts: number }, video: VideoMetric) => ({
+        views: acc.views + video.metrics.views,
+        likes: acc.likes + video.metrics.likes,
+        comments: acc.comments + video.metrics.comments,
+        shares: acc.shares + video.metrics.shares,
+        saves: acc.saves + video.metrics.saves,
+        posts: acc.posts + 1,
+      }),
+      { views: 0, likes: 0, comments: 0, shares: 0, saves: 0, posts: 0 }
+    );
+
+    // Calculate engagement rate as decimal
+    const engagementRate = totalMetrics.views > 0
+      ? (totalMetrics.likes + totalMetrics.comments + totalMetrics.shares) / totalMetrics.views
+      : 0;
+
+    return {
+      metrics: {
+        ...totalMetrics,
+        engagementRate,
+      },
+      dailyMetrics,
+      videoMetrics,
+      campaigns,
+      metadata: {
+        lastUpdatedAt: Date.now(),
+        dateRange: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+        },
+        totalVideos: videoMetrics.length,
+      },
+    };
+  },
+});
+
+// Internal queries for fetching data
+export const getPerformanceSnapshots = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+    startDate: v.number(),
+    endDate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const snapshots = [];
+    
+    for (const campaignId of args.campaignIds) {
+      const campaignSnapshots = await ctx.db
+        .query("campaignPerformanceSnapshots")
+        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
+        .collect();
+      
+      // Filter by date range
+      const filtered = campaignSnapshots.filter(snapshot => {
+        // Convert DD-MM-YYYY to timestamp for comparison
+        const parts = snapshot.date.split('-');
+        if (parts.length !== 3) return false;
+        const [day, month, year] = parts;
+        const snapshotDate = new Date(`${year}-${month}-${day}`).getTime();
+        return snapshotDate >= args.startDate && snapshotDate <= args.endDate;
+      });
+      
+      snapshots.push(...filtered);
+    }
+    
+    return snapshots;
+  },
+});
+
+export const getManuallyPostedVideos = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+  },
+  handler: async (ctx, args) => {
+    const videos = [];
+    
+    for (const campaignId of args.campaignIds) {
+      const campaignVideos = await ctx.db
+        .query("manuallyPostedVideos")
+        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
+        .collect();
+      videos.push(...campaignVideos);
+    }
+    
+    return videos;
+  },
+});
+
+export const fetchCommentsFromConvex = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+    userId: v.id("users"),
+    limit: v.number(),
+    offset: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const allComments = [];
+    
+    for (const campaignId of args.campaignIds) {
+      // Get comments for this campaign
+      const comments = await ctx.db
+        .query("comments")
+        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
+        .collect();
+      
+      // Get video information for each comment
+      for (const comment of comments) {
+        const video = await ctx.db.get(comment.videoId);
+        if (video) {
+          const campaign = await ctx.db.get(campaignId);
+          allComments.push({
+            id: comment._id,
+            videoId: comment.videoId,
+            campaignId: comment.campaignId,
+            campaignName: campaign?.campaignName || '',
+            videoUrl: video.videoUrl,
+            thumbnailUrl: video.thumbnailUrl,
+            platform: comment.socialPlatform,
+            comment: {
+              commentId: comment.commentId,
+              text: comment.text,
+              authorUsername: comment.authorUsername,
+              authorNickname: comment.authorNickname,
+              authorProfilePicUrl: comment.authorProfilePicUrl,
+              createdAt: comment.createdAt,
+            },
+          });
+        }
+      }
+    }
+    
+    // Sort by createdAt descending
+    allComments.sort((a, b) => b.comment.createdAt - a.comment.createdAt);
+    
+    // Apply pagination
+    const paginatedComments = allComments.slice(args.offset, args.offset + args.limit);
+    
+    return {
+      comments: paginatedComments,
+      metadata: {
+        totalComments: allComments.length,
+        lastUpdatedAt: Date.now(),
+      },
     };
   },
 });

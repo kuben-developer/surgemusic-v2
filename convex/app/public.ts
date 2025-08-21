@@ -1,13 +1,66 @@
-import { action, internalQuery } from "../_generated/server";
+import { action, internalQuery, internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
+import type { AnalyticsResponse, VideoMetric, DailyMetric } from "./analytics";
+
+// Type definitions for public report response
+interface PublicReportResponse {
+  reportName: string;
+  reportCreatedAt: number;
+  dailyData: Array<{
+    date: string;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+  totals: {
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+  avgEngagementRate: string;
+  videoMetrics: Array<{
+    id: string;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    engagement: number;
+    engagementRate: string;
+    videoInfo: {
+      id: string;
+      videoUrl: string;
+      videoName: string;
+      videoType: string;
+      createdAt: number;
+      tiktokUrl: string | null;
+      campaign: {
+        id: string;
+        campaignName: string;
+      };
+    };
+  }>;
+  campaigns: Array<{
+    id: string;
+    campaignName: string;
+    artistName: string;
+    songName: string;
+    genre: string;
+    campaignCoverImageUrl: string;
+  }>;
+  hiddenVideoIds: string[];
+  lastUpdatedAt?: number;
+}
 
 export const getSharedReport = action({
   args: {
     shareId: v.string(),
     days: v.number(),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<PublicReportResponse> => {
     try {
       // Find the report by its public share ID
       const report = await ctx.runQuery(internal.app.public.getReportByShareId, {
@@ -41,55 +94,91 @@ export const getSharedReport = action({
         campaignIds: report.campaignIds,
       });
 
-      // Use the existing fetchCombinedAnalytics function from analytics
-      const analyticsData = await ctx.runAction(internal.app.analytics.fetchCombinedAnalytics, {
-        campaignIds: campaignIds as any,
+      // Get the report owner's user data
+      const reportUser = await ctx.runQuery(internal.app.public.getUserById, {
+        userId: report.userId,
+      });
+
+      if (!reportUser) {
+        throw new Error("Report owner not found.");
+      }
+
+      // Use the new analytics function
+      const analyticsData: AnalyticsResponse = await ctx.runAction(internal.app.public.getPublicReportAnalytics, {
+        campaignIds: campaignIds,
         days: args.days,
-        clerkId: report.userId as any, // Pass the report owner's ID
+        userId: report.userId,
       });
 
       // Filter out hidden videos from videoMetrics
       const filteredVideoMetrics = report.hiddenVideoIds.length > 0
-        ? analyticsData.videoMetrics.filter((vm: any) => !report.hiddenVideoIds.includes(vm.videoInfo.id))
+        ? analyticsData.videoMetrics.filter((vm) => !report.hiddenVideoIds.includes(vm.videoId as any))
         : analyticsData.videoMetrics;
 
-      // Sanitize video metrics to remove sensitive data
-      const sanitizedVideoMetrics = filteredVideoMetrics.map((metric: any) => {
-        const { videoInfo, ...rest } = metric;
+      // Transform video metrics to public format
+      const sanitizedVideoMetrics = filteredVideoMetrics.map((metric: VideoMetric) => {
+        const campaign = campaigns.find((c) => c._id === metric.campaignId);
+        const engagement = metric.metrics.likes + metric.metrics.comments + metric.metrics.shares;
+        const engagementRate = metric.metrics.views > 0 
+          ? ((engagement / metric.metrics.views) * 100).toFixed(2)
+          : "0.00";
+        
         return {
-          ...rest,
+          id: metric.videoId,
+          views: metric.metrics.views,
+          likes: metric.metrics.likes,
+          comments: metric.metrics.comments,
+          shares: metric.metrics.shares,
+          engagement,
+          engagementRate,
           videoInfo: {
-            id: videoInfo.id,
-            videoUrl: videoInfo.video?.url || videoInfo.videoUrl,
-            videoName: videoInfo.video?.name || videoInfo.videoName,
-            videoType: videoInfo.video?.type || videoInfo.videoType,
-            createdAt: videoInfo._creationTime || videoInfo.createdAt,
-            tiktokUrl: videoInfo.tiktokUpload?.post?.url || null,
+            id: metric.videoId,
+            videoUrl: metric.videoUrl,
+            videoName: `Video ${metric.videoId.slice(-6)}`,
+            videoType: "video/mp4",
+            createdAt: metric.postedAt,
+            tiktokUrl: metric.platform === "tiktok" ? metric.videoUrl : null,
             campaign: {
-              id: videoInfo.campaignId,
-              campaignName: campaigns.find((c: any) => c._id === videoInfo.campaignId)?.campaignName || "Unknown",
+              id: metric.campaignId,
+              campaignName: campaign?.campaignName || "Unknown",
             },
           },
         };
       });
 
+      // Calculate average engagement rate
+      const avgEngagementRate = analyticsData.metrics.engagementRate > 0
+        ? (analyticsData.metrics.engagementRate * 100).toFixed(2)
+        : "0.00";
+
       return {
         reportName: report.name,
         reportCreatedAt: report._creationTime,
-        dailyData: analyticsData.dailyData,
-        totals: analyticsData.totals,
-        avgEngagementRate: analyticsData.avgEngagementRate,
+        dailyData: analyticsData.dailyMetrics.map((day: DailyMetric) => ({
+          date: day.date,
+          views: day.views,
+          likes: day.likes,
+          comments: day.comments,
+          shares: day.shares,
+        })),
+        totals: {
+          views: analyticsData.metrics.views,
+          likes: analyticsData.metrics.likes,
+          comments: analyticsData.metrics.comments,
+          shares: analyticsData.metrics.shares,
+        },
+        avgEngagementRate,
         videoMetrics: sanitizedVideoMetrics,
-        campaigns: campaigns.map((c: any) => ({
+        campaigns: campaigns.map((c: Doc<"campaigns">) => ({
           id: c._id,
           campaignName: c.campaignName,
           artistName: c.artistName,
           songName: c.songName,
           genre: c.genre,
-          campaignCoverImageUrl: c.campaignCoverImageUrl,
+          campaignCoverImageUrl: c.campaignCoverImageUrl || "",
         })),
         hiddenVideoIds: report.hiddenVideoIds,
-        lastUpdatedAt: analyticsData.lastUpdatedAt,
+        lastUpdatedAt: analyticsData.metadata.lastUpdatedAt,
       };
     } catch (error) {
       console.error(`Error accessing shared report:`, error);
@@ -113,10 +202,35 @@ export const getReportByShareId = internalQuery({
 
 export const getCampaignsByIds = internalQuery({
   args: { campaignIds: v.array(v.id("campaigns")) },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Doc<"campaigns">[]> => {
     const campaigns = await Promise.all(
       args.campaignIds.map(id => ctx.db.get(id))
     );
-    return campaigns.filter(c => c !== null);
+    return campaigns.filter((c): c is Doc<"campaigns"> => c !== null);
+  },
+});
+
+export const getUserById = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args): Promise<Doc<"users"> | null> => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
+export const getPublicReportAnalytics = internalAction({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+    days: v.number(),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<AnalyticsResponse> => {
+    // Use the internal analytics function
+    const result = await ctx.runAction(internal.app.analytics.fetchAnalyticsFromConvex, {
+      campaignIds: args.campaignIds,
+      days: args.days,
+      userId: args.userId,
+    });
+
+    return result;
   },
 })

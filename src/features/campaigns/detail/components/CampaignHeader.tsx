@@ -99,7 +99,7 @@ export function CampaignHeader({ campaign, campaignId, generatedVideos }: Campai
         </div>
 
         <div className="flex justify-end">
-          <Link href={`/campaign/analytics/${campaignId}`}>
+          <Link href={`/campaign/${campaignId}/analytics`}>
             <Button variant="outline" className="gap-2 bg-background/50 hover:bg-background border-primary/20 hover:border-primary/40">
               <span className="relative flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 transition-transform group-hover:scale-110" />

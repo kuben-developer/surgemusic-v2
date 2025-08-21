@@ -51,7 +51,7 @@ export function ReportForm({
     };
 
     const handleToggleCampaign = (campaignId: string, checked: boolean) => {
-        setCampaignIds(prevIds => {
+        setCampaignIds((prevIds: string[]) => {
             if (checked) {
                 // Only add if not already selected to prevent duplicates
                 if (!prevIds.includes(campaignId)) {
@@ -59,7 +59,7 @@ export function ReportForm({
                 }
                 return prevIds;
             } else {
-                return prevIds.filter(id => id !== campaignId);
+                return prevIds.filter((id: string) => id !== campaignId);
             }
         });
     };

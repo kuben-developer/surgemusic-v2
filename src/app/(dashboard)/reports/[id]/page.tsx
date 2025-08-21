@@ -1,3 +1,21 @@
-import { ReportDetailPage } from '@/features/reports';
+import { AnalyticsContainer } from '@/features/analytics';
 
-export default ReportDetailPage; 
+interface ReportAnalyticsPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function ReportAnalyticsPage({ params }: ReportAnalyticsPageProps) {
+  return (
+    <div className="container relative">
+      <AnalyticsContainer
+        type="report"
+        entityId={params.id}
+        title="Report Analytics"
+        showCommentsSection={true}
+        showExportButton={true}
+      />
+    </div>
+  );
+} 
