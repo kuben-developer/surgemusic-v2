@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import type { ReportAnalyticsData, GrowthData } from "../../shared/types/report.types";
+import type { ReportAnalyticsData, GrowthData, VideoMetric } from "../../shared/types/report.types";
+import type { AnalyticsResponse } from "../../../../../convex/app/analytics";
 
 interface UseReportAnalyticsDataProps {
   reportId: string | null;
@@ -44,7 +45,7 @@ export function useReportAnalyticsData({
 
   const getReportAnalytics = useAction(api.app.analytics.getReportAnalyticsV2);
 
-  const calculateGrowthData = useCallback((data: ReportAnalyticsData): AnalyticsGrowthData => {
+  const calculateGrowthData = useCallback((): AnalyticsGrowthData => {
     // Calculate growth metrics based on the data
     // This is a placeholder - actual implementation would compare current vs previous period
     return {
@@ -62,16 +63,70 @@ export function useReportAnalyticsData({
     setState(prev => ({ ...prev, isLoadingAnalytics: true }));
     
     try {
-      const data = await getReportAnalytics({ 
-        id: reportId as Id<"reports">, 
+      const rawData: AnalyticsResponse = await getReportAnalytics({ 
+        reportId: reportId as Id<"reports">, 
         days: parseInt(dateRange) 
       });
       
-      const growthData = calculateGrowthData(data);
+      // Transform video metrics to match expected structure
+      const transformedData: ReportAnalyticsData = {
+        dailyData: (rawData.dailyMetrics || []).map(day => ({
+          date: day.date,
+          views: day.views,
+          likes: day.likes,
+          comments: day.comments,
+          shares: day.shares
+        })),
+        avgEngagementRate: rawData.metrics?.engagementRate 
+          ? (rawData.metrics.engagementRate * 100).toFixed(2)
+          : "0.00",
+        videoMetrics: (rawData.videoMetrics || []).map((vm: any, index: number): VideoMetric => {
+          const videoId = vm.videoId || vm.id || '';
+          const views = vm.metrics?.views || vm.views || 0;
+          const likes = vm.metrics?.likes || vm.likes || 0;
+          const comments = vm.metrics?.comments || vm.comments || 0;
+          const shares = vm.metrics?.shares || vm.shares || 0;
+          const engagement = likes + comments + shares;
+          const engagementRate = views > 0 ? ((engagement / views) * 100).toFixed(2) : "0.00";
+          
+          return {
+            id: videoId,
+            views,
+            likes,
+            comments,
+            shares,
+            engagementRate,
+            videoInfo: {
+              id: videoId,
+              postId: null,
+              videoUrl: vm.videoUrl || '',
+              videoName: vm.videoName || `Video ${videoId.slice(-6)}`,
+              videoType: 'video/mp4',
+              tiktokUrl: vm.platform === 'tiktok' ? vm.videoUrl : '',
+              createdAt: new Date(vm.postedAt || Date.now()),
+              campaign: {
+                id: index,
+                campaignName: vm.campaignName || ''
+              }
+            }
+          };
+        }),
+        // Ensure hiddenVideoIds is accessible at root level
+        hiddenVideoIds: rawData.metadata?.hiddenVideoIds || [],
+        totals: {
+          views: rawData.metrics?.views || 0,
+          likes: rawData.metrics?.likes || 0,
+          comments: rawData.metrics?.comments || 0,
+          shares: rawData.metrics?.shares || 0
+        },
+        lastUpdatedAt: rawData.metadata?.lastUpdatedAt ? String(rawData.metadata.lastUpdatedAt) : null
+      };
+      
+      const growthData = calculateGrowthData();
       
       setState(prev => ({
         ...prev,
-        analyticsData: data,
+        analyticsData: transformedData,
         growthData,
         isLoadingAnalytics: false,
       }));

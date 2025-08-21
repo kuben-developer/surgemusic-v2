@@ -27,14 +27,13 @@ export function ReportHeader({
   return (
     <div className="flex items-center justify-between">
       <div>
-        <Link 
-          href="/reports" 
+        <Link
+          href="/reports"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to Reports
         </Link>
-        <h1 className="text-3xl font-bold">{reportName}</h1>
       </div>
       <div className="flex items-center gap-3">
         <Button
@@ -80,7 +79,7 @@ export function ReportHeader({
           onClick={onDelete}
           variant="destructive"
           size="sm"
-          className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
+          className="bg-destructive hover:bg-destructive/90 focus:ring-destructive"
           aria-label="Delete report permanently"
         >
           <Trash2 className="h-4 w-4 mr-2" />

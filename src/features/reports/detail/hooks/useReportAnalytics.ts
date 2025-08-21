@@ -74,11 +74,15 @@ export function useReportAnalytics({
       };
     }
 
-    const { videoMetrics, hiddenVideoIds } = analyticsData;
+    const { videoMetrics, hiddenVideoIds = [] } = analyticsData;
     
     // Filter out hidden videos from videoMetrics for display
     const visibleVideoMetrics = videoMetrics.filter(
-      (vm: VideoMetric) => !hiddenVideoIds.includes(vm.videoInfo.id)
+      (vm: VideoMetric) => {
+        // Use the videoInfo.id from the transformed data
+        const videoId = vm.videoInfo?.id;
+        return videoId && !hiddenVideoIds.includes(videoId);
+      }
     );
 
     const totalVideos = visibleVideoMetrics.length;

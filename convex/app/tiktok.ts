@@ -211,16 +211,38 @@ export const getTikTokUserVideos = internalAction({
       requestUrl += `$offset=${args.maxCursor}`;
     }
 
-    const response = await fetch(requestUrl, {
-      method: "GET",
-      headers: {
-        'accept': 'application/json',
-        'x-project-name': 'tokapi',
-        'x-api-key': TOKAPI_KEY
-      },
-    });
+    let data;
+    let success = false;
 
-    const data = await response.json();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch(requestUrl, {
+          method: "GET",
+          headers: {
+            'accept': 'application/json',
+            'x-project-name': 'tokapi',
+            'x-api-key': TOKAPI_KEY
+          },
+        });
+        data = await response.json();
+        if (!data.error) {
+          success = true;
+          break;
+        }
+      } catch (err) {
+        // Optionally log error or continue to retry
+      }
+    }
+
+    if (!success || data?.error) {
+      console.error(`Error fetching from https://www.tiktok.com/@${args.username}`);
+      return {
+        maxCursor: null,
+        hasMore: false,
+        videos: []
+      };
+    }
+
 
     if (data.status_msg.length > 0) {
       return {
@@ -229,6 +251,7 @@ export const getTikTokUserVideos = internalAction({
         videos: []
       };
     }
+
 
     const maxCursor = data.max_cursor
     const hasMore = data.has_more === 1
@@ -343,15 +366,13 @@ export const scrapeManuallyPostedVideos = internalAction({
         maxCursor: currentMaxCursor
       });
       const { maxCursor, hasMore, videos } = result;
-      console.log(`Fetched ${videos.length} videos for account ${args.username} currentMaxCursor: ${currentMaxCursor}, hasMore: ${hasMore}, maxCursor: ${maxCursor}`);
+      console.log(`Fetched ${videos.length} videos for account https://www.tiktok.com/@${args.username}`);
 
       for (const video of videos) {
         // Encode the video description to match the encoded keys in the map
         const encodedDescription = encodeCaption(video.description.trim());
         const campaignData = args.captionToCampaignMap[encodedDescription];
         if (campaignData) {
-          console.log(`Found matching campaign for video ${video.videoId}:`, campaignData);
-
           try {
             const result = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
               campaignId: campaignData.campaignId,
@@ -369,7 +390,6 @@ export const scrapeManuallyPostedVideos = internalAction({
               socialPlatform: "tiktok",
             });
 
-            console.log(`Video ${video.videoId} ${result.action} for campaign ${campaignData.campaignId}`);
 
             // Fetch and store comments for this video
             if (result.videoId && video.comments > 0) {
@@ -387,7 +407,6 @@ export const scrapeManuallyPostedVideos = internalAction({
                     comments: commentsData.comments,
                   });
 
-                  console.log(`Stored ${commentsResult.newComments} new comments for video ${video.videoId}`);
                 }
               } catch (commentError) {
                 console.error(`Failed to fetch/store comments for video ${video.videoId}:`, commentError);
@@ -396,6 +415,8 @@ export const scrapeManuallyPostedVideos = internalAction({
           } catch (error) {
             console.error(`Failed to store video ${video.videoId}:`, error);
           }
+        } else {
+          // console.log(`No match: ${video.description.trim()}`);
         }
       }
 
@@ -433,7 +454,7 @@ export const monitorManuallyPostedVideos = internalAction({
 
       for (const username of batch) {
         await ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
-          username: username,
+          username: username.trim(),
           captionToCampaignMap: Object.fromEntries(captionToCampaignMap),
         });
       }

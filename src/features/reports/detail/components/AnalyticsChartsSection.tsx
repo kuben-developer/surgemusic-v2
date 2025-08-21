@@ -27,14 +27,18 @@ export function AnalyticsChartsSection({
     handlers,
     metricInfo,
 }: AnalyticsChartsSectionProps) {
-    const { dailyData, totals, videoMetrics, hiddenVideoIds } = data;
+    const { dailyData, totals, videoMetrics, hiddenVideoIds = [] } = data;
     const { viewsGrowth, likesGrowth, commentsGrowth, sharesGrowth } = growth;
     const { activeMetric, currentPage, itemsPerPage, dateRange } = state;
     const { onActiveMetricChange, onPageChange } = handlers;
 
     // Filter out hidden videos from videoMetrics for display
     const visibleVideoMetrics = videoMetrics.filter(
-        (vm: VideoMetric) => !hiddenVideoIds.includes(vm.videoInfo.id)
+        (vm: VideoMetric) => {
+            // Use the videoInfo.id from the transformed data
+            const videoId = vm.videoInfo?.id;
+            return videoId && !hiddenVideoIds.includes(videoId);
+        }
     );
 
     return (

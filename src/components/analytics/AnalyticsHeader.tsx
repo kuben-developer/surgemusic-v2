@@ -57,12 +57,12 @@ export function AnalyticsHeader({
                     </p>
                 </div>
 
-                {lastUpdatedAt && <div className="flex items-center justify-end text-xs text-muted-foreground mb-1">
+                {lastUpdatedAt && lastUpdatedAt > 0 ? <div className="flex items-center justify-end text-xs text-muted-foreground mb-1">
                     <span className="flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500/70 animate-pulse"></span>
                         Updated {formatTimeAgo(new Date(lastUpdatedAt))}
                     </span>
-                </div>}
+                </div>:null}
             </div>
 
 

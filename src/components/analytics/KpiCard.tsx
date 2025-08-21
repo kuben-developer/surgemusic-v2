@@ -20,7 +20,9 @@ export function KpiCard({ title, value, icon, growth, iconBgColor = "bg-gray-100
             <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
                 <div className={`h-8 w-8 rounded-full ${iconBgColor} flex items-center justify-center`}>
-                    <span className={`h-4 w-4 ${iconTextColor}`}>{icon}</span>
+                    <span className={`flex items-center justify-center h-4 w-4 ${iconTextColor}`}>
+                        {icon}
+                    </span>
                 </div>
             </div>
             <div className="space-y-1">
@@ -38,4 +40,3 @@ export function KpiCard({ title, value, icon, growth, iconBgColor = "bg-gray-100
     );
 }
 
- 

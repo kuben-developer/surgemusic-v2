@@ -9,13 +9,17 @@ export interface AnalyticsContentData {
     dailyData: DailyData[];
     avgEngagementRate: string;
     videoMetrics: VideoMetric[];
-    hiddenVideoIds: string[];
+    hiddenVideoIds?: string[]; // Optional for backwards compatibility
     lastUpdatedAt?: string;
     totals: {
         views: number;
         likes: number;
         comments: number;
         shares: number;
+    };
+    metadata?: {
+        hiddenVideoIds?: string[];
+        [key: string]: any;
     };
 }
 

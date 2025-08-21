@@ -26,7 +26,7 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
         >
             <div className="relative h-16 aspect-[9/16] rounded overflow-hidden bg-muted">
                 {/* Consider adding error handling or a placeholder for video loading */}
-                <video src={video.videoInfo.videoUrl} className="h-full w-full object-cover" />
+                <img src={video.videoInfo.videoUrl} className="h-full w-full object-cover" />
                 {/* <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <Badge variant="secondary" className="bg-background/70">
                         {rank}
