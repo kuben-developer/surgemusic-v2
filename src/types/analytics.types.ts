@@ -40,11 +40,12 @@ export interface VideoMetric {
   likes: number;
   comments: number;
   shares: number;
-  engagementRate?: string;
-  videoInfo?: {
+  engagementRate: string; // Required for display
+  videoInfo: {  // Required for display
     id: string;
     postId: string | null;
     videoUrl: string;
+    thumbnailUrl: string; // Add thumbnail URL
     videoName: string;
     videoType: string;
     tiktokUrl: string;

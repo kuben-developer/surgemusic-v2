@@ -100,6 +100,7 @@ export function useReportAnalyticsData({
               id: videoId,
               postId: null,
               videoUrl: vm.videoUrl || '',
+              thumbnailUrl: vm.thumbnailUrl || '', // Add thumbnail URL
               videoName: vm.videoName || `Video ${videoId.slice(-6)}`,
               videoType: 'video/mp4',
               tiktokUrl: vm.platform === 'tiktok' ? vm.videoUrl : '',

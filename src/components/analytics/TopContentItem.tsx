@@ -10,26 +10,20 @@ interface TopContentItemProps {
 }
 
 export function TopContentItem({ video, rank }: TopContentItemProps) {
-    // Handle case where videoInfo might be undefined
-    if (!video.videoInfo) {
-        return (
-            <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-muted/30">
-                <div className="text-sm text-muted-foreground">Video information unavailable</div>
-            </div>
-        );
-    }
-
     return (
         <div
             key={video.id}
             className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors"
         >
             <div className="relative h-16 aspect-[9/16] rounded overflow-hidden bg-muted">
-                {/* Consider adding error handling or a placeholder for video loading */}
-                <img src={video.videoInfo.videoUrl} className="h-full w-full object-cover" />
+                {/* Use thumbnailUrl for the preview image */}
+                <video 
+                    src={video.videoInfo.videoUrl} 
+                    className="h-full w-full object-cover" 
+                />
                 {/* <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <Badge variant="secondary" className="bg-background/70">
-                        {rank}
+                        {rank}ß
                     </Badge>
                 </div> */}
             </div>
@@ -77,5 +71,4 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
         </div>
     );
 }
-
  

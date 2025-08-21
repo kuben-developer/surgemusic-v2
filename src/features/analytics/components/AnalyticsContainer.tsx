@@ -63,6 +63,7 @@ export function AnalyticsContainer({
       id: video.videoId,
       postId: null,
       videoUrl: video.videoUrl,
+      thumbnailUrl: video.thumbnailUrl, // Add thumbnail URL
       videoName: `Video ${video.videoId.slice(-6)}`,
       videoType: "video/mp4",
       createdAt: new Date(video.postedAt),
