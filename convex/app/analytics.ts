@@ -577,7 +577,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     const endDate = new Date();
     const startDate = new Date(Date.now() - args.days * 24 * 60 * 60 * 1000);
 
-    // Fetch campaigns
+    // Fetch campaigns using internal query (no auth required)
     const campaigns: Array<{
       id: string;
       name: string;
@@ -585,7 +585,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       status: string;
     }> = [];
     for (const campaignId of args.campaignIds) {
-      const campaign = await ctx.runQuery(api.app.campaigns.get, {
+      const campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
         campaignId: campaignId as Id<"campaigns">,
       });
       if (campaign) {

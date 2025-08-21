@@ -615,4 +615,18 @@ export const getAllWithCaptions = internalQuery({
   },
 })
 
+// Internal query to get a campaign without authentication (for public/shared contexts)
+export const getInternal = internalQuery({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign || campaign.isDeleted === true) {
+      return null;
+    }
+    return campaign;
+  },
+})
+
 
