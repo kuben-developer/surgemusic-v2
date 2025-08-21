@@ -428,7 +428,7 @@ export const scrapeManuallyPostedVideos = internalAction({
 
 
 export const monitorManuallyPostedVideos = internalAction({
-  handler: async (ctx, _) => {
+  handler: async (ctx) => {
     const campaigns = await ctx.runQuery(internal.app.campaigns.getAllWithCaptions);
     const captionToCampaignMap = new Map<string, { campaignId: Id<"campaigns">, userId: Id<"users"> }>();
 

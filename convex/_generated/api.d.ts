@@ -22,6 +22,7 @@ import type * as app_reports from "../app/reports.js";
 import type * as app_stripe from "../app/stripe.js";
 import type * as app_tiktok from "../app/tiktok.js";
 import type * as app_users from "../app/users.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as webhooks_ayrshare from "../webhooks/ayrshare.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "app/stripe": typeof app_stripe;
   "app/tiktok": typeof app_tiktok;
   "app/users": typeof app_users;
+  crons: typeof crons;
   http: typeof http;
   "webhooks/ayrshare": typeof webhooks_ayrshare;
   "webhooks/clerk": typeof webhooks_clerk;
