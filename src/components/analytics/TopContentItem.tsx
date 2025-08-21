@@ -17,9 +17,9 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
         >
             <div className="relative h-16 aspect-[9/16] rounded overflow-hidden bg-muted">
                 {/* Use thumbnailUrl for the preview image */}
-                <video 
-                    src={video.videoInfo.videoUrl} 
-                    className="h-full w-full object-cover" 
+                <video
+                    src={video.videoInfo.videoUrl}
+                    className="h-full w-full object-cover"
                 />
                 {/* <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <Badge variant="secondary" className="bg-background/70">
@@ -28,14 +28,23 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
                 </div> */}
             </div>
             <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">{video.videoInfo.videoName}</h4>
+                <h4 className="font-medium truncate">{video.videoInfo.campaign.campaignName}</h4>
                 <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">
-                        {video.videoInfo.videoType} • Posted {new Date(video.videoInfo.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                        })}
+                        Posted {(() => {
+                            const timestamp = typeof video.videoInfo.createdAt === 'number'
+                                ? video.videoInfo.createdAt
+                                : new Date(video.videoInfo.createdAt).getTime();
+                            // Check if timestamp is in seconds (less than 10 billion) vs milliseconds
+                            const date = timestamp < 10000000000
+                                ? new Date(timestamp * 1000)
+                                : new Date(timestamp);
+                            return date.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                            });
+                        })()}
                     </p>
                 </div>
                 {video.videoInfo.tiktokUrl && (
@@ -71,4 +80,3 @@ export function TopContentItem({ video, rank }: TopContentItemProps) {
         </div>
     );
 }
- 

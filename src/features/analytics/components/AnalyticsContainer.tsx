@@ -66,7 +66,9 @@ export function AnalyticsContainer({
       thumbnailUrl: video.thumbnailUrl, // Add thumbnail URL
       videoName: `Video ${video.videoId.slice(-6)}`,
       videoType: "video/mp4",
-      createdAt: new Date(video.postedAt),
+      createdAt: video.postedAt < 10000000000 
+        ? new Date(video.postedAt * 1000)  // Convert seconds to milliseconds
+        : new Date(video.postedAt),
       tiktokUrl: video.platform === "tiktok" ? video.videoUrl : "",
       campaign: {
         id: index, // Use index as a number ID since the original expects a number
