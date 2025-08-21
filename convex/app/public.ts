@@ -20,6 +20,7 @@ interface PublicReportResponse {
     likes: number;
     comments: number;
     shares: number;
+    totalVideos: number;
   };
   avgEngagementRate: string;
   videoMetrics: Array<{
@@ -81,7 +82,7 @@ export const getSharedReport = action({
           reportName: report.name,
           reportCreatedAt: report._creationTime,
           dailyData: [],
-          totals: { views: 0, likes: 0, comments: 0, shares: 0 },
+          totals: { views: 0, likes: 0, comments: 0, shares: 0, totalVideos: 0 },
           avgEngagementRate: "0.00",
           videoMetrics: [],
           campaigns: [],
@@ -166,6 +167,7 @@ export const getSharedReport = action({
           likes: analyticsData.metrics.likes,
           comments: analyticsData.metrics.comments,
           shares: analyticsData.metrics.shares,
+          totalVideos: analyticsData.metrics.posts,
         },
         avgEngagementRate,
         videoMetrics: sanitizedVideoMetrics,
