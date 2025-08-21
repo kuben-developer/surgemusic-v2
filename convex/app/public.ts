@@ -103,19 +103,18 @@ export const getSharedReport = action({
         throw new Error("Report owner not found.");
       }
 
-      // Use the new analytics function
+      // Use the new analytics function with hidden videos already filtered
       const analyticsData: AnalyticsResponse = await ctx.runAction(internal.app.public.getPublicReportAnalytics, {
         campaignIds: campaignIds,
         days: args.days,
         userId: report.userId,
+        hiddenVideoIds: report.hiddenVideoIds,
       });
 
-      // Filter out hidden videos from videoMetrics
-      const filteredVideoMetrics = report.hiddenVideoIds.length > 0
-        ? analyticsData.videoMetrics.filter((vm) => !report.hiddenVideoIds.includes(vm.videoId as any))
-        : analyticsData.videoMetrics;
+      // No need to filter here as it's already done server-side
+      const filteredVideoMetrics = analyticsData.videoMetrics;
 
-      // Transform video metrics to public format
+      // Transform filtered video metrics to public format
       const sanitizedVideoMetrics = filteredVideoMetrics.map((metric: VideoMetric) => {
         const campaign = campaigns.find((c) => c._id === metric.campaignId);
         const engagement = metric.metrics.likes + metric.metrics.comments + metric.metrics.shares;
@@ -162,6 +161,7 @@ export const getSharedReport = action({
           shares: day.shares,
         })),
         totals: {
+          // These totals already exclude hidden videos (filtered server-side)
           views: analyticsData.metrics.views,
           likes: analyticsData.metrics.likes,
           comments: analyticsData.metrics.comments,
@@ -222,13 +222,15 @@ export const getPublicReportAnalytics = internalAction({
     campaignIds: v.array(v.id("campaigns")),
     days: v.number(),
     userId: v.id("users"),
+    hiddenVideoIds: v.optional(v.array(v.union(v.id("generatedVideos"), v.id("manuallyPostedVideos")))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
-    // Use the internal analytics function
+    // Use the internal analytics function with hidden videos filtering
     const result = await ctx.runAction(internal.app.analytics.fetchAnalyticsFromConvex, {
       campaignIds: args.campaignIds,
       days: args.days,
       userId: args.userId,
+      hiddenVideoIds: args.hiddenVideoIds,
     });
 
     return result;

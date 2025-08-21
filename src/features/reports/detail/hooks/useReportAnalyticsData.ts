@@ -104,7 +104,8 @@ export function useReportAnalyticsData({
               videoName: vm.videoName || `Video ${videoId.slice(-6)}`,
               videoType: 'video/mp4',
               tiktokUrl: vm.platform === 'tiktok' ? vm.videoUrl : '',
-              createdAt: new Date(vm.postedAt || Date.now()),
+              // Check if postedAt is in seconds (TikTok API uses seconds) and convert to milliseconds
+              createdAt: new Date((vm.postedAt && vm.postedAt < 10000000000 ? vm.postedAt * 1000 : vm.postedAt) || Date.now()),
               campaign: {
                 id: index,
                 campaignName: vm.campaignName || ''
@@ -112,6 +113,40 @@ export function useReportAnalyticsData({
             }
           };
         }),
+        // Include all videos (including hidden) for the manage videos modal
+        allVideoMetrics: rawData.allVideoMetrics ? (rawData.allVideoMetrics || []).map((vm: any, index: number): VideoMetric => {
+          const videoId = vm.videoId || vm.id || '';
+          const views = vm.metrics?.views || vm.views || 0;
+          const likes = vm.metrics?.likes || vm.likes || 0;
+          const comments = vm.metrics?.comments || vm.comments || 0;
+          const shares = vm.metrics?.shares || vm.shares || 0;
+          const engagement = likes + comments + shares;
+          const engagementRate = views > 0 ? ((engagement / views) * 100).toFixed(2) : "0.00";
+          
+          return {
+            id: videoId,
+            views,
+            likes,
+            comments,
+            shares,
+            engagementRate,
+            videoInfo: {
+              id: videoId,
+              postId: null,
+              videoUrl: vm.videoUrl || '',
+              thumbnailUrl: vm.thumbnailUrl || '',
+              videoName: vm.videoName || `Video ${videoId.slice(-6)}`,
+              videoType: 'video/mp4',
+              tiktokUrl: vm.platform === 'tiktok' ? vm.videoUrl : '',
+              // Check if postedAt is in seconds (TikTok API uses seconds) and convert to milliseconds
+              createdAt: new Date((vm.postedAt && vm.postedAt < 10000000000 ? vm.postedAt * 1000 : vm.postedAt) || Date.now()),
+              campaign: {
+                id: index,
+                campaignName: vm.campaignName || ''
+              }
+            }
+          };
+        }) : undefined,
         // Ensure hiddenVideoIds is accessible at root level
         hiddenVideoIds: rawData.metadata?.hiddenVideoIds || [],
         totals: {

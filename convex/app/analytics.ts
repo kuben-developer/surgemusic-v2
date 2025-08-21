@@ -52,6 +52,7 @@ export interface AnalyticsResponse {
   metrics: AnalyticsMetrics;
   dailyMetrics: DailyMetric[];
   videoMetrics: VideoMetric[];
+  allVideoMetrics?: VideoMetric[]; // All videos including hidden ones (only for reports)
   campaigns: CampaignInfo[];
   metadata: {
     lastUpdatedAt: number;
@@ -391,6 +392,7 @@ export const getCampaignAnalytics = action({
   args: {
     campaignIds: v.optional(v.array(v.string())),
     days: v.number(),
+    hiddenVideoIds: v.optional(v.array(v.union(v.id("generatedVideos"), v.id("manuallyPostedVideos")))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
     const identity = await ctx.auth.getUserIdentity();
@@ -444,6 +446,7 @@ export const getCampaignAnalytics = action({
       campaignIds,
       days: args.days,
       userId: user._id,
+      hiddenVideoIds: args.hiddenVideoIds,
     });
 
     return result;
@@ -498,10 +501,12 @@ export const getReportAnalyticsV2 = action({
       };
     }
 
-    // Get analytics for the report's campaigns
-    const analyticsData = await ctx.runAction(api.app.analytics.getCampaignAnalytics, {
+    // Get analytics for the report's campaigns with hidden videos filtered
+    const analyticsData = await ctx.runAction(internal.app.analytics.fetchAnalyticsFromConvex, {
       campaignIds: report.campaignIds,
       days: args.days,
+      userId: report.userId,
+      hiddenVideoIds: report.hiddenVideoIds || [],
     });
 
     // Add report-specific metadata
@@ -572,10 +577,12 @@ export const fetchAnalyticsFromConvex = internalAction({
     campaignIds: v.array(v.string()),
     days: v.number(),
     userId: v.id("users"),
+    hiddenVideoIds: v.optional(v.array(v.union(v.id("generatedVideos"), v.id("manuallyPostedVideos")))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
     const endDate = new Date();
     const startDate = new Date(Date.now() - args.days * 24 * 60 * 60 * 1000);
+    const hiddenVideoIds = args.hiddenVideoIds || [];
 
     // Fetch campaigns using internal query (no auth required)
     const campaigns: Array<{
@@ -606,9 +613,44 @@ export const fetchAnalyticsFromConvex = internalAction({
     });
 
     // Fetch manually posted videos
-    const videos = await ctx.runQuery(internal.app.analytics.getManuallyPostedVideos, {
+    const allVideos = await ctx.runQuery(internal.app.analytics.getManuallyPostedVideos, {
       campaignIds: args.campaignIds as Id<"campaigns">[],
     });
+
+    // Filter out hidden videos
+    const videos = allVideos.filter(video => !hiddenVideoIds.includes(video._id));
+
+    // Calculate the proportion of visible videos for adjusting daily metrics
+    const totalVideoMetrics = allVideos.reduce(
+      (acc, video) => ({
+        views: acc.views + video.views,
+        likes: acc.likes + video.likes,
+        comments: acc.comments + video.comments,
+        shares: acc.shares + video.shares,
+        saves: acc.saves + video.saves,
+      }),
+      { views: 0, likes: 0, comments: 0, shares: 0, saves: 0 }
+    );
+
+    const visibleVideoMetrics = videos.reduce(
+      (acc, video) => ({
+        views: acc.views + video.views,
+        likes: acc.likes + video.likes,
+        comments: acc.comments + video.comments,
+        shares: acc.shares + video.shares,
+        saves: acc.saves + video.saves,
+      }),
+      { views: 0, likes: 0, comments: 0, shares: 0, saves: 0 }
+    );
+
+    // Calculate adjustment ratios for each metric
+    const adjustmentRatios = {
+      views: totalVideoMetrics.views > 0 ? visibleVideoMetrics.views / totalVideoMetrics.views : 1,
+      likes: totalVideoMetrics.likes > 0 ? visibleVideoMetrics.likes / totalVideoMetrics.likes : 1,
+      comments: totalVideoMetrics.comments > 0 ? visibleVideoMetrics.comments / totalVideoMetrics.comments : 1,
+      shares: totalVideoMetrics.shares > 0 ? visibleVideoMetrics.shares / totalVideoMetrics.shares : 1,
+      saves: totalVideoMetrics.saves > 0 ? visibleVideoMetrics.saves / totalVideoMetrics.saves : 1,
+    };
 
     // Aggregate daily metrics from snapshots
     const dailyMetricsMap = new Map<string, {
@@ -640,13 +682,14 @@ export const fetchAnalyticsFromConvex = internalAction({
         posts: 0,
       };
       
+      // Apply adjustment ratios to account for hidden videos
       dailyMetricsMap.set(isoDate, {
         date: isoDate,
-        views: existing.views + snapshot.views,
-        likes: existing.likes + snapshot.likes,
-        comments: existing.comments + snapshot.comments,
-        shares: existing.shares + snapshot.shares,
-        saves: existing.saves + snapshot.saves,
+        views: existing.views + Math.round(snapshot.views * adjustmentRatios.views),
+        likes: existing.likes + Math.round(snapshot.likes * adjustmentRatios.likes),
+        comments: existing.comments + Math.round(snapshot.comments * adjustmentRatios.comments),
+        shares: existing.shares + Math.round(snapshot.shares * adjustmentRatios.shares),
+        saves: existing.saves + Math.round(snapshot.saves * adjustmentRatios.saves),
         posts: existing.posts + snapshot.posts,
       });
     });
@@ -656,7 +699,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Process video metrics
+    // Process video metrics (only visible videos)
     const videoMetrics = videos.map((video: Doc<"manuallyPostedVideos">) => {
       const campaign = campaigns.find(c => c.id === video.campaignId);
       return {
@@ -676,6 +719,27 @@ export const fetchAnalyticsFromConvex = internalAction({
         },
       };
     });
+
+    // Process ALL video metrics (including hidden) if we're filtering (for report manage videos modal)
+    const allVideoMetrics = args.hiddenVideoIds !== undefined ? allVideos.map((video: Doc<"manuallyPostedVideos">) => {
+      const campaign = campaigns.find(c => c.id === video.campaignId);
+      return {
+        videoId: video._id,
+        campaignId: video.campaignId,
+        campaignName: campaign?.name || '',
+        platform: video.socialPlatform,
+        thumbnailUrl: video.thumbnailUrl,
+        videoUrl: video.videoUrl,
+        postedAt: video.postedAt,
+        metrics: {
+          views: video.views,
+          likes: video.likes,
+          comments: video.comments,
+          shares: video.shares,
+          saves: video.saves,
+        },
+      };
+    }) : undefined;
 
     // Calculate total metrics
     const totalMetrics = videoMetrics.reduce(
@@ -702,6 +766,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       },
       dailyMetrics,
       videoMetrics,
+      allVideoMetrics, // Include all videos when filtering is active
       campaigns,
       metadata: {
         lastUpdatedAt: Date.now(),

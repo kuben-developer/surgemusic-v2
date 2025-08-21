@@ -14,6 +14,7 @@ export type ReportAnalyticsData = {
     totals: Totals;
     avgEngagementRate: string;
     videoMetrics: VideoMetric[];
+    allVideoMetrics?: VideoMetric[]; // All videos including hidden ones (for manage videos modal)
     hiddenVideoIds: string[];
     lastUpdatedAt: string | null;
 };

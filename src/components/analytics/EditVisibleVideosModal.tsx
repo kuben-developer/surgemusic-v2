@@ -393,7 +393,7 @@ export function EditVisibleVideosModal({
                                             </h4>
                                             {video.videoInfo?.createdAt && (
                                                 <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground whitespace-nowrap">
-                                                    {new Date(video.videoInfo?.createdAt || 0).toLocaleDateString("en-US", {
+                                                    {(video.videoInfo.createdAt instanceof Date ? video.videoInfo.createdAt : new Date(video.videoInfo.createdAt)).toLocaleDateString("en-US", {
                                                         day: "numeric",
                                                         month: "short",
                                                         hour: "numeric",

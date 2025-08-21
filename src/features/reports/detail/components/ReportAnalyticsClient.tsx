@@ -108,7 +108,7 @@ export function ReportAnalyticsClient() {
 
             <AnalyticsDialogs
                 reportName={report.name}
-                allVideoMetrics={analyticsData.videoMetrics}
+                allVideoMetrics={analyticsData.allVideoMetrics || analyticsData.videoMetrics}
                 hiddenVideoIds={analyticsData.hiddenVideoIds || []}
                 isDeleteDialogOpen={reportActions.isDeleteDialogOpen}
                 onDeleteDialogChange={reportActions.setIsDeleteDialogOpen}
