@@ -81,14 +81,14 @@ export interface MetricTotals extends Totals {
 // Main shared report data structure
 export interface SharedReportData {
   reportName: string;
-  reportCreatedAt: Date;
+  reportCreatedAt: number; // Unix timestamp from backend
   dailyData: DailyDataPoint[];
   totals: MetricTotals;
   avgEngagementRate: string;
   videoMetrics: PublicVideoMetric[];
   campaigns: PublicCampaignInfo[];
   hiddenVideoIds: string[];
-  lastUpdatedAt?: Date;
+  lastUpdatedAt?: number; // Unix timestamp from backend
 }
 
 // Props for components

@@ -74,7 +74,7 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       {/* Report Header with Date Range */}
       <ReportHeaderWithDateRange
         reportName={data.reportName}
-        reportCreatedAt={data.reportCreatedAt.toISOString()}
+        reportCreatedAt={new Date(data.reportCreatedAt).toISOString()}
         dateRange={dateRange}
         onDateRangeChange={handleDateRangeChange}
       />
