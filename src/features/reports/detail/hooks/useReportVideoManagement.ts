@@ -26,7 +26,7 @@ export function useReportVideoManagement({ reportId }: UseReportVideoManagementP
         try {
             await updateHiddenVideosMutation({
                 reportId: reportId as Id<"reports">,
-                hiddenVideoIds: newHiddenVideoIds as Id<"generatedVideos">[],
+                hiddenVideoIds: newHiddenVideoIds as (Id<"generatedVideos"> | Id<"manuallyPostedVideos">)[],
             });
             
             toast.success("Video visibility updated successfully!");

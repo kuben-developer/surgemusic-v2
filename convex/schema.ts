@@ -192,7 +192,7 @@ export default defineSchema({
     userId: v.id('users'),
     publicShareId: v.optional(v.string()),
     campaignIds: v.array(v.id('campaigns')),
-    hiddenVideoIds: v.array(v.id('generatedVideos')),
+    hiddenVideoIds: v.array(v.union(v.id('generatedVideos'), v.id('manuallyPostedVideos'))),
   })
     .index("by_userId", ["userId"]),
 

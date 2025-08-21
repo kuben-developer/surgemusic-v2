@@ -314,7 +314,7 @@ export const share = mutation({
 export const updateHiddenVideos = mutation({
   args: {
     reportId: v.id("reports"),
-    hiddenVideoIds: v.array(v.id("generatedVideos")),
+    hiddenVideoIds: v.array(v.union(v.id("generatedVideos"), v.id("manuallyPostedVideos"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
