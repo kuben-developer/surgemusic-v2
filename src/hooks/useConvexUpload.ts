@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { toast } from "sonner";
+import { convertVideoToAudio, needsVideoToAudioConversion } from "@/utils/media-converter.utils";
 
 interface UploadResult {
   storageId: Id<"_storage">;
@@ -31,6 +32,24 @@ export function useConvexUpload(options: UseConvexUploadOptions = {}) {
       setIsUploading(true);
       setUploadProgress(0);
 
+      // Check if we need to convert video to audio
+      let fileToUpload = file;
+      if (needsVideoToAudioConversion(file, options.fileType)) {
+        setUploadProgress(10);
+        toast.info("Converting video to audio...");
+        
+        try {
+          const convertedFile = await convertVideoToAudio(file);
+          fileToUpload = convertedFile;
+          setUploadProgress(20);
+          toast.success("Video converted to audio successfully");
+        } catch (conversionError) {
+          console.error("Conversion failed:", conversionError);
+          toast.error("Failed to convert video to audio");
+          throw conversionError;
+        }
+      }
+
       // Step 1: Generate an upload URL
       const uploadUrl = await generateUploadUrl();
       
@@ -39,9 +58,9 @@ export function useConvexUpload(options: UseConvexUploadOptions = {}) {
       const response = await fetch(uploadUrl, {
         method: "POST",
         headers: {
-          "Content-Type": file.type || "application/octet-stream",
+          "Content-Type": fileToUpload.type || "application/octet-stream",
         },
-        body: file,
+        body: fileToUpload,
       });
 
       if (!response.ok) {
@@ -61,9 +80,9 @@ export function useConvexUpload(options: UseConvexUploadOptions = {}) {
       if (options.trackUpload && options.fileType) {
         await saveFileRecord({
           storageId,
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
+          filename: fileToUpload.name,
+          contentType: fileToUpload.type,
+          size: fileToUpload.size,
           fileType: options.fileType,
           publicUrl,
         });
