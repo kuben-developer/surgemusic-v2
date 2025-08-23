@@ -7,6 +7,7 @@ import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
 import { convertVideoToAudio } from "@/utils/media-converter.utils"
+import { getAudioDuration } from "@/utils/audio-trimmer.utils"
 
 interface SongAudioProps {
     songAudioUrl: string | null
@@ -81,12 +82,32 @@ export function SongAudio({
                 const audioFile = await convertVideoToAudio(file)
                 setProcessedAudioFile(audioFile)
                 
+                // Check duration of converted audio
+                const duration = await getAudioDuration(audioFile)
+                
+                if (duration < 15) {
+                    toast.error("Audio too short", {
+                        description: `The audio is only ${Math.floor(duration)} seconds long. Please upload audio that's at least 15 seconds.`
+                    })
+                    setSelectedFile(null)
+                    setProcessedAudioFile(null)
+                    setIsProcessingVideo(false)
+                    return
+                }
+                
                 // Generate base64 for preview
                 const base64 = await fileToBase64(audioFile)
                 setSongAudioBase64(base64)
                 
                 toast.success("Video converted to audio successfully")
-                setShowTrimmer(true)
+                
+                // If audio is exactly 15 seconds (with small tolerance), skip trimmer
+                if (duration >= 15 && duration <= 15.5) {
+                    toast.info("Audio is already 15 seconds, uploading directly...")
+                    await uploadFile(audioFile)
+                } else {
+                    setShowTrimmer(true)
+                }
             } catch (error) {
                 console.error("Video conversion failed:", error)
                 toast.error("Failed to convert video to audio")
@@ -95,14 +116,30 @@ export function SongAudio({
                 setIsProcessingVideo(false)
             }
         } else {
-            // For audio files, set directly
+            // For audio files, check duration first
+            const duration = await getAudioDuration(file)
+            
+            if (duration < 15) {
+                toast.error("Audio too short", {
+                    description: `The audio is only ${Math.floor(duration)} seconds long. Please upload audio that's at least 15 seconds.`
+                })
+                setSelectedFile(null)
+                return
+            }
+            
             setProcessedAudioFile(file)
             
             // Generate base64 for preview
             const base64 = await fileToBase64(file)
             setSongAudioBase64(base64)
             
-            setShowTrimmer(true)
+            // If audio is exactly 15 seconds (with small tolerance), skip trimmer
+            if (duration >= 15 && duration <= 15.5) {
+                toast.info("Audio is already 15 seconds, uploading directly...")
+                await uploadFile(file)
+            } else {
+                setShowTrimmer(true)
+            }
         }
     }
 

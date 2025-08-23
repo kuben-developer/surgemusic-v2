@@ -266,12 +266,6 @@ export function AudioTrimmer({ audioFile, onConfirm, onCancel }: AudioTrimmerPro
           Selection exceeds audio duration. Please choose an earlier start point.
         </p>
       )}
-
-      {duration > 0 && duration < 15 && (
-        <p className="text-sm text-destructive text-center">
-          This audio is shorter than 15 seconds. Please upload a longer audio file.
-        </p>
-      )}
     </div>
   )
 }
