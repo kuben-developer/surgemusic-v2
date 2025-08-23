@@ -5,7 +5,6 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { toast } from "sonner";
-import { convertVideoToAudio, needsVideoToAudioConversion } from "@/utils/media-converter.utils";
 
 interface UploadResult {
   storageId: Id<"_storage">;
@@ -32,23 +31,8 @@ export function useConvexUpload(options: UseConvexUploadOptions = {}) {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Check if we need to convert video to audio
+      // File is used as-is (conversion should be handled before calling uploadFile if needed)
       let fileToUpload = file;
-      if (needsVideoToAudioConversion(file, options.fileType)) {
-        setUploadProgress(10);
-        toast.info("Converting video to audio...");
-        
-        try {
-          const convertedFile = await convertVideoToAudio(file);
-          fileToUpload = convertedFile;
-          setUploadProgress(20);
-          toast.success("Video converted to audio successfully");
-        } catch (conversionError) {
-          console.error("Conversion failed:", conversionError);
-          toast.error("Failed to convert video to audio");
-          throw conversionError;
-        }
-      }
 
       // Step 1: Generate an upload URL
       const uploadUrl = await generateUploadUrl();
