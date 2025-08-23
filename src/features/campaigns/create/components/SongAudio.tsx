@@ -31,7 +31,7 @@ export function SongAudio({
     const [isProcessingVideo, setIsProcessingVideo] = useState(false)
     const [showTrimmer, setShowTrimmer] = useState(false)
     const [isTrimming, setIsTrimming] = useState(false)
-    
+
     const { uploadFile, fileToBase64, isUploading, uploadProgress } = useConvexUpload({
         fileType: "audio",
         trackUpload: true, // Track upload in files table for future reference
@@ -54,7 +54,7 @@ export function SongAudio({
         // Validate file type (audio or video)
         const isAudio = file.type.startsWith('audio/')
         const isVideo = file.type.startsWith('video/')
-        
+
         if (!isAudio && !isVideo) {
             toast.error("Invalid file type", {
                 description: "Please upload an audio file (MP3, WAV) or video file"
@@ -77,14 +77,14 @@ export function SongAudio({
         if (isVideo) {
             setIsProcessingVideo(true)
             toast.info("Converting video to audio...")
-            
+
             try {
                 const audioFile = await convertVideoToAudio(file)
                 setProcessedAudioFile(audioFile)
-                
+
                 // Check duration of converted audio
                 const duration = await getAudioDuration(audioFile)
-                
+
                 if (duration < 15) {
                     toast.error("Audio too short", {
                         description: `The audio is only ${Math.floor(duration)} seconds long. Please upload audio that's at least 15 seconds.`
@@ -94,15 +94,15 @@ export function SongAudio({
                     setIsProcessingVideo(false)
                     return
                 }
-                
+
                 // Generate base64 for preview
                 const base64 = await fileToBase64(audioFile)
                 setSongAudioBase64(base64)
-                
+
                 toast.success("Video converted to audio successfully")
-                
+
                 // If audio is exactly 15 seconds (with small tolerance), skip trimmer
-                if (duration >= 15 && duration <= 15.5) {
+                if (duration >= 15 && duration < 16) {
                     toast.info("Audio is already 15 seconds, uploading directly...")
                     await uploadFile(audioFile)
                 } else {
@@ -118,7 +118,7 @@ export function SongAudio({
         } else {
             // For audio files, check duration first
             const duration = await getAudioDuration(file)
-            
+
             if (duration < 15) {
                 toast.error("Audio too short", {
                     description: `The audio is only ${Math.floor(duration)} seconds long. Please upload audio that's at least 15 seconds.`
@@ -126,15 +126,15 @@ export function SongAudio({
                 setSelectedFile(null)
                 return
             }
-            
+
             setProcessedAudioFile(file)
-            
+
             // Generate base64 for preview
             const base64 = await fileToBase64(file)
             setSongAudioBase64(base64)
-            
+
             // If audio is exactly 15 seconds (with small tolerance), skip trimmer
-            if (duration >= 15 && duration <= 15.5) {
+            if (duration >= 15 && duration < 16) {
                 toast.info("Audio is already 15 seconds, uploading directly...")
                 await uploadFile(file)
             } else {
@@ -145,12 +145,12 @@ export function SongAudio({
 
     const handleTrimConfirm = async (trimmedFile: File) => {
         setIsTrimming(true)
-        
+
         try {
             // Generate base64 for the trimmed audio
             const base64 = await fileToBase64(trimmedFile)
             setSongAudioBase64(base64)
-            
+
             // Upload the trimmed 15-second audio
             await uploadFile(trimmedFile)
         } finally {
@@ -235,7 +235,7 @@ export function SongAudio({
                                 {isUploading && (
                                     <div className="w-full max-w-xs">
                                         <div className="bg-gray-200 rounded-full h-2">
-                                            <div 
+                                            <div
                                                 className="bg-primary h-2 rounded-full transition-all"
                                                 style={{ width: `${uploadProgress}%` }}
                                             />
@@ -271,7 +271,7 @@ export function SongAudio({
                                 onChange={handleFileInput}
                                 disabled={isUploading || isProcessingVideo}
                             />
-                            
+
                             <div className="flex flex-col items-center justify-center space-y-4">
                                 <Upload className="w-12 h-12 text-gray-400" />
                                 <div className="text-center">
@@ -282,11 +282,11 @@ export function SongAudio({
                                         Click to upload or drag and drop
                                     </p>
                                 </div>
-                                
+
                                 {isUploading && (
                                     <div className="w-full max-w-xs">
                                         <div className="bg-gray-200 rounded-full h-2">
-                                            <div 
+                                            <div
                                                 className="bg-primary h-2 rounded-full transition-all"
                                                 style={{ width: `${uploadProgress}%` }}
                                             />
