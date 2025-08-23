@@ -16,6 +16,7 @@ import type {
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_ayrshare from "../app/ayrshare.js";
 import type * as app_campaigns from "../app/campaigns.js";
+import type * as app_files from "../app/files.js";
 import type * as app_folders from "../app/folders.js";
 import type * as app_public from "../app/public.js";
 import type * as app_reports from "../app/reports.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "app/analytics": typeof app_analytics;
   "app/ayrshare": typeof app_ayrshare;
   "app/campaigns": typeof app_campaigns;
+  "app/files": typeof app_files;
   "app/folders": typeof app_folders;
   "app/public": typeof app_public;
   "app/reports": typeof app_reports;

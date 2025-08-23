@@ -1,10 +1,10 @@
 "use client"
 
-import type { OurFileRouter } from "@/app/api/uploadthing/core"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { UploadDropzone } from "@uploadthing/react"
-import { ExternalLink, Music } from "lucide-react"
+import { Music, Upload } from "lucide-react"
+import { useConvexUpload } from "@/hooks/useConvexUpload"
+import { useRef, useState } from "react"
 
 interface SongAudioProps {
     songAudioUrl: string | null
@@ -21,7 +21,87 @@ export function SongAudio({
     setSongAudioBase64,
     songAudioError
 }: SongAudioProps) {
-    // Using sonner toast directly
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [isDragging, setIsDragging] = useState(false)
+    
+    const { uploadFile, fileToBase64, isUploading, uploadProgress } = useConvexUpload({
+        fileType: "audio",
+        trackUpload: true, // Track upload in files table for future reference
+        onSuccess: (result) => {
+            setSongAudioUrl(result.publicUrl)
+            toast.success("Audio uploaded successfully")
+        },
+        onError: (error) => {
+            toast.error("Failed to upload audio", {
+                description: error.message
+            })
+        }
+    })
+
+    const handleFileSelect = async (file: File) => {
+        // Validate file type (audio or video)
+        const isAudio = file.type.startsWith('audio/')
+        const isVideo = file.type.startsWith('video/')
+        
+        if (!isAudio && !isVideo) {
+            toast.error("Invalid file type", {
+                description: "Please upload an audio file (MP3, WAV) or video file"
+            })
+            return
+        }
+
+        // Validate file size (32MB for audio, 128MB for video)
+        const maxSize = isVideo ? 128 * 1024 * 1024 : 32 * 1024 * 1024
+        if (file.size > maxSize) {
+            toast.error("File size too large", {
+                description: `Please upload a file smaller than ${isVideo ? '128MB' : '32MB'}`
+            })
+            return
+        }
+
+        // If it's a video file, we need to extract audio (for now, just upload as is)
+        // The webhook will handle audio extraction if needed
+        if (isVideo) {
+            toast.info("Processing video file", {
+                description: "Audio will be extracted from the video"
+            })
+        }
+
+        // Convert to base64 for audio preview (if audio)
+        if (isAudio) {
+            const base64 = await fileToBase64(file)
+            setSongAudioBase64(base64)
+        }
+
+        // Upload to Convex
+        await uploadFile(file)
+    }
+
+    const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            handleFileSelect(file)
+        }
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+
+        const file = e.dataTransfer.files[0]
+        if (file) {
+            handleFileSelect(file)
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = () => {
+        setIsDragging(false)
+    }
 
     return (
         <section className={`bg-card rounded-xl p-8 shadow-sm border ${songAudioError ? 'ring-2 ring-red-500' : ''}`}>
@@ -35,7 +115,7 @@ export function SongAudio({
                     {songAudioUrl ? (
                         <div className="border rounded-xl p-4 space-y-4">
                             <audio controls className="w-full">
-                                <source src={songAudioUrl} />
+                                <source src={songAudioBase64 || songAudioUrl} />
                             </audio>
                             <Button
                                 variant="outline"
@@ -49,100 +129,51 @@ export function SongAudio({
                             </Button>
                         </div>
                     ) : (
-                        <UploadDropzone<OurFileRouter, "audioUploader">
-                            endpoint="audioUploader"
-                            config={{
-                                mode: "auto"
-                            }}
-                            className="border-2 border-dashed border-gray-400/50 rounded-xl p-8 hover:border-gray-500 transition-colors cursor-pointer bg-muted/30"
-                            content={{
-                                label: "30 Second Song Audio: MP3, WAV or Video",
-                                allowedContent: "Click to upload or drag and drop"
-                            }}
-                            appearance={{
-                                uploadIcon: "w-12 h-12 text-gray-400",
-                                label: "text-base font-medium mt-4 text-muted-foreground",
-                                allowedContent: "text-md text-muted-foreground/70 mt-1 w-full text-center",
-                                button: "bg-gray-600"
-                            }}
-                            onBeforeUploadBegin={(files) => {
-                                const file = files[0];
-                                if (!file) return files;
-
-                                // If file is video, extract audio first
-                                if (file.type.startsWith('video/')) {
-                                    const audioContext = new AudioContext();
-                                    const reader = new FileReader();
-
-                                    reader.onload = async function (e) {
-                                        try {
-                                            const arrayBuffer = e.target?.result as ArrayBuffer;
-                                            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-                                            // Convert AudioBuffer to WAV blob
-                                            const offlineContext = new OfflineAudioContext(
-                                                audioBuffer.numberOfChannels,
-                                                audioBuffer.length,
-                                                audioBuffer.sampleRate
-                                            );
-
-                                            const source = offlineContext.createBufferSource();
-                                            source.buffer = audioBuffer;
-                                            source.connect(offlineContext.destination);
-                                            source.start();
-                                            const renderedBuffer = await offlineContext.startRendering();
-
-                                            // Convert AudioBuffer to Float32Array
-                                            const channelData = renderedBuffer.getChannelData(0);
-                                            const wavBlob = new Blob([channelData.buffer], { type: 'audio/wav' });
-
-                                            // Convert WAV blob to base64
-                                            const audioReader = new FileReader();
-                                            audioReader.onloadend = () => {
-                                                setSongAudioBase64(audioReader.result as string);
-                                            };
-                                            audioReader.readAsDataURL(wavBlob);
-                                        } catch (error) {
-                                            toast.error("No Audio Found in Video", {
-                                                description: "Please upload a video file with sound."
-                                            });
-                                        }
-                                    };
-
-                                    reader.readAsArrayBuffer(file);
-                                } else {
-                                    // For audio files, convert directly to base64
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        setSongAudioBase64(reader.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-
-                                return files;
-                            }}
-                            onClientUploadComplete={(res) => {
-                                if (res?.[0]) {
-                                    setSongAudioUrl(res[0].ufsUrl)
-                                }
-                            }}
-                            onUploadError={(error: Error) => {
-                                if (error.message.includes("FileSizeMismatch")) {
-                                    toast.error("File Size Too Large", {
-                                        description: "Please upload a smaller file."
-                                    });
-                                }
-                            }}
-                        />
+                        <div
+                            className={`border-2 border-dashed ${isDragging ? 'border-primary bg-primary/10' : 'border-gray-400/50'} rounded-xl p-8 hover:border-gray-500 transition-colors cursor-pointer bg-muted/30 relative`}
+                            onClick={() => fileInputRef.current?.click()}
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                        >
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="audio/*,video/*"
+                                className="hidden"
+                                onChange={handleFileInput}
+                                disabled={isUploading}
+                            />
+                            
+                            <div className="flex flex-col items-center justify-center space-y-4">
+                                <Upload className="w-12 h-12 text-gray-400" />
+                                <div className="text-center">
+                                    <p className="text-base font-medium text-muted-foreground">
+                                        30 Second Song Audio: MP3, WAV or Video
+                                    </p>
+                                    <p className="text-md text-muted-foreground/70 mt-1">
+                                        Click to upload or drag and drop
+                                    </p>
+                                </div>
+                                
+                                {isUploading && (
+                                    <div className="w-full max-w-xs">
+                                        <div className="bg-gray-200 rounded-full h-2">
+                                            <div 
+                                                className="bg-primary h-2 rounded-full transition-all"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-2 text-center">
+                                            Uploading... {uploadProgress}%
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
-                </div>
-                <div className="flex justify-center">
-                    <Button size="lg" className="w-96" onClick={() => window.open('https://www.audio-trimmer.com/', '_blank')}>
-                        Free Audio Trimming Tool (External Website)
-                        <ExternalLink className="w-4 h-4 ml-2" />
-                    </Button>
                 </div>
             </div>
         </section>
     )
-} 
+}

@@ -202,4 +202,22 @@ export default defineSchema({
     campaignIds: v.array(v.id('campaigns')),
   })
     .index("by_userId", ["userId"]),
+
+  files: defineTable({
+    userId: v.id('users'),
+    storageId: v.id('_storage'),
+    filename: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    uploadedAt: v.number(),
+    campaignId: v.optional(v.id('campaigns')),
+    fileType: v.union(
+      v.literal('audio'),
+      v.literal('image'),
+      v.literal('video')
+    ),
+    publicUrl: v.string(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_campaignId", ["campaignId"]),
 })

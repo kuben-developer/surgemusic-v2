@@ -1,13 +1,12 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { UploadDropzone } from "@uploadthing/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import type { OurFileRouter } from "./api/uploadthing/core"
-import { useState, type JSX } from "react"
+import { useState, type JSX, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
+import { Upload } from "lucide-react"
+import { useConvexUpload } from "@/hooks/useConvexUpload"
 
 type Feature = {
   title: string;
@@ -69,6 +68,76 @@ const features: Feature[] = [
 
 export default function Page() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  
+  const { uploadFile, isUploading, uploadProgress } = useConvexUpload({
+    fileType: "audio",
+    trackUpload: true,
+    onSuccess: (result) => {
+      router.push(`/campaign/create?songAudioUrl=${encodeURIComponent(result.publicUrl)}`)
+    },
+    onError: (error) => {
+      if (error.message.includes("File size")) {
+        toast.error("File Size Too Large", {
+          description: "Please upload a smaller file."
+        })
+      } else {
+        toast.error(`Error: ${error.message}`)
+      }
+    }
+  })
+
+  const handleFileSelect = async (file: File) => {
+    // Validate file type (audio or video)
+    const isAudio = file.type.startsWith('audio/')
+    const isVideo = file.type.startsWith('video/')
+    
+    if (!isAudio && !isVideo) {
+      toast.error("Invalid file type", {
+        description: "Please upload an audio file (MP3, WAV) or video file"
+      })
+      return
+    }
+
+    // Validate file size (32MB for audio, 128MB for video)
+    const maxSize = isVideo ? 128 * 1024 * 1024 : 32 * 1024 * 1024
+    if (file.size > maxSize) {
+      toast.error("File size too large", {
+        description: `Please upload a file smaller than ${isVideo ? '128MB' : '32MB'}`
+      })
+      return
+    }
+
+    // Upload to Convex
+    await uploadFile(file)
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,40 +152,48 @@ export default function Page() {
             </p>
           </div>
 
-          <UploadDropzone<OurFileRouter, "audioUploader">
-            endpoint="audioUploader"
-            config={{
-              mode: "auto"
-            }}
-            className="border border-dashed rounded-lg p-6 hover:border-foreground/40 transition-all duration-300 cursor-pointer bg-muted/10"
-            content={{
-              label: "Drop your song here",
-              allowedContent: "30 second MP3, WAV or Video"
-            }}
-            appearance={{
-              uploadIcon: "w-8 h-8 text-muted-foreground",
-              label: "text-base font-medium mt-3 text-foreground",
-              allowedContent: "text-sm text-muted-foreground mt-1",
-              button: "bg-primary w-36 text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
-            }}
-            onBeforeUploadBegin={(files) => {
-              return files;
-            }}
-            onClientUploadComplete={(res) => {
-              if (res?.[0]) {
-                router.push(`/campaign/create?songAudioUrl=${encodeURIComponent(res[0].ufsUrl)}`)
-              }
-            }}
-            onUploadError={(error: Error) => {
-              if (error.message.includes("FileSizeMismatch")) {
-                toast("File Size Too Large - Please upload a smaller file.", {
-                  description: "Error uploading file"
-                })
-              } else {
-                toast(`Error: ${error.message}`)
-              }
-            }}
-          />
+          <div
+            className={`border border-dashed ${isDragging ? 'border-primary bg-primary/10' : 'border-border'} rounded-lg p-6 hover:border-foreground/40 transition-all duration-300 cursor-pointer bg-muted/10 relative`}
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,video/*"
+              className="hidden"
+              onChange={handleFileInput}
+              disabled={isUploading}
+            />
+            
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Upload className="w-8 h-8 text-muted-foreground" />
+              <div className="text-center">
+                <p className="text-base font-medium text-foreground">
+                  Drop your song here
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  30 second MP3, WAV or Video
+                </p>
+              </div>
+              
+              {isUploading && (
+                <div className="w-full max-w-xs">
+                  <div className="bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2 text-center">
+                    Uploading... {uploadProgress}%
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Feature cards */}

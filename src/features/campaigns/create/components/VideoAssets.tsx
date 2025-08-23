@@ -1,10 +1,10 @@
 "use client"
 
-import type { OurFileRouter } from "@/app/api/uploadthing/core"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { UploadDropzone } from "@uploadthing/react"
-import { Video } from "lucide-react"
+import { Video, Upload } from "lucide-react"
+import { useConvexUpload } from "@/hooks/useConvexUpload"
+import { useRef, useState } from "react"
 
 interface VideoAssetsProps {
     musicVideoUrl: string | null
@@ -21,7 +21,74 @@ export function VideoAssets({
     setMusicVideoBase64,
     musicVideoError
 }: VideoAssetsProps) {
-    // Using sonner toast directly
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [isDragging, setIsDragging] = useState(false)
+    
+    const { uploadFile, fileToBase64, isUploading, uploadProgress } = useConvexUpload({
+        fileType: "video",
+        trackUpload: true, // Track upload in files table for future reference
+        onSuccess: (result) => {
+            setMusicVideoUrl(result.publicUrl)
+            toast.success("Video uploaded successfully")
+        },
+        onError: (error) => {
+            toast.error("Failed to upload video", {
+                description: error.message
+            })
+        }
+    })
+
+    const handleFileSelect = async (file: File) => {
+        // Validate file type
+        if (!file.type.startsWith('video/')) {
+            toast.error("Invalid file type", {
+                description: "Please upload a video file"
+            })
+            return
+        }
+
+        // Validate file size (128MB limit)
+        const maxSize = 128 * 1024 * 1024 // 128MB
+        if (file.size > maxSize) {
+            toast.error("File size too large", {
+                description: "Please upload a video smaller than 128MB"
+            })
+            return
+        }
+
+        // Convert to base64 for preview
+        const base64 = await fileToBase64(file)
+        setMusicVideoBase64(base64)
+
+        // Upload to Convex
+        await uploadFile(file)
+    }
+
+    const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            handleFileSelect(file)
+        }
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+
+        const file = e.dataTransfer.files[0]
+        if (file) {
+            handleFileSelect(file)
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = () => {
+        setIsDragging(false)
+    }
 
     return (
         <section className={`bg-card rounded-xl p-8 shadow-sm border ${musicVideoError ? 'ring-2 ring-red-500' : ''}`}>
@@ -58,50 +125,51 @@ export function VideoAssets({
                             </Button>
                         </div>
                     ) : (
-                        <UploadDropzone<OurFileRouter, "videoUploader">
-                            endpoint="videoUploader"
-                            config={{
-                                mode: "auto"
-                            }}
-                            className="border-2 border-dashed border-gray-400/50 rounded-xl p-8 hover:border-gray-500 transition-colors cursor-pointer bg-muted/30"
-                            content={{
-                                label: "Music Video Clip or Performance with Song",
-                                allowedContent: "Click to upload or drag and drop"
-                            }}
-                            appearance={{
-                                uploadIcon: "w-12 h-12 text-gray-400",
-                                label: "text-base font-medium mt-4 w-full text-muted-foreground",
-                                allowedContent: "text-md text-muted-foreground/70 mt-1 w-full text-center",
-                                button: "bg-gray-600"
-                            }}
-                            onBeforeUploadBegin={(files) => {
-                                // Convert the first file to base64
-                                const file = files[0];
-                                if (!file) return files;
-
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                    setMusicVideoBase64(reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                                return files;
-                            }}
-                            onClientUploadComplete={(res) => {
-                                if (res?.[0]) {
-                                    setMusicVideoUrl(res[0].ufsUrl)
-                                }
-                            }}
-                            onUploadError={(error: Error) => {
-                                if (error.message.includes("FileSizeMismatch")) {
-                                    toast.error("File Size Too Large", {
-                                        description: "Please upload a smaller file."
-                                    });
-                                }
-                            }}
-                        />
+                        <div
+                            className={`border-2 border-dashed ${isDragging ? 'border-primary bg-primary/10' : 'border-gray-400/50'} rounded-xl p-8 hover:border-gray-500 transition-colors cursor-pointer bg-muted/30 relative`}
+                            onClick={() => fileInputRef.current?.click()}
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                        >
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="video/*"
+                                className="hidden"
+                                onChange={handleFileInput}
+                                disabled={isUploading}
+                            />
+                            
+                            <div className="flex flex-col items-center justify-center space-y-4">
+                                <Upload className="w-12 h-12 text-gray-400" />
+                                <div className="text-center">
+                                    <p className="text-base font-medium text-muted-foreground">
+                                        Music Video Clip or Performance with Song
+                                    </p>
+                                    <p className="text-md text-muted-foreground/70 mt-1">
+                                        Click to upload or drag and drop
+                                    </p>
+                                </div>
+                                
+                                {isUploading && (
+                                    <div className="w-full max-w-xs">
+                                        <div className="bg-gray-200 rounded-full h-2">
+                                            <div 
+                                                className="bg-primary h-2 rounded-full transition-all"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-2 text-center">
+                                            Uploading... {uploadProgress}%
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
         </section>
     )
-} 
+}
