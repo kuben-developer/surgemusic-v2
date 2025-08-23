@@ -3,7 +3,6 @@ import { CampaignInfo } from "./CampaignInfo";
 import { ContentThemes } from "./ContentThemes";
 import { GenreSelection } from "./GenreSelection";
 import { ImageAssets } from "./ImageAssets";
-import { LyricVideoOverlay } from "./LyricVideoOverlay";
 import { SongAudio } from "./SongAudio";
 import { SongDetails } from "./SongDetails";
 import { VideoAssets } from "./VideoAssets";
@@ -16,12 +15,6 @@ export interface StepProps {
   campaignType: "custom" | "express";
   setCampaignType: (value: "custom" | "express") => void;
   campaignNameError: boolean;
-
-  // Lyric Video Overlay
-  lyricVideoUrl: string | null;
-  setLyricVideoUrl: (value: string | null) => void;
-  lyricVideoBase64: string | null;
-  setLyricVideoBase64: (value: string | null) => void;
 
   // Song Details
   songName: string;
@@ -86,17 +79,6 @@ export const STEP_CONFIGS: StepConfig[] = [
       campaignType: props.campaignType,
       setCampaignType: props.setCampaignType,
       campaignNameError: props.campaignNameError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  {
-    id: "lyric-video-overlay",
-    component: LyricVideoOverlay,
-    propsSelector: (props) => ({
-      lyricVideoUrl: props.lyricVideoUrl,
-      setLyricVideoUrl: props.setLyricVideoUrl,
-      lyricVideoBase64: props.lyricVideoBase64,
-      setLyricVideoBase64: props.setLyricVideoBase64,
     }),
     availableFor: ["express", "custom"],
   },

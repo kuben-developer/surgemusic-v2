@@ -19,7 +19,6 @@ export const create = mutation({
     themes: v.array(v.string()),
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
-    lyricVideoUrl: v.optional(v.string()),
     caption: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -519,7 +518,6 @@ export const sendWebhook = internalAction({
     themes: v.array(v.string()),
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
-    lyricVideoUrl: v.optional(v.string()),
   },
   handler: async (_, args): Promise<void> => {
     try {
@@ -543,7 +541,6 @@ export const sendWebhook = internalAction({
           "Song Name": args.songName,
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
-          "lyricVideo": args.lyricVideoUrl || "",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         }];
       } else {
@@ -555,7 +552,6 @@ export const sendWebhook = internalAction({
           "Artist Name": args.artistName,
           "Genre": args.genre,
           "Campaign Setup": "express",
-          "lyricVideo": args.lyricVideoUrl || "",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         }];
       }
@@ -603,7 +599,7 @@ export const getCampaignWithUser = internalQuery({
 
 export const getAllWithCaptions = internalQuery({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const campaigns = await ctx.db
       .query("campaigns")
       .filter((q) =>

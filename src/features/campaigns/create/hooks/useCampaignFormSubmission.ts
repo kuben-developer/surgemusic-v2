@@ -15,7 +15,6 @@ export interface CreateCampaignData {
   themes: string[];
   songAudioUrl?: string;
   musicVideoUrl?: string;
-  lyricVideoUrl?: string;
 }
 
 interface SubmissionProps {

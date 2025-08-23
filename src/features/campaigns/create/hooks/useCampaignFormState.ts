@@ -15,10 +15,6 @@ export function useCampaignFormState() {
   const [campaignName, setCampaignName] = useState("");
   const [campaignNameError, setCampaignNameError] = useState(false);
 
-  // Lyric Video Overlay state
-  const [lyricVideoUrl, setLyricVideoUrl] = useState<string | null>(null);
-  const [lyricVideoBase64, setLyricVideoBase64] = useState<string | null>(null);
-
   // Song Details state
   const [songName, setSongName] = useState("");
   const [artistName, setArtistName] = useState("");
@@ -68,12 +64,6 @@ export function useCampaignFormState() {
     setCampaignName,
     campaignNameError,
     setCampaignNameError,
-
-    // Lyric Video Overlay
-    lyricVideoUrl,
-    setLyricVideoUrl,
-    lyricVideoBase64,
-    setLyricVideoBase64,
 
     // Song Details
     songName,

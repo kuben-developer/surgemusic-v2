@@ -46,12 +46,6 @@ export default function CampaignCreatePage() {
         setCampaignType={formData.setCampaignType}
         campaignNameError={formData.campaignNameError}
 
-        // Lyric Video Overlay
-        lyricVideoUrl={formData.lyricVideoUrl}
-        setLyricVideoUrl={formData.setLyricVideoUrl}
-        lyricVideoBase64={formData.lyricVideoBase64}
-        setLyricVideoBase64={formData.setLyricVideoBase64}
-
         // Song Details
         songName={formData.songName}
         setSongName={formData.setSongName}

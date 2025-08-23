@@ -22,7 +22,6 @@ export function useCampaignFormSections({ campaignType, errors }: SectionsProps)
   const sections = useMemo(() => {
     const baseSections = [
       { title: "Campaign Info", error: errors.campaignNameError },
-      { title: "Lyric Video Overlay", error: false },
       { title: "Genre Selection", error: errors.genreError },
       { title: "Content Themes", error: errors.themesError },
       { title: "Song Details", error: errors.songDetailsError },

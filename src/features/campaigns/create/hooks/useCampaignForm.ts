@@ -2,7 +2,7 @@ import { useCampaignFormState } from "./useCampaignFormState";
 import { useCampaignFormValidation } from "./useCampaignFormValidation";
 import { useCampaignFormNavigation } from "./useCampaignFormNavigation";
 import { useCampaignFormSections } from "./useCampaignFormSections";
-import { useCampaignFormSubmission, type CreateCampaignData } from "./useCampaignFormSubmission";
+import { useCampaignFormSubmission } from "./useCampaignFormSubmission";
 
 export type { CreateCampaignData } from "./useCampaignFormSubmission";
 
@@ -78,7 +78,6 @@ export function useCampaignForm() {
         themes: state.selectedThemes,
         songAudioUrl: state.songAudioUrl || undefined,
         musicVideoUrl: state.musicVideoUrl || undefined,
-        lyricVideoUrl: state.lyricVideoUrl || undefined,
       });
     }
   };
@@ -95,12 +94,6 @@ export function useCampaignForm() {
     campaignName: state.campaignName,
     setCampaignName: state.setCampaignName,
     campaignNameError: state.campaignNameError,
-
-    // Lyric Video Overlay
-    lyricVideoUrl: state.lyricVideoUrl,
-    setLyricVideoUrl: state.setLyricVideoUrl,
-    lyricVideoBase64: state.lyricVideoBase64,
-    setLyricVideoBase64: state.setLyricVideoBase64,
 
     // Song Details
     songName: state.songName,
