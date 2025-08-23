@@ -147,7 +147,7 @@ export default function Page() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 text-foreground">Upload Your Song</h1>
             <p className="text-muted-foreground text-lg">
-              Add a 30 second snippet of your best hook or chorus.
+              Add a 15 seconds snippet of your best hook or chorus.
               We'll create amazing content for your music promotion.
             </p>
           </div>
@@ -175,7 +175,7 @@ export default function Page() {
                   Drop your song here
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  30 second MP3, WAV or Video
+                  15 seconds MP3, WAV or Video
                 </p>
               </div>
               
