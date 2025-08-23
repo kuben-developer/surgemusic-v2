@@ -544,6 +544,7 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "lyricVideo": args.lyricVideoUrl || "",
+          "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         }];
       } else {
         payload = [{
@@ -555,6 +556,7 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "lyricVideo": args.lyricVideoUrl || "",
+          "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         }];
       }
 
