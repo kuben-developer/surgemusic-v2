@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { Authenticated, Unauthenticated, AuthLoading } from "convex/react"
 import Sidebar from "./custom-sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { Toaster as PublicToaster } from "sonner"
@@ -36,10 +37,36 @@ function PublicLayout({ children }: LayoutWrapperProps) {
 function PrivateLayout({ children }: LayoutWrapperProps) {
   return (
     <>
-      <div role="application" aria-label="Surge Music Dashboard">
-        <Sidebar>{children}</Sidebar>
-      </div>
-      <Toaster />
+      <AuthLoading>
+        <div className="flex h-screen items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">Authenticating...</p>
+          </div>
+        </div>
+      </AuthLoading>
+      
+      <Authenticated>
+        <div role="application" aria-label="Surge Music Dashboard">
+          <Sidebar>{children}</Sidebar>
+        </div>
+        <Toaster />
+      </Authenticated>
+      
+      <Unauthenticated>
+        <div className="flex h-screen items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <h2 className="text-2xl font-semibold">Authentication Required</h2>
+            <p className="text-muted-foreground">Please sign in to continue</p>
+            <a 
+              href="/sign-in" 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+            >
+              Sign In
+            </a>
+          </div>
+        </div>
+      </Unauthenticated>
     </>
   )
 }
