@@ -2,12 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Music, Upload, Scissors } from "lucide-react"
+import { Music, Upload, Scissors, FileText, Loader2 } from "lucide-react"
 import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
+import { LyricsEditor } from "./LyricsEditor"
 import { convertVideoToAudio } from "@/utils/media-converter.utils"
 import { getAudioDuration } from "@/utils/audio-trimmer.utils"
+import { type LyricsLine, initializeEmptyLyrics } from "@/utils/srt-converter.utils"
+import { useAction } from "convex/react"
+import { api } from "../../../../../convex/_generated/api"
 
 interface SongAudioProps {
     songAudioUrl: string | null
@@ -15,6 +19,8 @@ interface SongAudioProps {
     songAudioBase64: string | null
     setSongAudioBase64: (base64: string | null) => void
     songAudioError: boolean
+    lyrics: LyricsLine[]
+    setLyrics: (lyrics: LyricsLine[]) => void
 }
 
 export function SongAudio({
@@ -22,7 +28,9 @@ export function SongAudio({
     setSongAudioUrl,
     songAudioBase64,
     setSongAudioBase64,
-    songAudioError
+    songAudioError,
+    lyrics,
+    setLyrics
 }: SongAudioProps) {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isDragging, setIsDragging] = useState(false)
@@ -31,6 +39,10 @@ export function SongAudio({
     const [isProcessingVideo, setIsProcessingVideo] = useState(false)
     const [showTrimmer, setShowTrimmer] = useState(false)
     const [isTrimming, setIsTrimming] = useState(false)
+    const [showLyricsEditor, setShowLyricsEditor] = useState(false)
+    const [isTranscribing, setIsTranscribing] = useState(false)
+    
+    const transcribeAudio = useAction(api.app.transcription.transcribeAudio)
 
     const { uploadFile, fileToBase64, isUploading, uploadProgress } = useConvexUpload({
         fileType: "audio",
@@ -42,6 +54,7 @@ export function SongAudio({
             setSelectedFile(null)
             setProcessedAudioFile(null)
             setShowTrimmer(false)
+            // Don't initialize lyrics here - let user transcribe or manually add them
         },
         onError: (error) => {
             toast.error("Failed to upload audio", {
@@ -171,6 +184,52 @@ export function SongAudio({
         setSelectedFile(null)
         setProcessedAudioFile(null)
         setShowTrimmer(false)
+        setShowLyricsEditor(false)
+        setLyrics([])
+    }
+    
+    const handleTranscribe = async () => {
+        if (!songAudioUrl) {
+            toast.error("No audio to transcribe")
+            return
+        }
+        
+        setIsTranscribing(true)
+        try {
+            console.log("Starting transcription for URL:", songAudioUrl)
+            const result = await transcribeAudio({ audioUrl: songAudioUrl })
+            console.log("Transcription result:", result)
+            
+            if (result.success && result.lyrics && result.lyrics.length > 0) {
+                setLyrics(result.lyrics)
+                setShowLyricsEditor(true)
+                toast.success("Audio transcribed successfully")
+            } else {
+                console.error("Transcription failed:", result.error)
+                toast.error(result.error || "Transcription failed - opening manual editor")
+                // Initialize empty lyrics and open editor for manual entry
+                setLyrics(initializeEmptyLyrics(15))
+                setShowLyricsEditor(true)
+            }
+        } catch (error) {
+            console.error("Transcription error:", error)
+            toast.error("Failed to transcribe audio - opening manual editor")
+            // Initialize empty lyrics and open editor for manual entry
+            setLyrics(initializeEmptyLyrics(15))
+            setShowLyricsEditor(true)
+        } finally {
+            setIsTranscribing(false)
+        }
+    }
+    
+    const handleLyricsSave = (updatedLyrics: LyricsLine[]) => {
+        setLyrics(updatedLyrics)
+        setShowLyricsEditor(false)
+        toast.success("Lyrics saved successfully")
+    }
+    
+    const handleLyricsCancel = () => {
+        setShowLyricsEditor(false)
     }
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +267,14 @@ export function SongAudio({
                 </div>
                 <p className="text-muted-foreground text-lg">Add a 15 second snippet from your song. We recommend using the chorus/hook or a catchy part of the song.</p>
                 <div className="space-y-4">
-                    {songAudioUrl ? (
+                    {showLyricsEditor ? (
+                        <LyricsEditor
+                            initialLyrics={lyrics}
+                            onSave={handleLyricsSave}
+                            onCancel={handleLyricsCancel}
+                            audioBase64={songAudioBase64}
+                        />
+                    ) : songAudioUrl ? (
                         <div className="border rounded-xl p-4 space-y-4">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                                 <Scissors className="w-4 h-4" />
@@ -217,13 +283,51 @@ export function SongAudio({
                             <audio controls className="w-full">
                                 <source src={songAudioBase64 || songAudioUrl} />
                             </audio>
-                            <Button
-                                variant="outline"
-                                onClick={handleRemoveAudio}
-                                className="w-full"
-                            >
-                                Remove Audio
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleRemoveAudio}
+                                    className="flex-1"
+                                >
+                                    Remove Audio
+                                </Button>
+                                {!showLyricsEditor && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            // Check if lyrics have actual content (not just empty entries)
+                                            const hasLyricsContent = lyrics.length > 0 && lyrics.some(l => l.text.trim().length > 0);
+                                            if (hasLyricsContent) {
+                                                setShowLyricsEditor(true);
+                                            } else {
+                                                handleTranscribe();
+                                            }
+                                        }}
+                                        disabled={isTranscribing}
+                                        className="flex-1"
+                                    >
+                                        {isTranscribing ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Transcribing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                Transcribe & Edit Lyrics
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+                            </div>
+                            {lyrics.length > 0 && !showLyricsEditor && (
+                                <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted/30 rounded">
+                                    <span className="flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />
+                                        Lyrics added ({lyrics.filter(l => l.text.trim()).length}/15 seconds have text)
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     ) : showTrimmer && processedAudioFile ? (
                         isTrimming || isUploading ? (

@@ -88,6 +88,11 @@ export default function CampaignCreatePage() {
         selectedThemes={formData.selectedThemes}
         setSelectedThemes={formData.setSelectedThemes}
         themesError={formData.themesError}
+
+        // Lyrics
+        lyrics={formData.lyrics}
+        setLyrics={formData.setLyrics}
+        lyricsError={formData.lyricsError}
       />
     </div>
   );

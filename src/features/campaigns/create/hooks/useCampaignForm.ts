@@ -78,6 +78,7 @@ export function useCampaignForm() {
         themes: state.selectedThemes,
         songAudioUrl: state.songAudioUrl || undefined,
         musicVideoUrl: state.musicVideoUrl || undefined,
+        lyrics: state.lyrics,
       });
     }
   };
@@ -137,6 +138,11 @@ export function useCampaignForm() {
     selectedThemes: state.selectedThemes,
     setSelectedThemes: state.setSelectedThemes,
     themesError: state.themesError,
+
+    // Lyrics
+    lyrics: state.lyrics,
+    setLyrics: state.setLyrics,
+    lyricsError: state.lyricsError,
 
     // Actions
     handleNext,

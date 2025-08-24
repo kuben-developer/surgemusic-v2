@@ -22,6 +22,7 @@ import type * as app_public from "../app/public.js";
 import type * as app_reports from "../app/reports.js";
 import type * as app_stripe from "../app/stripe.js";
 import type * as app_tiktok from "../app/tiktok.js";
+import type * as app_transcription from "../app/transcription.js";
 import type * as app_users from "../app/users.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   "app/reports": typeof app_reports;
   "app/stripe": typeof app_stripe;
   "app/tiktok": typeof app_tiktok;
+  "app/transcription": typeof app_transcription;
   "app/users": typeof app_users;
   crons: typeof crons;
   http: typeof http;

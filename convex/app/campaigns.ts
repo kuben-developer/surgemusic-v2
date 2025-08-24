@@ -8,6 +8,15 @@ function numericUuid() {
   return timestamp + random;
 }
 
+function formatSRTTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const millis = Math.floor((seconds % 1) * 1000);
+  
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
+}
+
 export const create = mutation({
   args: {
     campaignName: v.string(),
@@ -20,6 +29,10 @@ export const create = mutation({
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
     caption: v.optional(v.string()),
+    lyrics: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+    }))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -76,6 +89,7 @@ export const create = mutation({
       themes: args.themes,
       status: "pending",
       caption: args.caption ? args.caption.trim() : undefined,
+      lyrics: args.lyrics,
     });
 
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
@@ -518,9 +532,30 @@ export const sendWebhook = internalAction({
     themes: v.array(v.string()),
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
+    lyrics: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+    }))),
   },
   handler: async (_, args): Promise<void> => {
     try {
+      // Convert lyrics to SRT format if present
+      let lyricsSRT = "";
+      if (args.lyrics && args.lyrics.length > 0) {
+        const srtLines: string[] = [];
+        args.lyrics.forEach((line, index) => {
+          const subtitleNumber = index + 1;
+          const startTime = formatSRTTime(line.timestamp);
+          const endTime = formatSRTTime(line.timestamp + 1);
+          
+          srtLines.push(String(subtitleNumber));
+          srtLines.push(`${startTime} --> ${endTime}`);
+          srtLines.push(line.text || '');
+          srtLines.push('');
+        });
+        lyricsSRT = srtLines.join('\n').trim();
+      }
+
       const isCustomCampaign = args.themes.length > 0;
       let payload;
 
@@ -542,6 +577,7 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
+          "Lyrics SRT": lyricsSRT,
         }];
       } else {
         payload = [{
@@ -553,6 +589,7 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
+          "Lyrics SRT": lyricsSRT,
         }];
       }
 

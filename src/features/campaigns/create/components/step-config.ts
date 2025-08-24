@@ -7,6 +7,7 @@ import { SongAudio } from "./SongAudio";
 import { SongDetails } from "./SongDetails";
 import { VideoAssets } from "./VideoAssets";
 import { VideoCount } from "./VideoCount";
+import { type LyricsLine } from "@/utils/srt-converter.utils";
 
 export interface StepProps {
   // Campaign Info
@@ -60,6 +61,11 @@ export interface StepProps {
   selectedThemes: string[];
   setSelectedThemes: (value: string[]) => void;
   themesError: boolean;
+
+  // Lyrics
+  lyrics: LyricsLine[];
+  setLyrics: (lyrics: LyricsLine[]) => void;
+  lyricsError: boolean;
 }
 
 export interface StepConfig {
@@ -124,6 +130,8 @@ export const STEP_CONFIGS: StepConfig[] = [
       songAudioBase64: props.songAudioBase64,
       setSongAudioBase64: props.setSongAudioBase64,
       songAudioError: props.songAudioError,
+      lyrics: props.lyrics,
+      setLyrics: props.setLyrics,
     }),
     availableFor: ["express", "custom"],
   },

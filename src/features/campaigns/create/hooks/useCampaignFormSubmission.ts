@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
+import { type LyricsLine } from "@/utils/srt-converter.utils";
 
 export interface CreateCampaignData {
   campaignName: string;
@@ -15,6 +16,7 @@ export interface CreateCampaignData {
   themes: string[];
   songAudioUrl?: string;
   musicVideoUrl?: string;
+  lyrics?: LyricsLine[];
 }
 
 interface SubmissionProps {
@@ -28,7 +30,13 @@ export function useCampaignFormSubmission({ setIsPending }: SubmissionProps) {
   const createCampaign = async (data: CreateCampaignData) => {
     setIsPending(true);
     try {
-      const campaignId = await createCampaignMutation(data);
+      // Prepare the data with lyrics if available
+      const campaignData = {
+        ...data,
+        lyrics: data.lyrics && data.lyrics.length > 0 ? data.lyrics : undefined,
+      };
+      
+      const campaignId = await createCampaignMutation(campaignData);
       router.push(`/campaign/${campaignId}`);
     } catch (error) {
       console.error("Error creating campaign:", error);

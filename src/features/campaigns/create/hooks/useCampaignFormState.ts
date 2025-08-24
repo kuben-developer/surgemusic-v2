@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { type LyricsLine } from "@/utils/srt-converter.utils";
 
 export function useCampaignFormState() {
   const searchParams = useSearchParams();
@@ -49,6 +50,10 @@ export function useCampaignFormState() {
   // Content Themes state
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [themesError, setThemesError] = useState(false);
+
+  // Lyrics state
+  const [lyrics, setLyrics] = useState<LyricsLine[]>([]);
+  const [lyricsError, setLyricsError] = useState(false);
 
   return {
     // Form navigation
@@ -114,5 +119,11 @@ export function useCampaignFormState() {
     setSelectedThemes,
     themesError,
     setThemesError,
+
+    // Lyrics
+    lyrics,
+    setLyrics,
+    lyricsError,
+    setLyricsError,
   };
 }

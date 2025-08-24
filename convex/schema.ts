@@ -45,6 +45,10 @@ export default defineSchema({
     ),
     isDeleted: v.optional(v.boolean()),
     caption: v.optional(v.string()),
+    lyrics: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+    }))),
   })
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])
