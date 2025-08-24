@@ -46,52 +46,68 @@ export const transcribeAudio = action({
 
       console.log("Transcription response received:", JSON.stringify(transcription, null, 2));
 
-      // Extract text from the response
+      // Extract text and words timing from the response
       let transcribedText = "";
+      let wordsData: Array<{ text: string; start: number; end: number; type: string }> = [];
+      
       if (transcription && typeof transcription === 'object') {
-        // Handle the response based on ElevenLabs API structure
+        // Extract the full text
         if ('text' in transcription) {
           transcribedText = (transcription as any).text;
-        } else if ('results' in transcription && (transcription as any).results) {
-          // Handle multichannel/structured response
-          const results = (transcription as any).results;
-          if (results.channels && Array.isArray(results.channels) && results.channels.length > 0) {
-            // Combine all utterances from the first channel
-            transcribedText = results.channels[0].utterances
-              ?.map((u: any) => u.text || '')
-              .join(' ') || "";
-          } else if (results.text) {
-            transcribedText = results.text;
-          }
-        } else if ('utterances' in transcription && Array.isArray((transcription as any).utterances)) {
-          // Handle simple utterances array
-          transcribedText = (transcription as any).utterances
-            .map((u: any) => u.text || '')
-            .join(' ');
+        }
+        
+        // Extract the words array with timing information
+        if ('words' in transcription && Array.isArray((transcription as any).words)) {
+          wordsData = (transcription as any).words;
         }
       }
 
-      if (!transcribedText) {
-        console.error("No text found in transcription response:", JSON.stringify(transcription, null, 2));
-        throw new Error("Transcription failed - no text returned");
+      if (!transcribedText || !wordsData.length) {
+        console.error("No text or word timing found in transcription response:", JSON.stringify(transcription, null, 2));
+        throw new Error("Transcription failed - no text or timing data returned");
       }
       
       console.log("Transcribed text:", transcribedText);
+      console.log(`Found ${wordsData.length} word entries with timing`);
 
-      // Split text into 15 one-second segments
-      const words = transcribedText.split(/\s+/).filter((word: string) => word.length > 0);
-      const wordsPerSecond = Math.ceil(words.length / 15);
+      // Filter to get only actual words (exclude spacing and punctuation)
+      const actualWords = wordsData.filter(w => w.type === 'word');
+      console.log(`Processing ${actualWords.length} actual words`);
+
+      // Group words into 1-second intervals based on their start time
       const lyrics = [];
-
-      for (let i = 0; i < 15; i++) {
-        const startIndex = i * wordsPerSecond;
-        const endIndex = Math.min(startIndex + wordsPerSecond, words.length);
-        const lineText = words.slice(startIndex, endIndex).join(' ');
-
+      
+      for (let second = 0; second < 15; second++) {
+        // Find all words that start within this second
+        const wordsInThisSecond = actualWords.filter(word => {
+          // Word starts within this second interval
+          return word.start >= second && word.start < second + 1;
+        });
+        
+        // Join the words for this second
+        const lineText = wordsInThisSecond
+          .map(w => w.text)
+          .join(' ')
+          .trim();
+        
         lyrics.push({
-          timestamp: i,
+          timestamp: second,
           text: lineText,
         });
+        
+        if (lineText) {
+          console.log(`Second ${second}: "${lineText}" (${wordsInThisSecond.length} words)`);
+        }
+      }
+      
+      // Handle any words that might be beyond 15 seconds by adding them to the last second
+      const wordsAfter15 = actualWords.filter(word => word.start >= 15);
+      if (wordsAfter15.length > 0) {
+        const extraText = wordsAfter15.map(w => w.text).join(' ').trim();
+        if (extraText) {
+          lyrics[14].text = lyrics[14].text ? `${lyrics[14].text} ${extraText}` : extraText;
+          console.log(`Added ${wordsAfter15.length} words from beyond 15s to last second`);
+        }
       }
 
       console.log("Successfully created lyrics for 15 seconds");
