@@ -300,7 +300,7 @@ export function SongAudio({
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-3">
                                             <h3 className="text-lg font-semibold">Transcribe Lyrics</h3>
-                                            <Badge variant="secondary" className="gap-1">
+                                            <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
                                                 <Sparkles className="w-3 h-3" />
                                                 Pro Plan
                                             </Badge>
