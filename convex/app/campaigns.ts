@@ -537,10 +537,10 @@ export const sendWebhook = internalAction({
       text: v.string(),
     }))),
   },
-  handler: async (_, args): Promise<void> => {
+  handler: async (ctx, args): Promise<void> => {
     try {
-      // Convert lyrics to SRT format if present
-      let lyricsSRT = "";
+      // Convert lyrics to SRT format and upload to storage if present
+      let lyricsSRTUrl = "";
       if (args.lyrics && args.lyrics.length > 0) {
         const srtLines: string[] = [];
         args.lyrics.forEach((line, index) => {
@@ -553,7 +553,17 @@ export const sendWebhook = internalAction({
           srtLines.push(line.text || '');
           srtLines.push('');
         });
-        lyricsSRT = srtLines.join('\n').trim();
+        const lyricsSRT = srtLines.join('\n').trim();
+        
+        // Store the SRT file in Convex storage
+        const srtBlob = new Blob([lyricsSRT], { type: 'text/plain' });
+        const storageId = await ctx.storage.store(srtBlob);
+        
+        // Get the public URL for the stored file
+        const url = await ctx.storage.getUrl(storageId);
+        if (url) {
+          lyricsSRTUrl = url;
+        }
       }
 
       const isCustomCampaign = args.themes.length > 0;
@@ -577,7 +587,7 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT": lyricsSRT,
+          "Lyrics SRT": lyricsSRTUrl,
         }];
       } else {
         payload = [{
@@ -589,7 +599,7 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT": lyricsSRT,
+          "Lyrics SRT": lyricsSRTUrl,
         }];
       }
 
