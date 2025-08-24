@@ -1,8 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Music, Upload, Scissors, FileText, Loader2 } from "lucide-react"
+import { Music, Upload, Scissors, FileText, Loader2, Sparkles } from "lucide-react"
 import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
@@ -275,23 +276,52 @@ export function SongAudio({
                             audioBase64={songAudioBase64}
                         />
                     ) : songAudioUrl ? (
-                        <div className="border rounded-xl p-4 space-y-4">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                <Scissors className="w-4 h-4" />
-                                <span>15-second audio clip ready</span>
-                            </div>
-                            <audio controls className="w-full">
-                                <source src={songAudioBase64 || songAudioUrl} />
-                            </audio>
-                            <div className="flex gap-2">
+                        <>
+                            <div className="border rounded-xl p-4 space-y-4">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                    <Scissors className="w-4 h-4" />
+                                    <span>15-second audio clip ready</span>
+                                </div>
+                                <audio controls className="w-full">
+                                    <source src={songAudioBase64 || songAudioUrl} />
+                                </audio>
                                 <Button
                                     variant="outline"
                                     onClick={handleRemoveAudio}
-                                    className="flex-1"
+                                    className="w-full"
                                 >
                                     Remove Audio
                                 </Button>
-                                {!showLyricsEditor && (
+                            </div>
+                            
+                            {/* Transcribe Lyrics Section - Separate from audio box */}
+                            {!showLyricsEditor && (
+                                <div className="border rounded-xl p-6 space-y-4 bg-muted/20">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-lg font-semibold">Transcribe Lyrics</h3>
+                                            <Badge variant="secondary" className="gap-1">
+                                                <Sparkles className="w-3 h-3" />
+                                                Pro Plan
+                                            </Badge>
+                                        </div>
+                                        
+                                        <div className="space-y-2 text-sm text-muted-foreground">
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-primary mt-0.5">•</span>
+                                                <span>Boost video engagement with synchronized lyrics overlays</span>
+                                            </p>
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-primary mt-0.5">•</span>
+                                                <span>Increase viewer retention by making content more accessible</span>
+                                            </p>
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-primary mt-0.5">•</span>
+                                                <span>Create professional-looking videos that stand out on social media</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
                                     <Button
                                         variant="outline"
                                         onClick={() => {
@@ -304,7 +334,7 @@ export function SongAudio({
                                             }
                                         }}
                                         disabled={isTranscribing}
-                                        className="flex-1"
+                                        className="w-full"
                                     >
                                         {isTranscribing ? (
                                             <>
@@ -314,21 +344,23 @@ export function SongAudio({
                                         ) : (
                                             <>
                                                 <FileText className="w-4 h-4 mr-2" />
-                                                Transcribe & Edit Lyrics
+                                                {lyrics.length > 0 && lyrics.some(l => l.text.trim()) ? 'Edit Lyrics' : 'Transcribe & Edit Lyrics'}
                                             </>
                                         )}
                                     </Button>
-                                )}
-                            </div>
-                            {lyrics.length > 0 && !showLyricsEditor && (
-                                <div className="text-sm text-muted-foreground mt-2 p-2 bg-muted/30 rounded">
-                                    <span className="flex items-center gap-1">
-                                        <FileText className="w-3 h-3" />
-                                        Lyrics added ({lyrics.filter(l => l.text.trim()).length}/15 seconds have text)
-                                    </span>
+                                    
+                                    {lyrics.length > 0 && (
+                                        <div className="text-sm text-muted-foreground mt-2 p-3 bg-background/50 rounded-lg">
+                                            <span className="flex items-center gap-2">
+                                                <FileText className="w-4 h-4 text-primary" />
+                                                <span className="font-medium">Lyrics added</span>
+                                                <span className="text-xs">({lyrics.filter(l => l.text.trim()).length}/15 seconds have text)</span>
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </div>
+                        </>
                     ) : showTrimmer && processedAudioFile ? (
                         isTrimming || isUploading ? (
                             <div className="border rounded-xl p-8 flex flex-col items-center justify-center space-y-4">
