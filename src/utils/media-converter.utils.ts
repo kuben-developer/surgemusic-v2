@@ -14,8 +14,8 @@ async function initFFmpeg(): Promise<FFmpeg> {
 
   ffmpeg = new FFmpeg();
 
-  // Load FFmpeg with CORS-enabled CDN URLs
-  const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+  // Load FFmpeg with CORS-enabled CDN URLs - using jsDelivr for better performance
+  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
   
   await ffmpeg.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),

@@ -26,6 +26,7 @@ import type * as app_transcription from "../app/transcription.js";
 import type * as app_users from "../app/users.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
+import type * as utils_srt_generator from "../utils/srt_generator.js";
 import type * as webhooks_ayrshare from "../webhooks/ayrshare.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_make from "../webhooks/make.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "app/users": typeof app_users;
   crons: typeof crons;
   http: typeof http;
+  "utils/srt_generator": typeof utils_srt_generator;
   "webhooks/ayrshare": typeof webhooks_ayrshare;
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/make": typeof webhooks_make;

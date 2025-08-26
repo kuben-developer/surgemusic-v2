@@ -54,6 +54,22 @@ export function useCampaignFormState() {
   // Lyrics state
   const [lyrics, setLyrics] = useState<LyricsLine[]>([]);
   const [lyricsError, setLyricsError] = useState(false);
+  
+  // Word-level data from ElevenLabs
+  const [wordsData, setWordsData] = useState<Array<{
+    text: string;
+    start: number;
+    end: number;
+    type: string;
+    logprob?: number;
+  }> | undefined>(undefined);
+  
+  // Lyrics with word indices mapping
+  const [lyricsWithWords, setLyricsWithWords] = useState<Array<{
+    timestamp: number;
+    text: string;
+    wordIndices: number[];
+  }> | undefined>(undefined);
 
   return {
     // Form navigation
@@ -125,5 +141,11 @@ export function useCampaignFormState() {
     setLyrics,
     lyricsError,
     setLyricsError,
+    
+    // Word data
+    wordsData,
+    setWordsData,
+    lyricsWithWords,
+    setLyricsWithWords,
   };
 }

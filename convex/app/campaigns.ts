@@ -33,6 +33,18 @@ export const create = mutation({
       timestamp: v.number(),
       text: v.string(),
     }))),
+    wordsData: v.optional(v.array(v.object({
+      text: v.string(),
+      start: v.number(),
+      end: v.number(),
+      type: v.string(),
+      logprob: v.optional(v.number()),
+    }))),
+    lyricsWithWords: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+      wordIndices: v.array(v.number()),
+    }))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -90,6 +102,8 @@ export const create = mutation({
       status: "pending",
       caption: args.caption ? args.caption.trim() : undefined,
       lyrics: args.lyrics,
+      wordsData: args.wordsData,
+      lyricsWithWords: args.lyricsWithWords,
     });
 
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
@@ -536,12 +550,56 @@ export const sendWebhook = internalAction({
       timestamp: v.number(),
       text: v.string(),
     }))),
+    wordsData: v.optional(v.array(v.object({
+      text: v.string(),
+      start: v.number(),
+      end: v.number(),
+      type: v.string(),
+      logprob: v.optional(v.number()),
+    }))),
+    lyricsWithWords: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+      wordIndices: v.array(v.number()),
+    }))),
   },
   handler: async (ctx, args): Promise<void> => {
     try {
-      // Convert lyrics to SRT format and upload to storage if present
-      let lyricsSRTUrl = "";
-      if (args.lyrics && args.lyrics.length > 0) {
+      // Import the SRT generation functions
+      const { generateAllSRTVariations, generateSRTWithEditedLyrics } = await import("../utils/srt_generator");
+      
+      // Generate 5 different SRT files with varying word groupings
+      const srtUrls: string[] = [];
+      
+      if (args.wordsData && args.wordsData.length > 0) {
+        // Generate SRT variations using word-level timing data
+        let srtVariations: string[];
+        
+        // Check if lyrics have been edited by comparing with original word text
+        const originalText = args.wordsData.map(w => w.text).join(' ');
+        const editedText = args.lyrics?.map(l => l.text).join(' ') || '';
+        
+        if (args.lyrics && editedText !== originalText && args.lyricsWithWords) {
+          // User has edited the lyrics, use synchronization
+          srtVariations = generateSRTWithEditedLyrics(args.lyrics, args.wordsData, args.lyricsWithWords);
+        } else {
+          // Use original word timing data
+          srtVariations = generateAllSRTVariations(args.wordsData);
+        }
+        
+        // Upload each SRT variation to storage
+        for (const srtContent of srtVariations) {
+          if (srtContent) {
+            const srtBlob = new Blob([srtContent], { type: 'text/plain' });
+            const storageId = await ctx.storage.store(srtBlob);
+            const url = await ctx.storage.getUrl(storageId);
+            srtUrls.push(url || '');
+          } else {
+            srtUrls.push('');
+          }
+        }
+      } else if (args.lyrics && args.lyrics.length > 0) {
+        // Fallback: No word data available, create simple SRT from per-second lyrics
         const srtLines: string[] = [];
         args.lyrics.forEach((line, index) => {
           const subtitleNumber = index + 1;
@@ -555,15 +613,23 @@ export const sendWebhook = internalAction({
         });
         const lyricsSRT = srtLines.join('\n').trim();
         
-        // Store the SRT file in Convex storage
-        const srtBlob = new Blob([lyricsSRT], { type: 'text/plain' });
-        const storageId = await ctx.storage.store(srtBlob);
-        
-        // Get the public URL for the stored file
-        const url = await ctx.storage.getUrl(storageId);
-        if (url) {
-          lyricsSRTUrl = url;
+        // Upload the same SRT for all 5 variations as fallback
+        for (let i = 0; i < 5; i++) {
+          const srtBlob = new Blob([lyricsSRT], { type: 'text/plain' });
+          const storageId = await ctx.storage.store(srtBlob);
+          const url = await ctx.storage.getUrl(storageId);
+          srtUrls.push(url || '');
         }
+      } else {
+        // No lyrics at all, fill with empty strings
+        for (let i = 0; i < 5; i++) {
+          srtUrls.push('');
+        }
+      }
+      
+      // Ensure we have exactly 5 URLs (fill with empty strings if needed)
+      while (srtUrls.length < 5) {
+        srtUrls.push('');
       }
 
       const isCustomCampaign = args.themes.length > 0;
@@ -587,7 +653,11 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT": lyricsSRTUrl,
+          "Lyrics SRT 1": srtUrls[0] || "",  // 1 word at a time
+          "Lyrics SRT 2": srtUrls[1] || "",  // 2 words at a time
+          "Lyrics SRT 3": srtUrls[2] || "",  // 3 words at a time
+          "Lyrics SRT 4": srtUrls[3] || "",  // 4 words at a time
+          "Lyrics SRT 5": srtUrls[4] || "",  // 5 words at a time
         }];
       } else {
         payload = [{
@@ -599,7 +669,11 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT": lyricsSRTUrl,
+          "Lyrics SRT 1": srtUrls[0] || "",  // 1 word at a time
+          "Lyrics SRT 2": srtUrls[1] || "",  // 2 words at a time
+          "Lyrics SRT 3": srtUrls[2] || "",  // 3 words at a time
+          "Lyrics SRT 4": srtUrls[3] || "",  // 4 words at a time
+          "Lyrics SRT 5": srtUrls[4] || "",  // 5 words at a time
         }];
       }
 

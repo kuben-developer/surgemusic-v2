@@ -49,6 +49,20 @@ export default defineSchema({
       timestamp: v.number(),
       text: v.string(),
     }))),
+    // New fields for word-level timing from ElevenLabs
+    wordsData: v.optional(v.array(v.object({
+      text: v.string(),
+      start: v.number(),
+      end: v.number(),
+      type: v.string(),
+      logprob: v.optional(v.number()), // Confidence score from ElevenLabs
+    }))),
+    // Enhanced lyrics that map seconds to word indices
+    lyricsWithWords: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+      wordIndices: v.array(v.number()), // Indices into wordsData array
+    }))),
   })
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])

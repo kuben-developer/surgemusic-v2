@@ -37,7 +37,9 @@ export function LyricsEditor({
 
   const handleLyricChange = (index: number, text: string) => {
     const updatedLyrics = [...lyrics]
-    updatedLyrics[index].text = text
+    if (updatedLyrics[index]) {
+      updatedLyrics[index].text = text
+    }
     setLyrics(updatedLyrics)
   }
 

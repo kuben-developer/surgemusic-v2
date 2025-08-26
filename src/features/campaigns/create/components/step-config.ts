@@ -66,6 +66,32 @@ export interface StepProps {
   lyrics: LyricsLine[];
   setLyrics: (lyrics: LyricsLine[]) => void;
   lyricsError: boolean;
+  
+  // Word data
+  wordsData?: Array<{
+    text: string;
+    start: number;
+    end: number;
+    type: string;
+    logprob?: number;
+  }>;
+  setWordsData: (data: Array<{
+    text: string;
+    start: number;
+    end: number;
+    type: string;
+    logprob?: number;
+  }> | undefined) => void;
+  lyricsWithWords?: Array<{
+    timestamp: number;
+    text: string;
+    wordIndices: number[];
+  }>;
+  setLyricsWithWords: (data: Array<{
+    timestamp: number;
+    text: string;
+    wordIndices: number[];
+  }> | undefined) => void;
 }
 
 export interface StepConfig {
@@ -132,6 +158,10 @@ export const STEP_CONFIGS: StepConfig[] = [
       songAudioError: props.songAudioError,
       lyrics: props.lyrics,
       setLyrics: props.setLyrics,
+      wordsData: props.wordsData,
+      setWordsData: props.setWordsData,
+      lyricsWithWords: props.lyricsWithWords,
+      setLyricsWithWords: props.setLyricsWithWords,
     }),
     availableFor: ["express", "custom"],
   },

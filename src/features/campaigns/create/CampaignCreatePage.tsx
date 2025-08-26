@@ -93,6 +93,12 @@ export default function CampaignCreatePage() {
         lyrics={formData.lyrics}
         setLyrics={formData.setLyrics}
         lyricsError={formData.lyricsError}
+        
+        // Word data
+        wordsData={formData.wordsData}
+        setWordsData={formData.setWordsData}
+        lyricsWithWords={formData.lyricsWithWords}
+        setLyricsWithWords={formData.setLyricsWithWords}
       />
     </div>
   );

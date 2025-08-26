@@ -17,6 +17,18 @@ export interface CreateCampaignData {
   songAudioUrl?: string;
   musicVideoUrl?: string;
   lyrics?: LyricsLine[];
+  wordsData?: Array<{
+    text: string;
+    start: number;
+    end: number;
+    type: string;
+    logprob?: number;
+  }>;
+  lyricsWithWords?: Array<{
+    timestamp: number;
+    text: string;
+    wordIndices: number[];
+  }>;
 }
 
 interface SubmissionProps {
@@ -30,10 +42,12 @@ export function useCampaignFormSubmission({ setIsPending }: SubmissionProps) {
   const createCampaign = async (data: CreateCampaignData) => {
     setIsPending(true);
     try {
-      // Prepare the data with lyrics if available
+      // Prepare the data with lyrics and word data if available
       const campaignData = {
         ...data,
         lyrics: data.lyrics && data.lyrics.length > 0 ? data.lyrics : undefined,
+        wordsData: data.wordsData,
+        lyricsWithWords: data.lyricsWithWords,
       };
       
       const campaignId = await createCampaignMutation(campaignData);

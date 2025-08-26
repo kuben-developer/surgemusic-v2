@@ -79,6 +79,8 @@ export function useCampaignForm() {
         songAudioUrl: state.songAudioUrl || undefined,
         musicVideoUrl: state.musicVideoUrl || undefined,
         lyrics: state.lyrics,
+        wordsData: state.wordsData,
+        lyricsWithWords: state.lyricsWithWords,
       });
     }
   };
@@ -143,6 +145,12 @@ export function useCampaignForm() {
     lyrics: state.lyrics,
     setLyrics: state.setLyrics,
     lyricsError: state.lyricsError,
+    
+    // Word data
+    wordsData: state.wordsData,
+    setWordsData: state.setWordsData,
+    lyricsWithWords: state.lyricsWithWords,
+    setLyricsWithWords: state.setLyricsWithWords,
 
     // Actions
     handleNext,

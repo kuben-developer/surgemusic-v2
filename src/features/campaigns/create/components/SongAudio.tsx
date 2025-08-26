@@ -22,6 +22,30 @@ interface SongAudioProps {
     songAudioError: boolean
     lyrics: LyricsLine[]
     setLyrics: (lyrics: LyricsLine[]) => void
+    wordsData?: Array<{
+        text: string;
+        start: number;
+        end: number;
+        type: string;
+        logprob?: number;
+    }>
+    setWordsData: (data: Array<{
+        text: string;
+        start: number;
+        end: number;
+        type: string;
+        logprob?: number;
+    }> | undefined) => void
+    lyricsWithWords?: Array<{
+        timestamp: number;
+        text: string;
+        wordIndices: number[];
+    }>
+    setLyricsWithWords: (data: Array<{
+        timestamp: number;
+        text: string;
+        wordIndices: number[];
+    }> | undefined) => void
 }
 
 export function SongAudio({
@@ -31,7 +55,11 @@ export function SongAudio({
     setSongAudioBase64,
     songAudioError,
     lyrics,
-    setLyrics
+    setLyrics,
+    wordsData,
+    setWordsData,
+    lyricsWithWords,
+    setLyricsWithWords
 }: SongAudioProps) {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isDragging, setIsDragging] = useState(false)
@@ -187,6 +215,8 @@ export function SongAudio({
         setShowTrimmer(false)
         setShowLyricsEditor(false)
         setLyrics([])
+        setWordsData(undefined)
+        setLyricsWithWords(undefined)
     }
     
     const handleTranscribe = async () => {
@@ -203,6 +233,13 @@ export function SongAudio({
             
             if (result.success && result.lyrics && result.lyrics.length > 0) {
                 setLyrics(result.lyrics)
+                // Save word-level data if available
+                if (result.wordsData) {
+                    setWordsData(result.wordsData)
+                }
+                if (result.lyricsWithWords) {
+                    setLyricsWithWords(result.lyricsWithWords)
+                }
                 setShowLyricsEditor(true)
                 toast.success("Audio transcribed successfully")
             } else {
@@ -225,6 +262,25 @@ export function SongAudio({
     
     const handleLyricsSave = (updatedLyrics: LyricsLine[]) => {
         setLyrics(updatedLyrics)
+        
+        // If we have word data, update the synchronization
+        if (wordsData && lyricsWithWords) {
+            // Create updated lyricsWithWords that maintains word indices
+            // For now, we'll keep the existing word mapping if the text hasn't changed too much
+            const updatedLyricsWithWords = lyricsWithWords.map((original, index) => {
+                const updatedLine = updatedLyrics[index];
+                if (!updatedLine) return original;
+                
+                return {
+                    ...original,
+                    text: updatedLine.text,
+                    timestamp: updatedLine.timestamp
+                };
+            });
+            
+            setLyricsWithWords(updatedLyricsWithWords);
+        }
+        
         setShowLyricsEditor(false)
         toast.success("Lyrics saved successfully")
     }

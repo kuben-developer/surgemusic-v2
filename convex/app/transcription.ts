@@ -104,9 +104,45 @@ export const transcribeAudio = action({
       const wordsAfter15 = actualWords.filter(word => word.start >= 15);
       if (wordsAfter15.length > 0) {
         const extraText = wordsAfter15.map(w => w.text).join(' ').trim();
-        if (extraText) {
-          lyrics[14].text = lyrics[14].text ? `${lyrics[14].text} ${extraText}` : extraText;
+        if (extraText && lyrics.length > 0) {
+          const lastIndex = lyrics.length - 1;
+          const lastLyric = lyrics[lastIndex];
+          if (lastLyric) {
+            lastLyric.text = lastLyric.text ? `${lastLyric.text} ${extraText}` : extraText;
+          }
           console.log(`Added ${wordsAfter15.length} words from beyond 15s to last second`);
+        }
+      }
+
+      // Create lyricsWithWords that maps each second to specific word indices
+      const lyricsWithWords = lyrics.map((line, second) => {
+        // Find indices of words that belong to this second
+        const wordIndices = actualWords
+          .map((word, index) => ({ word, index }))
+          .filter(({ word }) => {
+            // Word starts within this second interval
+            return word.start >= second && word.start < second + 1;
+          })
+          .map(({ index }) => index);
+        
+        return {
+          timestamp: line.timestamp,
+          text: line.text,
+          wordIndices,
+        };
+      });
+
+      // Handle words beyond 15 seconds - add their indices to the last second
+      const wordsAfter15Indices = actualWords
+        .map((word, index) => ({ word, index }))
+        .filter(({ word }) => word.start >= 15)
+        .map(({ index }) => index);
+      
+      if (wordsAfter15Indices.length > 0 && lyricsWithWords.length > 0) {
+        const lastIndex = lyricsWithWords.length - 1;
+        const lastLyricWithWords = lyricsWithWords[lastIndex];
+        if (lastLyricWithWords) {
+          lastLyricWithWords.wordIndices.push(...wordsAfter15Indices);
         }
       }
 
@@ -115,6 +151,8 @@ export const transcribeAudio = action({
         success: true,
         lyrics,
         fullText: transcribedText,
+        wordsData: actualWords, // Return the raw word timing data
+        lyricsWithWords, // Return the mapping of seconds to word indices
       };
     } catch (error) {
       console.error("Transcription error details:", {
