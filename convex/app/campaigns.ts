@@ -13,7 +13,7 @@ function formatSRTTime(seconds: number): string {
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
   const millis = Math.floor((seconds % 1) * 1000);
-  
+
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
 }
 
@@ -567,18 +567,18 @@ export const sendWebhook = internalAction({
     try {
       // Import the SRT generation functions
       const { generateAllSRTVariations, generateSRTWithEditedLyrics } = await import("../utils/srt_generator");
-      
+
       // Generate 5 different SRT files with varying word groupings
       const srtUrls: string[] = [];
-      
+
       if (args.wordsData && args.wordsData.length > 0) {
         // Generate SRT variations using word-level timing data
         let srtVariations: string[];
-        
+
         // Check if lyrics have been edited by comparing with original word text
         const originalText = args.wordsData.map(w => w.text).join(' ');
         const editedText = args.lyrics?.map(l => l.text).join(' ') || '';
-        
+
         if (args.lyrics && editedText !== originalText && args.lyricsWithWords) {
           // User has edited the lyrics, use synchronization
           srtVariations = generateSRTWithEditedLyrics(args.lyrics, args.wordsData, args.lyricsWithWords);
@@ -586,7 +586,7 @@ export const sendWebhook = internalAction({
           // Use original word timing data
           srtVariations = generateAllSRTVariations(args.wordsData);
         }
-        
+
         // Upload each SRT variation to storage
         for (const srtContent of srtVariations) {
           if (srtContent) {
@@ -605,14 +605,14 @@ export const sendWebhook = internalAction({
           const subtitleNumber = index + 1;
           const startTime = formatSRTTime(line.timestamp);
           const endTime = formatSRTTime(line.timestamp + 1);
-          
+
           srtLines.push(String(subtitleNumber));
           srtLines.push(`${startTime} --> ${endTime}`);
           srtLines.push(line.text || '');
           srtLines.push('');
         });
         const lyricsSRT = srtLines.join('\n').trim();
-        
+
         // Upload the same SRT for all 5 variations as fallback
         for (let i = 0; i < 5; i++) {
           const srtBlob = new Blob([lyricsSRT], { type: 'text/plain' });
@@ -626,7 +626,7 @@ export const sendWebhook = internalAction({
           srtUrls.push('');
         }
       }
-      
+
       // Ensure we have exactly 5 URLs (fill with empty strings if needed)
       while (srtUrls.length < 5) {
         srtUrls.push('');
@@ -653,11 +653,11 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT 1": srtUrls[0] || "",  // 1 word at a time
-          "Lyrics SRT 2": srtUrls[1] || "",  // 2 words at a time
-          "Lyrics SRT 3": srtUrls[2] || "",  // 3 words at a time
-          "Lyrics SRT 4": srtUrls[3] || "",  // 4 words at a time
-          "Lyrics SRT 5": srtUrls[4] || "",  // 5 words at a time
+          "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time
+          "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
+          "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time
+          "lyricsSRT4": srtUrls[3] || "",  // 4 words at a time
+          "lyricsSRT5": srtUrls[4] || "",  // 5 words at a time
         }];
       } else {
         payload = [{
@@ -669,11 +669,11 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics SRT 1": srtUrls[0] || "",  // 1 word at a time
-          "Lyrics SRT 2": srtUrls[1] || "",  // 2 words at a time
-          "Lyrics SRT 3": srtUrls[2] || "",  // 3 words at a time
-          "Lyrics SRT 4": srtUrls[3] || "",  // 4 words at a time
-          "Lyrics SRT 5": srtUrls[4] || "",  // 5 words at a time
+          "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time
+          "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
+          "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time
+          "lyricsSRT4": srtUrls[3] || "",  // 4 words at a time
+          "lyricsSRT5": srtUrls[4] || "",  // 5 words at a time
         }];
       }
 
