@@ -679,7 +679,7 @@ export const sendWebhook = internalAction({
 
       console.log("Sending webhook payload:", payload);
 
-      const webhookResponse = await fetch("https://hkdk.events/gbzu8j6tggs0nr", {
+      const webhookResponse = await fetch("https://hkdk.events/6yktobe5l75ddi", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
