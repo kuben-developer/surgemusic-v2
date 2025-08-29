@@ -1,12 +1,12 @@
 import type { PricingPlan, PlanName } from '../types/pricing.types';
-import { formatVideoGenerations, formatSongs } from '../utils/pricing.utils';
+import { formatVideoGenerations, formatUserProfiles } from '../utils/pricing.utils';
 
 // Base plan configuration without pricing or Stripe integration
 interface BasePlanConfig {
   readonly name: PlanName;
   readonly description: string;
   readonly videoGenerations: number;
-  readonly songs: number;
+  readonly userProfile: number;
   readonly baseFeatures: readonly string[];
 }
 
@@ -14,11 +14,13 @@ interface BasePlanConfig {
 const STRIPE_PRICE_IDS = {
   monthly: {
     Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_M_PRICE!,
+    Growth: process.env.NEXT_PUBLIC_STRIPE_GROWTH_M_PRICE!,
     Professional: process.env.NEXT_PUBLIC_STRIPE_PRO_M_PRICE!,
     Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_M_PRICE!,
   },
   yearly: {
     Starter: process.env.NEXT_PUBLIC_STRIPE_STARTER_Y_PRICE!,
+    Growth: process.env.NEXT_PUBLIC_STRIPE_GROWTH_Y_PRICE!,
     Professional: process.env.NEXT_PUBLIC_STRIPE_PRO_Y_PRICE!,
     Ultimate: process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_Y_PRICE!,
   },
@@ -26,18 +28,31 @@ const STRIPE_PRICE_IDS = {
 
 // Monthly pricing configuration
 const MONTHLY_PRICES: Record<PlanName, number> = {
-  Starter: 39,
-  Professional: 99,
-  Ultimate: 249,
+  Starter: 29,
+  Growth: 99,
+  Professional: 249,
+  Ultimate: 990,
 } as const;
 
 // Base plan configurations
 const BASE_PLANS: readonly BasePlanConfig[] = [
   {
     name: 'Starter',
-    description: 'Enhanced features and daily videos for a month.',
-    videoGenerations: 30,
-    songs: 1,
+    description: 'Enhanced features and daily videos for a month',
+    videoGenerations: 60,
+    userProfile: 1,
+    baseFeatures: [
+      'All content categories & outputs',
+      'Content calendar scheduler',
+      'Purchase additional discounted credits',
+      'Choice of US rap & UK rap theme content',
+    ],
+  },
+  {
+    name: 'Growth',
+    description: 'Best for growing your music reach',
+    videoGenerations: 240,
+    userProfile: 2,
     baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
@@ -48,8 +63,8 @@ const BASE_PLANS: readonly BasePlanConfig[] = [
   {
     name: 'Professional',
     description: 'Designed for viral growth and even more videos.',
-    videoGenerations: 120,
-    songs: 4,
+    videoGenerations: 720,
+    userProfile: 4,
     baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
@@ -60,8 +75,8 @@ const BASE_PLANS: readonly BasePlanConfig[] = [
   {
     name: 'Ultimate',
     description: 'Take over TikTok and flood the FYP with your music.',
-    videoGenerations: 360,
-    songs: 12,
+    videoGenerations: 3000,
+    userProfile: 12,
     baseFeatures: [
       'All content categories & outputs',
       'Content calendar scheduler',
@@ -82,7 +97,7 @@ function createPricingPlan(
 ): PricingPlan {
   const features = [
     formatVideoGenerations(videoGenerations),
-    formatSongs(baseConfig.songs),
+    formatUserProfiles(baseConfig.userProfile),
     ...baseConfig.baseFeatures,
   ];
 
@@ -94,7 +109,7 @@ function createPricingPlan(
     price,
     description: baseConfig.description,
     videoGenerations,
-    songs: baseConfig.songs,
+    userProfile: baseConfig.userProfile,
     features,
     priceId: STRIPE_PRICE_IDS[stripeKey][baseConfig.name],
     interval,

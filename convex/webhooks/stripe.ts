@@ -18,12 +18,14 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
   };
 
   const subscriptionCredits: Record<string, number> = {
-    [process.env.NEXT_PUBLIC_STRIPE_STARTER_M_PRICE!]: 30,
-    [process.env.NEXT_PUBLIC_STRIPE_PRO_M_PRICE!]: 120,
-    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_M_PRICE!]: 360,
-    [process.env.NEXT_PUBLIC_STRIPE_STARTER_Y_PRICE!]: 30 * 12,
-    [process.env.NEXT_PUBLIC_STRIPE_PRO_Y_PRICE!]: 120 * 12,
-    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_Y_PRICE!]: 360 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_STARTER_M_PRICE!]: 60,
+    [process.env.NEXT_PUBLIC_STRIPE_GROWTH_M_PRICE!]: 240,
+    [process.env.NEXT_PUBLIC_STRIPE_PRO_M_PRICE!]: 720,
+    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_M_PRICE!]: 3000,
+    [process.env.NEXT_PUBLIC_STRIPE_STARTER_Y_PRICE!]: 60 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_GROWTH_Y_PRICE!]: 240 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_PRO_Y_PRICE!]: 720 * 12,
+    [process.env.NEXT_PUBLIC_STRIPE_ULTIMATE_Y_PRICE!]: 3000 * 12,
   };
   const body = await request.text();
   const signature = request.headers.get("Stripe-Signature") ?? "";

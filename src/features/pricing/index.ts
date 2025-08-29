@@ -45,7 +45,7 @@ export {
   isValidPlan,
   getFeatureCount,
   formatVideoGenerations,
-  formatSongs,
+  formatUserProfiles,
   getIntervalDisplayName,
   canCreateCheckoutSession,
   getPlanValidationError

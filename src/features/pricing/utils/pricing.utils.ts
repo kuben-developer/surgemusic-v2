@@ -43,8 +43,9 @@ export function isMostPopularPlan(planName: PlanName): boolean {
 export function getPlanTier(planName: PlanName): number {
   const tierMap: Record<PlanName, number> = {
     'Starter': 1,
-    'Professional': 2,
-    'Ultimate': 3,
+    'Growth': 2,
+    'Professional': 3,
+    'Ultimate': 4,
   };
   return tierMap[planName];
 }
@@ -89,10 +90,10 @@ export function formatVideoGenerations(count: number): string {
 }
 
 /**
- * Formats songs with proper singular/plural
+ * Formats user profiles with proper singular/plural
  */
-export function formatSongs(count: number): string {
-  return `${count} song${count === 1 ? '' : 's'}`;
+export function formatUserProfiles(count: number): string {
+  return `${count} user profile${count === 1 ? '' : 's'}`;
 }
 
 /**

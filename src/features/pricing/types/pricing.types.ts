@@ -10,14 +10,14 @@ export interface UserData {
 // Core types
 export type PricingInterval = 'month' | 'year';
 
-export type PlanName = 'Starter' | 'Professional' | 'Ultimate';
+export type PlanName = 'Starter' | 'Growth' | 'Professional' | 'Ultimate';
 
 export interface PricingPlan {
   readonly name: PlanName;
   readonly price: number;
   readonly description: string;
   readonly videoGenerations: number;
-  readonly songs: number;
+  readonly userProfile: number;
   readonly features: readonly string[];
   readonly priceId: string;
   readonly interval: PricingInterval;

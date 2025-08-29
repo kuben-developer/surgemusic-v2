@@ -14,7 +14,7 @@ export function PricingGrid({
   onManageBilling,
 }: PricingGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 gap-8 md:grid-cols-4 max-w-8xl mx-auto">
       {plans.map((plan) => (
         <PricingCard
           key={plan.name}
