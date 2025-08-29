@@ -5,7 +5,7 @@ import { VideoCountHeader } from "./VideoCountHeader";
 import { VideoCountPreset } from "./VideoCountPreset";
 import { VideoCountCustom } from "./VideoCountCustom";
 import { useVideoCountLogic } from "../hooks/useVideoCountLogic";
-import { VIDEO_OPTIONS, COMING_SOON_OPTIONS } from "../constants/video-options";
+import { VIDEO_OPTIONS, COMING_SOON_OPTIONS, TRIAL_VIDEO_OPTION } from "../constants/video-options";
 import type { VideoCountProps } from "../types/video-count.types";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,8 @@ export function VideoCount({
     setSelectedVideoCount,
     videoCountError,
     totalCredits,
-    isSubscribed
+    isSubscribed,
+    isTrial
 }: VideoCountProps) {
     const {
         isCustomMode,
@@ -37,6 +38,19 @@ export function VideoCount({
 
                 <div className="space-y-6">
                     <div className="grid gap-4">
+                        {/* Show trial option for trial users with exactly 6 credits */}
+                        {isTrial && totalCredits === 6 && (
+                            <VideoCountPreset
+                                key={TRIAL_VIDEO_OPTION.count}
+                                option={TRIAL_VIDEO_OPTION}
+                                isSelected={selectedVideoCount === TRIAL_VIDEO_OPTION.count && !isCustomMode}
+                                isLocked={false}
+                                lockReason="Trial option"
+                                isSubscribed={isSubscribed}
+                                onSelect={() => handlePresetSelection(TRIAL_VIDEO_OPTION.count)}
+                            />
+                        )}
+                        
                         {VIDEO_OPTIONS.map((option) => {
                             const isLocked = isOptionLocked(option.required, isSubscribed, totalCredits);
                             const lockReason = getLockReason(option.required, isSubscribed);

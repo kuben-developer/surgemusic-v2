@@ -7,6 +7,7 @@ interface StepRendererProps extends StepProps {
   currentSection: number;
   totalCredits: number;
   isSubscribed: boolean;
+  isTrial: boolean;
 }
 
 export function StepRenderer({
@@ -14,6 +15,7 @@ export function StepRenderer({
   campaignType,
   totalCredits,
   isSubscribed,
+  isTrial,
   ...stepProps
 }: StepRendererProps) {
   const { getStepByIndex } = useStepNavigation({ campaignType });
@@ -31,6 +33,7 @@ export function StepRenderer({
     campaignType,
     totalCredits,
     isSubscribed,
+    isTrial,
   });
 
   return (

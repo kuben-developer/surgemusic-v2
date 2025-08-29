@@ -14,6 +14,7 @@ export default function CampaignCreatePage() {
   const userData = useQuery(api.app.users.getCurrentUser);
   const totalCredits = (userData?.videoGenerationCredit ?? 0) + (userData?.videoGenerationAdditionalCredit ?? 0);
   const isSubscribed = Boolean(userData?.subscriptionPriceId);
+  const isTrial = userData?.isTrial ?? false;
 
   return (
     <div className="container max-w-5xl mx-auto py-12">
@@ -39,6 +40,7 @@ export default function CampaignCreatePage() {
         campaignType={formData.campaignType}
         totalCredits={totalCredits}
         isSubscribed={isSubscribed}
+        isTrial={isTrial}
         
         // Campaign Info
         campaignName={formData.campaignName}

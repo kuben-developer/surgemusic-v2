@@ -4,4 +4,5 @@ export interface VideoCountProps {
   videoCountError: boolean;
   totalCredits: number;
   isSubscribed: boolean;
+  isTrial?: boolean;
 }

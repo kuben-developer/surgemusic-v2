@@ -25,7 +25,7 @@ export function useVideoCountLogic({
     }
   };
 
-  const handlePresetSelection = (count: VideoCountOption) => {
+  const handlePresetSelection = (count: VideoCountOption | 6) => {
     setIsCustomMode(false);
     setSelectedVideoCount(count);
   };

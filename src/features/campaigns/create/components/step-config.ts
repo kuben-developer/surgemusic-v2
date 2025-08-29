@@ -42,6 +42,7 @@ export interface StepProps {
   videoCountError: boolean;
   totalCredits: number;
   isSubscribed: boolean;
+  isTrial?: boolean;
 
   // Image Assets
   albumArtUrl: string | null;
@@ -198,6 +199,7 @@ export const STEP_CONFIGS: StepConfig[] = [
       videoCountError: props.videoCountError,
       totalCredits: props.totalCredits,
       isSubscribed: props.isSubscribed,
+      isTrial: props.isTrial,
     }),
     availableFor: ["express", "custom"],
   },
