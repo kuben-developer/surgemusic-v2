@@ -44,6 +44,8 @@ export interface StepProps {
   totalCredits: number;
   isSubscribed: boolean;
   isTrial?: boolean;
+  hasProFeatures?: boolean;
+  isFirstTimeUser?: boolean;
 
   // Image Assets
   albumArtUrl: string | null;
@@ -161,7 +163,8 @@ export const STEP_CONFIGS: StepConfig[] = [
       selectedLyricsOption: props.selectedLyricsOption,
       setSelectedLyricsOption: props.setSelectedLyricsOption,
       lyricsOptionError: props.lyricsOptionError,
-      isSubscribed: props.isSubscribed,
+      hasProFeatures: props.hasProFeatures || false,
+      isFirstTimeUser: props.isFirstTimeUser ?? true,
     }),
     availableFor: ["express", "custom"],
   },
@@ -176,7 +179,8 @@ export const STEP_CONFIGS: StepConfig[] = [
       songAudioError: props.songAudioError,
       lyrics: props.lyrics,
       setLyrics: props.setLyrics,
-      isSubscribed: props.isSubscribed,
+      hasProFeatures: props.hasProFeatures || false,
+      isFirstTimeUser: props.isFirstTimeUser ?? true,
       wordsData: props.wordsData,
       setWordsData: props.setWordsData,
       lyricsWithWords: props.lyricsWithWords,

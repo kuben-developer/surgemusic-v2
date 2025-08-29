@@ -9,14 +9,16 @@ interface LyricsSelectionProps {
   selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
   setSelectedLyricsOption: (option: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null) => void;
   lyricsOptionError: boolean;
-  isSubscribed: boolean;
+  hasProFeatures: boolean;
+  isFirstTimeUser?: boolean;
 }
 
 export function LyricsSelection({
   selectedLyricsOption,
   setSelectedLyricsOption,
   lyricsOptionError,
-  isSubscribed,
+  hasProFeatures,
+  isFirstTimeUser = true,
 }: LyricsSelectionProps) {
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [selectedFeatureDescription, setSelectedFeatureDescription] = useState("");
@@ -26,7 +28,7 @@ export function LyricsSelection({
     requiresPro: boolean,
     featureDescription?: string
   ) => {
-    if (requiresPro && !isSubscribed) {
+    if (requiresPro && !hasProFeatures) {
       setSelectedFeatureDescription(featureDescription || "");
       setShowSubscriptionDialog(true);
       return;
@@ -56,7 +58,7 @@ export function LyricsSelection({
                 selectedLyricsOption === "lyrics" ? "ring-2 ring-primary" : ""
               }`}
             >
-              {!isSubscribed && (
+              {!hasProFeatures && (
                 <Badge className="absolute top-2 right-2 gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
                   <Sparkles className="w-3 h-3" />
                   Pro Plan
@@ -79,7 +81,7 @@ export function LyricsSelection({
                 selectedLyricsOption === "lyrics-hooks" ? "ring-2 ring-primary" : ""
               }`}
             >
-              {!isSubscribed && (
+              {!hasProFeatures && (
                 <Badge className="absolute top-2 right-2 gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
                   <Sparkles className="w-3 h-3" />
                   Pro Plan
@@ -124,6 +126,7 @@ export function LyricsSelection({
         open={showSubscriptionDialog}
         onOpenChange={setShowSubscriptionDialog}
         featureDescription={selectedFeatureDescription}
+        isFirstTimeUser={isFirstTimeUser}
       />
     </>
   );

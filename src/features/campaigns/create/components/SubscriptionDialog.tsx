@@ -16,12 +16,14 @@ interface SubscriptionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   featureDescription: string;
+  isFirstTimeUser?: boolean;
 }
 
 export function SubscriptionDialog({
   open,
   onOpenChange,
   featureDescription,
+  isFirstTimeUser = true,
 }: SubscriptionDialogProps) {
   const router = useRouter();
 
@@ -38,10 +40,10 @@ export function SubscriptionDialog({
             <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <DialogTitle className="text-xl">Unlock Pro Features</DialogTitle>
+            <DialogTitle className="text-xl">Upgrade to Access Pro Features</DialogTitle>
           </div>
           <DialogDescription className="text-base">
-            Subscribe to any plan to access this feature
+            Available on {isFirstTimeUser ? "Free Trial, " : ""}Growth plan and above
           </DialogDescription>
         </DialogHeader>
 
@@ -51,7 +53,7 @@ export function SubscriptionDialog({
           </p>
 
           <div className="space-y-3">
-            <p className="font-medium">With a subscription, you'll get:</p>
+            <p className="font-medium">With Pro access, you'll get:</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
                 <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -73,7 +75,9 @@ export function SubscriptionDialog({
           </div>
 
           <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-            Subscribe to any plan to unlock all Pro features and take your content to the next level.
+            {isFirstTimeUser 
+              ? "Start your free trial or upgrade to the Growth plan (or above) to unlock all Pro features." 
+              : "Upgrade to the Growth plan (or above) to unlock all Pro features."} Note: Starter plan does not include Pro features.
           </p>
         </div>
 

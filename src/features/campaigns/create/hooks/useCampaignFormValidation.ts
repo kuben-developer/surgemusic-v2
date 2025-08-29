@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { hasProAccess } from "../utils/pro-access.utils";
 
 interface ValidationState {
   campaignName: string;
@@ -12,7 +13,8 @@ interface ValidationState {
   selectedThemes: string[];
   campaignType: "custom" | "express";
   selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
-  isSubscribed?: boolean;
+  subscriptionPriceId?: string;
+  isTrial?: boolean;
 }
 
 interface ErrorSetters {
@@ -116,11 +118,12 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
       return false;
     }
     
-    // Check if Pro option selected without subscription
-    if ((state.selectedLyricsOption === "lyrics" || state.selectedLyricsOption === "lyrics-hooks") && !state.isSubscribed) {
+    // Check if Pro option selected without Pro access
+    const hasProFeatures = hasProAccess(state.subscriptionPriceId, state.isTrial || false);
+    if ((state.selectedLyricsOption === "lyrics" || state.selectedLyricsOption === "lyrics-hooks") && !hasProFeatures) {
       setLyricsOptionError(true);
-      toast.error("Pro Subscription Required", {
-        description: "The selected lyrics option requires a Pro subscription",
+      toast.error("Pro Features Required", {
+        description: "This feature requires a Free Trial or Growth plan (or above)",
       });
       return false;
     }

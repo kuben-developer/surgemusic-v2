@@ -23,7 +23,8 @@ interface SongAudioProps {
     songAudioError: boolean
     lyrics: LyricsLine[]
     setLyrics: (lyrics: LyricsLine[]) => void
-    isSubscribed?: boolean
+    hasProFeatures?: boolean
+    isFirstTimeUser?: boolean
     wordsData?: Array<{
         text: string;
         start: number;
@@ -58,7 +59,8 @@ export function SongAudio({
     songAudioError,
     lyrics,
     setLyrics,
-    isSubscribed = false,
+    hasProFeatures = false,
+    isFirstTimeUser = true,
     wordsData,
     setWordsData,
     lyricsWithWords,
@@ -386,8 +388,8 @@ export function SongAudio({
                                     <Button
                                         variant="outline"
                                         onClick={() => {
-                                            // Check subscription first
-                                            if (!isSubscribed) {
+                                            // Check Pro features access first
+                                            if (!hasProFeatures) {
                                                 setShowSubscriptionDialog(true);
                                                 return;
                                             }
@@ -510,6 +512,7 @@ export function SongAudio({
             open={showSubscriptionDialog}
             onOpenChange={setShowSubscriptionDialog}
             featureDescription="Automatically transcribe your audio and edit lyrics with AI-powered tools. Create perfectly synchronized captions for your videos."
+            isFirstTimeUser={isFirstTimeUser}
         />
     </>
     )

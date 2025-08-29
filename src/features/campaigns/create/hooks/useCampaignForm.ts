@@ -6,7 +6,12 @@ import { useCampaignFormSubmission } from "./useCampaignFormSubmission";
 
 export type { CreateCampaignData } from "./useCampaignFormSubmission";
 
-export function useCampaignForm() {
+interface UseCampaignFormProps {
+  subscriptionPriceId?: string;
+  isTrial: boolean;
+}
+
+export function useCampaignForm({ subscriptionPriceId, isTrial }: UseCampaignFormProps) {
   // Use the state management hook
   const state = useCampaignFormState();
 
@@ -40,7 +45,8 @@ export function useCampaignForm() {
       selectedThemes: state.selectedThemes,
       campaignType: state.campaignType,
       selectedLyricsOption: state.selectedLyricsOption,
-      isSubscribed: false, // This will be passed from the parent component
+      subscriptionPriceId,
+      isTrial,
     },
     {
       setCampaignNameError: state.setCampaignNameError,

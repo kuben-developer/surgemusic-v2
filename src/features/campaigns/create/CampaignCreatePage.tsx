@@ -6,15 +6,21 @@ import { ProgressIndicator } from "./components/ProgressIndicator";
 import { NavigationControls } from "./components/NavigationControls";
 import { StepRenderer } from "./components/StepRenderer";
 import { useCampaignForm } from "./hooks/useCampaignForm";
+import { hasProAccess } from "./utils/pro-access.utils";
 
 export default function CampaignCreatePage() {
-  const formData = useCampaignForm();
-
   // Fetch user data
   const userData = useQuery(api.app.users.getCurrentUser);
   const totalCredits = (userData?.videoGenerationCredit ?? 0) + (userData?.videoGenerationAdditionalCredit ?? 0);
   const isSubscribed = Boolean(userData?.subscriptionPriceId);
   const isTrial = userData?.isTrial ?? false;
+  const isFirstTimeUser = userData?.firstTimeUser ?? true;
+  const hasProFeatures = hasProAccess(userData?.subscriptionPriceId, isTrial);
+  
+  const formData = useCampaignForm({
+    subscriptionPriceId: userData?.subscriptionPriceId,
+    isTrial,
+  });
 
   return (
     <div className="container max-w-5xl mx-auto py-12">
@@ -41,6 +47,8 @@ export default function CampaignCreatePage() {
         totalCredits={totalCredits}
         isSubscribed={isSubscribed}
         isTrial={isTrial}
+        hasProFeatures={hasProFeatures}
+        isFirstTimeUser={isFirstTimeUser}
         
         // Campaign Info
         campaignName={formData.campaignName}
