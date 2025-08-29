@@ -58,7 +58,7 @@ export function PricingCardActions({
         </Button>
       )}
       <Button
-        className="w-full"
+        className="w-full cursor-pointer"
         variant={getMainButtonVariant()}
         onClick={handleMainButtonClick}
         disabled={plan.priceId === ''}

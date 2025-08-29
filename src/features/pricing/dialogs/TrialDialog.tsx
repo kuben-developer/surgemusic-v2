@@ -87,7 +87,7 @@ export function TrialDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="sm:w-full"
+            className="w-full sm:flex-1"
           >
             Maybe Later
           </Button>
@@ -97,7 +97,7 @@ export function TrialDialog({
                 onStartTrial(selectedPlan);
               }
             }}
-            className="sm:w-full gap-2"
+            className="w-full sm:flex-1 gap-2"
           >
             <Zap className="h-4 w-4" />
             Start Free Trial

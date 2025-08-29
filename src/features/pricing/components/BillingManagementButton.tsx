@@ -9,7 +9,7 @@ export function BillingManagementButton({ onManageBilling }: BillingManagementBu
     <div className="mb-8 text-center">
       <Button
         onClick={onManageBilling}
-        className="inline-flex items-center gap-2"
+        className="inline-flex items-center gap-2 cursor-pointer"
       >
         <CreditCardIcon className="h-4 w-4" />
         Manage Billing
