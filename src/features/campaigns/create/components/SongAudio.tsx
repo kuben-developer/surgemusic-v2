@@ -8,6 +8,7 @@ import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
 import { LyricsEditor } from "./LyricsEditor"
+import { SubscriptionDialog } from "./SubscriptionDialog"
 import { convertVideoToAudio } from "@/utils/media-converter.utils"
 import { getAudioDuration } from "@/utils/audio-trimmer.utils"
 import { type LyricsLine, initializeEmptyLyrics } from "@/utils/srt-converter.utils"
@@ -22,6 +23,7 @@ interface SongAudioProps {
     songAudioError: boolean
     lyrics: LyricsLine[]
     setLyrics: (lyrics: LyricsLine[]) => void
+    isSubscribed?: boolean
     wordsData?: Array<{
         text: string;
         start: number;
@@ -56,6 +58,7 @@ export function SongAudio({
     songAudioError,
     lyrics,
     setLyrics,
+    isSubscribed = false,
     wordsData,
     setWordsData,
     lyricsWithWords,
@@ -70,6 +73,7 @@ export function SongAudio({
     const [isTrimming, setIsTrimming] = useState(false)
     const [showLyricsEditor, setShowLyricsEditor] = useState(false)
     const [isTranscribing, setIsTranscribing] = useState(false)
+    const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false)
     
     const transcribeAudio = useAction(api.app.transcription.transcribeAudio)
 
@@ -316,11 +320,12 @@ export function SongAudio({
     }
 
     return (
-        <section className={`bg-card rounded-xl p-8 shadow-sm border ${songAudioError ? 'ring-2 ring-red-500' : ''}`}>
-            <div className="max-w-2xl mx-auto space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b">
-                    <Music className="w-7 h-7" />
-                    <h2 className="text-2xl font-semibold">Song Audio</h2>
+        <>
+            <section className={`bg-card rounded-xl p-8 shadow-sm border ${songAudioError ? 'ring-2 ring-red-500' : ''}`}>
+                <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="flex items-center gap-3 pb-2 border-b">
+                        <Music className="w-7 h-7" />
+                        <h2 className="text-2xl font-semibold">Song Audio</h2>
                 </div>
                 <p className="text-muted-foreground text-lg">Add a 15 second snippet from your song. We recommend using the chorus/hook or a catchy part of the song.</p>
                 <div className="space-y-4">
@@ -381,6 +386,12 @@ export function SongAudio({
                                     <Button
                                         variant="outline"
                                         onClick={() => {
+                                            // Check subscription first
+                                            if (!isSubscribed) {
+                                                setShowSubscriptionDialog(true);
+                                                return;
+                                            }
+                                            
                                             // Check if lyrics have actual content (not just empty entries)
                                             const hasLyricsContent = lyrics.length > 0 && lyrics.some(l => l.text.trim().length > 0);
                                             if (hasLyricsContent) {
@@ -494,5 +505,12 @@ export function SongAudio({
                 </div>
             </div>
         </section>
+        
+        <SubscriptionDialog
+            open={showSubscriptionDialog}
+            onOpenChange={setShowSubscriptionDialog}
+            featureDescription="Automatically transcribe your audio and edit lyrics with AI-powered tools. Create perfectly synchronized captions for your videos."
+        />
+    </>
     )
 }

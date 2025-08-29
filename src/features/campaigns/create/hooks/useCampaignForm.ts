@@ -22,6 +22,7 @@ export function useCampaignForm() {
       albumArtError: state.albumArtError,
       musicVideoError: state.musicVideoError,
       themesError: state.themesError,
+      lyricsOptionError: state.lyricsOptionError,
     },
   });
 
@@ -38,6 +39,8 @@ export function useCampaignForm() {
       musicVideoUrl: state.musicVideoUrl,
       selectedThemes: state.selectedThemes,
       campaignType: state.campaignType,
+      selectedLyricsOption: state.selectedLyricsOption,
+      isSubscribed: false, // This will be passed from the parent component
     },
     {
       setCampaignNameError: state.setCampaignNameError,
@@ -48,6 +51,7 @@ export function useCampaignForm() {
       setAlbumArtError: state.setAlbumArtError,
       setMusicVideoError: state.setMusicVideoError,
       setThemesError: state.setThemesError,
+      setLyricsOptionError: state.setLyricsOptionError,
     }
   );
 
@@ -65,9 +69,33 @@ export function useCampaignForm() {
 
   const handleGenerateVideos = () => {
     if (validateForm()) {
-      if (!(state.selectedVideoCount && state.selectedGenre)) {
+      if (!(state.selectedVideoCount && state.selectedGenre && state.selectedLyricsOption)) {
         return;
       }
+      
+      // Map selectedLyricsOption to hasLyrics and hasCaptions
+      let hasLyrics = false;
+      let hasCaptions = false;
+      
+      switch (state.selectedLyricsOption) {
+        case "lyrics":
+          hasLyrics = true;
+          hasCaptions = false;
+          break;
+        case "lyrics-hooks":
+          hasLyrics = true;
+          hasCaptions = true;
+          break;
+        case "hooks":
+          hasLyrics = false;
+          hasCaptions = true;
+          break;
+        case "video-only":
+          hasLyrics = false;
+          hasCaptions = false;
+          break;
+      }
+      
       createCampaign({
         campaignName: state.campaignName,
         songName: state.songName,
@@ -78,6 +106,8 @@ export function useCampaignForm() {
         themes: state.selectedThemes,
         songAudioUrl: state.songAudioUrl || undefined,
         musicVideoUrl: state.musicVideoUrl || undefined,
+        hasLyrics,
+        hasCaptions,
         lyrics: state.lyrics,
         wordsData: state.wordsData,
         lyricsWithWords: state.lyricsWithWords,
@@ -140,6 +170,11 @@ export function useCampaignForm() {
     selectedThemes: state.selectedThemes,
     setSelectedThemes: state.setSelectedThemes,
     themesError: state.themesError,
+
+    // Lyrics Selection
+    selectedLyricsOption: state.selectedLyricsOption,
+    setSelectedLyricsOption: state.setSelectedLyricsOption,
+    lyricsOptionError: state.lyricsOptionError,
 
     // Lyrics
     lyrics: state.lyrics,

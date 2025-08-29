@@ -16,6 +16,8 @@ export interface CreateCampaignData {
   themes: string[];
   songAudioUrl?: string;
   musicVideoUrl?: string;
+  hasLyrics?: boolean;
+  hasCaptions?: boolean;
   lyrics?: LyricsLine[];
   wordsData?: Array<{
     text: string;

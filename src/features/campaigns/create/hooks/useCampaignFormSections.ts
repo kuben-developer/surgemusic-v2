@@ -11,6 +11,7 @@ interface FormErrors {
   albumArtError: boolean;
   musicVideoError: boolean;
   themesError: boolean;
+  lyricsOptionError: boolean;
 }
 
 interface SectionsProps {
@@ -25,6 +26,7 @@ export function useCampaignFormSections({ campaignType, errors }: SectionsProps)
       { title: "Genre Selection", error: errors.genreError },
       { title: "Content Themes", error: errors.themesError },
       { title: "Song Details", error: errors.songDetailsError },
+      { title: "Lyrics Selection", error: errors.lyricsOptionError },
       { title: "Song Audio", error: errors.songAudioError },
     ];
 

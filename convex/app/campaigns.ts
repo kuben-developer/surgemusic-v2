@@ -29,6 +29,8 @@ export const create = mutation({
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
     caption: v.optional(v.string()),
+    hasLyrics: v.optional(v.boolean()),
+    hasCaptions: v.optional(v.boolean()),
     lyrics: v.optional(v.array(v.object({
       timestamp: v.number(),
       text: v.string(),
@@ -101,6 +103,8 @@ export const create = mutation({
       themes: args.themes,
       status: "pending",
       caption: args.caption ? args.caption.trim() : undefined,
+      hasLyrics: args.hasLyrics,
+      hasCaptions: args.hasCaptions,
       lyrics: args.lyrics,
       wordsData: args.wordsData,
       lyricsWithWords: args.lyricsWithWords,
@@ -546,6 +550,8 @@ export const sendWebhook = internalAction({
     themes: v.array(v.string()),
     songAudioUrl: v.optional(v.string()),
     musicVideoUrl: v.optional(v.string()),
+    hasLyrics: v.optional(v.boolean()),
+    hasCaptions: v.optional(v.boolean()),
     lyrics: v.optional(v.array(v.object({
       timestamp: v.number(),
       text: v.string(),
@@ -653,6 +659,8 @@ export const sendWebhook = internalAction({
           "Campaign ID": args.referenceId,
           "Campaign Setup": "custom",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
+          "Lyrics": args.hasLyrics ? "Yes" : "No",
+          "Captions": args.hasCaptions ? "Yes" : "No",
           "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time
           "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
           "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time
@@ -669,6 +677,8 @@ export const sendWebhook = internalAction({
           "Genre": args.genre,
           "Campaign Setup": "express",
           "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
+          "Lyrics": args.hasLyrics ? "Yes" : "No",
+          "Captions": args.hasCaptions ? "Yes" : "No",
           "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time 
           "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
           "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time

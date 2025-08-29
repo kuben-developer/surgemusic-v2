@@ -45,6 +45,8 @@ export default defineSchema({
     ),
     isDeleted: v.optional(v.boolean()),
     caption: v.optional(v.string()),
+    hasLyrics: v.optional(v.boolean()),
+    hasCaptions: v.optional(v.boolean()),
     lyrics: v.optional(v.array(v.object({
       timestamp: v.number(),
       text: v.string(),

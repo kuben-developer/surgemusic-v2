@@ -91,6 +91,11 @@ export default function CampaignCreatePage() {
         setSelectedThemes={formData.setSelectedThemes}
         themesError={formData.themesError}
 
+        // Lyrics Selection
+        selectedLyricsOption={formData.selectedLyricsOption}
+        setSelectedLyricsOption={formData.setSelectedLyricsOption}
+        lyricsOptionError={formData.lyricsOptionError}
+
         // Lyrics
         lyrics={formData.lyrics}
         setLyrics={formData.setLyrics}

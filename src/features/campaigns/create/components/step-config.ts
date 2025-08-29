@@ -3,6 +3,7 @@ import { CampaignInfo } from "./CampaignInfo";
 import { ContentThemes } from "./ContentThemes";
 import { GenreSelection } from "./GenreSelection";
 import { ImageAssets } from "./ImageAssets";
+import { LyricsSelection } from "./LyricsSelection";
 import { SongAudio } from "./SongAudio";
 import { SongDetails } from "./SongDetails";
 import { VideoAssets } from "./VideoAssets";
@@ -62,6 +63,11 @@ export interface StepProps {
   selectedThemes: string[];
   setSelectedThemes: (value: string[]) => void;
   themesError: boolean;
+
+  // Lyrics Selection
+  selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
+  setSelectedLyricsOption: (option: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null) => void;
+  lyricsOptionError: boolean;
 
   // Lyrics
   lyrics: LyricsLine[];
@@ -149,6 +155,17 @@ export const STEP_CONFIGS: StepConfig[] = [
     availableFor: ["express", "custom"],
   },
   {
+    id: "lyrics-selection",
+    component: LyricsSelection,
+    propsSelector: (props) => ({
+      selectedLyricsOption: props.selectedLyricsOption,
+      setSelectedLyricsOption: props.setSelectedLyricsOption,
+      lyricsOptionError: props.lyricsOptionError,
+      isSubscribed: props.isSubscribed,
+    }),
+    availableFor: ["express", "custom"],
+  },
+  {
     id: "song-audio",
     component: SongAudio,
     propsSelector: (props) => ({
@@ -159,6 +176,7 @@ export const STEP_CONFIGS: StepConfig[] = [
       songAudioError: props.songAudioError,
       lyrics: props.lyrics,
       setLyrics: props.setLyrics,
+      isSubscribed: props.isSubscribed,
       wordsData: props.wordsData,
       setWordsData: props.setWordsData,
       lyricsWithWords: props.lyricsWithWords,

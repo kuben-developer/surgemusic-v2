@@ -11,6 +11,8 @@ interface ValidationState {
   musicVideoUrl: string | null;
   selectedThemes: string[];
   campaignType: "custom" | "express";
+  selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
+  isSubscribed?: boolean;
 }
 
 interface ErrorSetters {
@@ -22,6 +24,7 @@ interface ErrorSetters {
   setAlbumArtError: (value: boolean) => void;
   setMusicVideoError: (value: boolean) => void;
   setThemesError: (value: boolean) => void;
+  setLyricsOptionError: (value: boolean) => void;
 }
 
 export function useCampaignFormValidation(state: ValidationState, errorSetters: ErrorSetters) {
@@ -34,6 +37,7 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
     setAlbumArtError,
     setMusicVideoError,
     setThemesError,
+    setLyricsOptionError,
   } = errorSetters;
 
   const resetAllErrors = () => {
@@ -45,6 +49,7 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
     setAlbumArtError(false);
     setMusicVideoError(false);
     setThemesError(false);
+    setLyricsOptionError(false);
   };
 
   const validateCampaignName = () => {
@@ -102,6 +107,27 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
     return true;
   };
 
+  const validateLyricsOption = () => {
+    if (!state.selectedLyricsOption) {
+      setLyricsOptionError(true);
+      toast.error("Lyrics Option Required", {
+        description: "Please select how you want lyrics and captions to appear",
+      });
+      return false;
+    }
+    
+    // Check if Pro option selected without subscription
+    if ((state.selectedLyricsOption === "lyrics" || state.selectedLyricsOption === "lyrics-hooks") && !state.isSubscribed) {
+      setLyricsOptionError(true);
+      toast.error("Pro Subscription Required", {
+        description: "The selected lyrics option requires a Pro subscription",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
   const validateCustomCampaignAssets = () => {
     if (state.campaignType !== "custom") return true;
 
@@ -146,6 +172,7 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
     const validations = [
       validateCampaignName(),
       validateSongDetails(),
+      validateLyricsOption(),
       validateSongAudio(),
       validateGenre(),
       validateVideoCount(),

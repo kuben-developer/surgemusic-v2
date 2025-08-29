@@ -51,6 +51,10 @@ export function useCampaignFormState() {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [themesError, setThemesError] = useState(false);
 
+  // Lyrics Selection state
+  const [selectedLyricsOption, setSelectedLyricsOption] = useState<"lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null>(null);
+  const [lyricsOptionError, setLyricsOptionError] = useState(false);
+  
   // Lyrics state
   const [lyrics, setLyrics] = useState<LyricsLine[]>([]);
   const [lyricsError, setLyricsError] = useState(false);
@@ -135,6 +139,12 @@ export function useCampaignFormState() {
     setSelectedThemes,
     themesError,
     setThemesError,
+
+    // Lyrics Selection
+    selectedLyricsOption,
+    setSelectedLyricsOption,
+    lyricsOptionError,
+    setLyricsOptionError,
 
     // Lyrics
     lyrics,
