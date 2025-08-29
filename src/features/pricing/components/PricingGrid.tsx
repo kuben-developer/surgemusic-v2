@@ -19,6 +19,7 @@ export function PricingGrid({
         <PricingCard
           key={plan.name}
           plan={plan}
+          currentPlan={currentPlan}
           isCurrentPlan={plan.priceId === currentPlan?.priceId}
           hasActivePlan={hasActivePlan}
           isUserOnTrial={isUserOnTrial}

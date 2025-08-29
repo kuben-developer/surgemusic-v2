@@ -34,6 +34,7 @@ export interface TrialDialogProps {
 
 export interface PricingCardProps {
   readonly plan: PricingPlan;
+  readonly currentPlan?: PricingPlan;
   readonly isCurrentPlan: boolean;
   readonly hasActivePlan: boolean;
   readonly isUserOnTrial: boolean;

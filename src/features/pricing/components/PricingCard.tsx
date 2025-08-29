@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { PricingCardActions } from './PricingCardActions';
-import { isMostPopularPlan } from '../utils/pricing.utils';
+import { isMostPopularPlan, isUserOnHigherPlan } from '../utils/pricing.utils';
 import type { PricingCardProps } from '../types/pricing.types';
 
 export function PricingCard({
   plan,
+  currentPlan,
   isCurrentPlan,
   hasActivePlan,
   isUserOnTrial,
@@ -17,14 +18,17 @@ export function PricingCard({
   onBuyNow,
   onManageBilling,
 }: PricingCardProps) {
-  const showPopularBadge = isMostPopularPlan(plan.name) && !isCurrentPlan;
+  const showPopularBadge =
+    isMostPopularPlan(plan.name) &&
+    !isCurrentPlan &&
+    !isUserOnHigherPlan(currentPlan?.name, plan.name);
   const showCurrentBadge = isCurrentPlan;
 
   return (
     <div
       className={cn(
         "rounded-lg border border-border bg-card p-8 shadow-lg",
-        isMostPopularPlan(plan.name) && "ring-2 ring-primary",
+        showPopularBadge && "ring-2 ring-primary",
         isCurrentPlan && "ring-2 ring-green-500"
       )}
     >
@@ -36,9 +40,9 @@ export function PricingCard({
       )}
       {showCurrentBadge && (
         <div className="mb-4 -mt-2">
-          <StatusBadge 
-            type={isUserOnTrial ? "trial" : "current"} 
-            text={isUserOnTrial ? "Current Trial Plan" : "Current Plan"} 
+          <StatusBadge
+            type={isUserOnTrial ? "trial" : "current"}
+            text={isUserOnTrial ? "Current Trial Plan" : "Current Plan"}
           />
         </div>
       )}

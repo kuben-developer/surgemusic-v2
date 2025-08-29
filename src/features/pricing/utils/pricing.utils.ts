@@ -83,6 +83,14 @@ export function getFeatureCount(plan: PricingPlan): number {
 }
 
 /**
+ * Checks if the user's current plan is higher tier than the given plan
+ */
+export function isUserOnHigherPlan(currentPlanName: PlanName | undefined, planName: PlanName): boolean {
+  if (!currentPlanName) return false;
+  return getPlanTier(currentPlanName) > getPlanTier(planName);
+}
+
+/**
  * Formats video generations with proper singular/plural
  */
 export function formatVideoGenerations(count: number): string {
