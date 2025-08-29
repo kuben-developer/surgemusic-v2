@@ -235,7 +235,7 @@ export const getTikTokUserVideos = internalAction({
     }
 
     if (!success || data?.error) {
-      console.error(`Error fetching from https://www.tiktok.com/@${args.username}`);
+      // console.error(`Error fetching from https://www.tiktok.com/@${args.username}`);
       return {
         maxCursor: null,
         hasMore: false,
@@ -366,7 +366,7 @@ export const scrapeManuallyPostedVideos = internalAction({
         maxCursor: currentMaxCursor
       });
       const { maxCursor, hasMore, videos } = result;
-      console.log(`Fetched ${videos.length} videos for account https://www.tiktok.com/@${args.username}`);
+      // console.log(`Fetched ${videos.length} videos for account https://www.tiktok.com/@${args.username}`);
 
       for (const video of videos) {
         // Encode the video description to match the encoded keys in the map
@@ -443,7 +443,7 @@ export const monitorManuallyPostedVideos = internalAction({
       }
     }
 
-    console.log(`Found ${captionToCampaignMap.size} campaigns with captions`);
+    // console.log(`Found ${captionToCampaignMap.size} campaigns with captions`);
 
     const BATCH_SIZE = 90;
     const BATCH_DELAY_MS = 60000; // 1 minute in milliseconds
@@ -459,7 +459,7 @@ export const monitorManuallyPostedVideos = internalAction({
         });
       }
 
-      console.log(`Deployed batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} scrapers scheduled to run after ${batchDelay}ms`);
+      // console.log(`Deployed batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} scrapers scheduled to run after ${batchDelay}ms`);
     }
 
   },

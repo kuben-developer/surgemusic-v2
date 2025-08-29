@@ -80,6 +80,7 @@ export const createCheckoutSession = action({
         : {}),
       success_url: `${process.env.DOMAIN_URL}/?success=true`,
       cancel_url: `${process.env.DOMAIN_URL}/pricing?canceled=true`,
+      allow_promotion_codes: true,
       metadata: {
         userId: user._id,
         mode,

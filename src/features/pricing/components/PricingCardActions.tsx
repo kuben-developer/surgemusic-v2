@@ -50,7 +50,7 @@ export function PricingCardActions({
     <div className="mt-8 space-y-3">
       {isFirstTimeUser && (
         <Button
-          className="w-full"
+          className="w-full cursor-pointer"
           variant="outline"
           onClick={() => onSelectPlan(plan)}
         >

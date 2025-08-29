@@ -41,7 +41,7 @@ export function TrialDialog({
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
                   <Zap className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-medium">5 Video Generations</p>
+                    <p className="font-medium">6 Video Generations</p>
                     <p className="text-sm text-muted-foreground">Start creating viral content immediately</p>
                   </div>
                 </div>
@@ -87,7 +87,7 @@ export function TrialDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-full sm:flex-1"
+            className="w-full sm:flex-1 cursor-pointer"
           >
             Maybe Later
           </Button>
@@ -97,7 +97,7 @@ export function TrialDialog({
                 onStartTrial(selectedPlan);
               }
             }}
-            className="w-full sm:flex-1 gap-2"
+            className="w-full sm:flex-1 gap-2 cursor-pointer"
           >
             <Zap className="h-4 w-4" />
             Start Free Trial

@@ -89,7 +89,7 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
       const invoice = event.data.object as Stripe.Invoice;
 
       // Only process subscription invoices
-      const subscriptionId = (invoice as any).subscription;
+      const subscriptionId = (invoice as any).subscription || (invoice as any).parent.subscription_details.subscription;
       if (!subscriptionId) break;
 
       const subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
@@ -105,7 +105,7 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
       const isTrial = subscription.status === 'trialing';
 
       if (subscriptionPriceId) {
-        let credits = isTrial ? 5 : (subscriptionCredits[subscriptionPriceId] ?? 0);
+        let credits = isTrial ? 6 : (subscriptionCredits[subscriptionPriceId] ?? 0);
 
         // Handle cancellation of other subscriptions
         const user = await ctx.runQuery(internal.app.users.getByClerkId, {
