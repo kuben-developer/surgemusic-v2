@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Check, Plus, Zap } from "lucide-react"
+import { Check, Plus, Zap, Info } from "lucide-react"
+import { toast } from "sonner"
 
 interface ContentThemesProps {
     selectedGenre: "rap" | "electronic" | "pop" | "other" | null
@@ -24,7 +25,13 @@ export function ContentThemes({
                         <Zap className="w-7 h-7" />
                         <h2 className="text-2xl font-semibold">Choose Your Content Themes</h2>
                     </div>
-                    <p className="text-muted-foreground text-lg">We recommend choosing a variety of content themes that you think could work for your target audience.</p>
+                    <div className="space-y-2">
+                        <p className="text-muted-foreground text-lg">We recommend choosing a variety of content themes that you think could work for your target audience.</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Info className="w-4 h-4" />
+                            <span>Select up to 3 content themes ({selectedThemes.length}/3 selected)</span>
+                        </div>
+                    </div>
                     {selectedGenre && (
                         <div className="space-y-8">
                             {/* {['reactions', 'recommendation', 'lyric', 'lifestyle', 'girls'].map((theme) => ( */}
@@ -49,6 +56,15 @@ export function ContentThemes({
                                         disabled={theme === 'lyric'}
                                         onClick={() => {
                                             if (theme === 'lyric') return;
+                                            
+                                            // Check if trying to add a 4th theme
+                                            if (!selectedThemes.includes(theme) && selectedThemes.length >= 3) {
+                                                toast.error("Maximum 3 Themes", {
+                                                    description: "Please unselect one theme before adding another. You can only select up to 3 content themes.",
+                                                });
+                                                return;
+                                            }
+                                            
                                             setSelectedThemes((prev: string[]) =>
                                                 prev.includes(theme)
                                                     ? prev.filter((t: string) => t !== theme)

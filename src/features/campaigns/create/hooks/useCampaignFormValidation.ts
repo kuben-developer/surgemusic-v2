@@ -129,6 +129,12 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
         description: "Please select at least one content theme",
       });
       isValid = false;
+    } else if (state.selectedThemes.length > 3) {
+      setThemesError(true);
+      toast.error("Too Many Themes Selected", {
+        description: "You can only select up to 3 content themes. Please unselect some themes.",
+      });
+      isValid = false;
     }
 
     return isValid;
