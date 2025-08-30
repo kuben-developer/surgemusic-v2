@@ -607,12 +607,10 @@ export const sendWebhook = internalAction({
       } else if (args.lyrics && args.lyrics.length > 0) {
         // Fallback: No word data available, create simple SRT from per-second lyrics
         const srtLines: string[] = [];
-        args.lyrics.forEach((line, index) => {
-          const subtitleNumber = index + 1;
+        args.lyrics.forEach((line) => {
           const startTime = formatSRTTime(line.timestamp);
           const endTime = formatSRTTime(line.timestamp + 1);
 
-          srtLines.push(String(subtitleNumber));
           srtLines.push(`${startTime} --> ${endTime}`);
           srtLines.push(line.text || '');
           srtLines.push('');

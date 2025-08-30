@@ -21,14 +21,11 @@ interface WordData {
  */
 export function generateSingleWordSRT(wordsData: WordData[]): string {
   const srtLines: string[] = [];
-  let subtitleNumber = 1;
 
   for (const word of wordsData) {
-    srtLines.push(String(subtitleNumber));
     srtLines.push(`${formatSRTTime(word.start)} --> ${formatSRTTime(word.end)}`);
     srtLines.push(word.text);
     srtLines.push('');
-    subtitleNumber++;
   }
 
   return srtLines.join('\n').trim();
@@ -46,7 +43,6 @@ export function generateMultiWordSRT(
   totalDuration: number = 15
 ): string {
   const srtLines: string[] = [];
-  let subtitleNumber = 1;
   let i = 0;
 
   while (i < wordsData.length) {
@@ -86,12 +82,9 @@ export function generateMultiWordSRT(
     const text = wordGroup.map(w => w.text).join(' ').trim();
     
     // Add to SRT
-    srtLines.push(String(subtitleNumber));
     srtLines.push(`${formatSRTTime(startTime)} --> ${formatSRTTime(endTime)}`);
     srtLines.push(text);
     srtLines.push('');
-    
-    subtitleNumber++;
     i += wordCount;
   }
 
@@ -170,12 +163,11 @@ export function generateSRTWithEditedLyrics(
   }
   
   // Fallback: Generate simple SRT from per-second lyrics
-  const fallbackSRT = lyrics.map((line, index) => {
-    const subtitleNumber = index + 1;
+  const fallbackSRT = lyrics.map((line) => {
     const startTime = formatSRTTime(line.timestamp);
     const endTime = formatSRTTime(line.timestamp + 1);
     
-    return `${subtitleNumber}\n${startTime} --> ${endTime}\n${line.text || ''}\n`;
+    return `${startTime} --> ${endTime}\n${line.text || ''}\n`;
   }).join('\n').trim();
   
   // Return the same SRT for all 5 variations as fallback
