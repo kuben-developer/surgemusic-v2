@@ -10,6 +10,8 @@ const SignInPage = () => {
             footerAction: { display: "none" },
           },
         }}
+        signUpUrl="/sign-up"
+        signInUrl="/sign-in"
       />
     </div>
   );
