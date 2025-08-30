@@ -6,9 +6,10 @@
   "scripts": {
     "build": "next build",
     "check": "next lint && tsc --noEmit",
-    "dev": "npm-run-all --parallel dev:frontend dev:backend",
+    "dev": "npm-run-all --parallel dev:frontend dev:backend ngrok",
     "dev:frontend": "next dev --turbo",
     "dev:backend": "convex dev",
+    "ngrok": "ngrok http 3000 --hostname=dev.surgemusic.io",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "lint": "next lint",

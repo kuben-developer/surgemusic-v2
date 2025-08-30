@@ -23,6 +23,7 @@ const config = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  allowedDevOrigins: ['dev.surgemusic.io'],
 };
 
 export default config;
