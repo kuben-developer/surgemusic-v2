@@ -39,8 +39,15 @@ export function VideoGridItem({
       <div className="aspect-[9/16] bg-muted/30 relative overflow-hidden">
         <video
           src={video.video.url}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02] relative z-10"
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.02] relative z-10"
           controls
+          style={{
+            aspectRatio: "9 / 16",
+            width: "100%",
+            height: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         <Badge
