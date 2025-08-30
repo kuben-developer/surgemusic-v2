@@ -208,7 +208,7 @@ export const getTikTokUserVideos = internalAction({
 
     let requestUrl = `http://api.tokapi.online/v1/post/user/posts?username=${args.username}&count=20`;
     if (args.maxCursor) {
-      requestUrl += `$offset=${args.maxCursor}`;
+      requestUrl += `&offset=${args.maxCursor}`;
     }
 
     let data;
@@ -223,14 +223,30 @@ export const getTikTokUserVideos = internalAction({
             'x-project-name': 'tokapi',
             'x-api-key': TOKAPI_KEY
           },
+          signal: AbortSignal.timeout(30000), // 30 second timeout per request
         });
+        
+        if (!response.ok) {
+          console.error(`HTTP error for @${args.username}: ${response.status}`);
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          continue;
+        }
+        
         data = await response.json();
         if (!data.error) {
           success = true;
           break;
         }
+        
+        // Wait before retry with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
       } catch (err) {
-        // Optionally log error or continue to retry
+        console.error(`Attempt ${attempt + 1} failed for @${args.username}:`, err);
+        if (attempt < 2) {
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        }
       }
     }
 
@@ -244,7 +260,17 @@ export const getTikTokUserVideos = internalAction({
     }
 
 
-    if (data.status_msg.length > 0) {
+    // Check if there's an error message in the response
+    if (data.status_msg && data.status_msg.length > 0) {
+      return {
+        maxCursor: null,
+        hasMore: false,
+        videos: []
+      };
+    }
+
+    // Ensure required data structures exist
+    if (!data.aweme_list || !Array.isArray(data.aweme_list)) {
       return {
         maxCursor: null,
         hasMore: false,
@@ -303,27 +329,48 @@ export const getTikTokVideoComments = internalAction({
       createdAt: number;
     }[] = [];
 
-    let requestUrl = `http://api.tokapi.online/v1/post/${args.videoId}/comments`;
-    const response = await fetch(requestUrl, {
-      method: "GET",
-      headers: {
-        'accept': 'application/json',
-        'x-project-name': 'tokapi',
-        'x-api-key': TOKAPI_KEY
-      },
-    });
+    try {
+      const requestUrl = `http://api.tokapi.online/v1/post/${args.videoId}/comments`;
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: {
+          'accept': 'application/json',
+          'x-project-name': 'tokapi',
+          'x-api-key': TOKAPI_KEY
+        },
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      });
 
-    const data = await response.json();
+      if (!response.ok) {
+        console.error(`Failed to fetch comments for video ${args.videoId}: HTTP ${response.status}`);
+        return { comments: [] };
+      }
 
-    for (const comment of data.comments) {
-      comments.push({
-        commentId: comment.cid.toString(),
-        text: comment.text,
-        authorUsername: comment.user.unique_id,
-        authorNickname: comment.user.nickname,
-        authorProfilePicUrl: comment.user.avatar_thumb.url_list[0],
-        createdAt: comment.create_time,
-      })
+      const data = await response.json();
+
+      // Check if comments exist and is an array
+      if (!data.comments || !Array.isArray(data.comments)) {
+        return { comments: [] };
+      }
+
+      for (const comment of data.comments) {
+        // Validate required fields exist
+        if (!comment.cid || !comment.user || !comment.text) {
+          continue;
+        }
+
+        comments.push({
+          commentId: comment.cid.toString(),
+          text: comment.text || '',
+          authorUsername: comment.user.unique_id || 'unknown',
+          authorNickname: comment.user.nickname || 'Unknown User',
+          authorProfilePicUrl: comment.user.avatar_thumb?.url_list?.[0] || '',
+          createdAt: comment.create_time || Date.now(),
+        });
+      }
+    } catch (error) {
+      console.error(`Error fetching comments for video ${args.videoId}:`, error);
+      return { comments: [] };
     }
 
     return {
@@ -343,9 +390,13 @@ export const scrapeManuallyPostedVideos = internalAction({
   },
   handler: async (ctx, args) => {
     let currentMaxCursor: number | null = null;
-    while (true) {
+    let pagesProcessed = 0;
+    const MAX_PAGES = 10; // Limit pages to prevent infinite loops
+    
+    while (pagesProcessed < MAX_PAGES) {
+      pagesProcessed++;
 
-      const result: {
+      let result: {
         maxCursor: number | null;
         hasMore: boolean;
         videos: Array<{
@@ -361,10 +412,17 @@ export const scrapeManuallyPostedVideos = internalAction({
           saves: number;
           description: string;
         }>;
-      } = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
-        username: args.username,
-        maxCursor: currentMaxCursor
-      });
+      } = { maxCursor: null, hasMore: false, videos: [] }; // Initialize with default values
+      
+      try {
+        result = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
+          username: args.username,
+          maxCursor: currentMaxCursor
+        });
+      } catch (error) {
+        console.error(`Error fetching videos for @${args.username}:`, error);
+        break; // Exit the loop on error
+      }
       const { maxCursor, hasMore, videos } = result;
       // console.log(`Fetched ${videos.length} videos for account https://www.tiktok.com/@${args.username}`);
 
@@ -399,14 +457,13 @@ export const scrapeManuallyPostedVideos = internalAction({
                 });
 
                 if (commentsData.comments && commentsData.comments.length > 0) {
-                  const commentsResult = await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                  await ctx.runMutation(internal.app.analytics.storeVideoComments, {
                     campaignId: campaignData.campaignId,
                     userId: campaignData.userId,
                     videoId: result.videoId,
                     socialPlatform: "tiktok",
                     comments: commentsData.comments,
                   });
-
                 }
               } catch (commentError) {
                 console.error(`Failed to fetch/store comments for video ${video.videoId}:`, commentError);
@@ -420,8 +477,12 @@ export const scrapeManuallyPostedVideos = internalAction({
         }
       }
 
-      if (!hasMore) break;
+      if (!hasMore || !maxCursor) break;
       currentMaxCursor = maxCursor;
+    }
+    
+    if (pagesProcessed >= MAX_PAGES) {
+      console.log(`Reached maximum page limit (${MAX_PAGES}) for @${args.username}`);
     }
   },
 });
@@ -445,15 +506,17 @@ export const monitorManuallyPostedVideos = internalAction({
 
     // console.log(`Found ${captionToCampaignMap.size} campaigns with captions`);
 
-    const BATCH_SIZE = 90;
-    const BATCH_DELAY_MS = 60000; // 1 minute in milliseconds
+    // Reduce batch size and increase delay to prevent timeouts
+    const BATCH_SIZE = 30; // Reduced from 90 to prevent overwhelming the API
+    const BATCH_DELAY_MS = 120000; // 2 minutes between batches (increased from 1 minute)
 
     for (let i = 0; i < TIKTOK_ACCOUNTS.length; i += BATCH_SIZE) {
       const batch = TIKTOK_ACCOUNTS.slice(i, i + BATCH_SIZE);
       const batchDelay = Math.floor(i / BATCH_SIZE) * BATCH_DELAY_MS;
 
       for (const username of batch) {
-        await ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
+        // Don't await scheduler.runAfter - it's fire-and-forget
+        ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
           username: username.trim(),
           captionToCampaignMap: Object.fromEntries(captionToCampaignMap),
         });
