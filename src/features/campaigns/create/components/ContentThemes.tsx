@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,9 +25,8 @@ export function ContentThemes({
   setSelectedThemes,
   themesError,
 }: ContentThemesProps) {
-  const girlsTheme = useMemo(() => CONTENT_THEMES.find((t) => t.key === "girls"), []);
-  const defaultGirls = girlsTheme?.subThemes?.[0]?.key ?? "girls_chic";
-  const [activeGirlsSub, setActiveGirlsSub] = useState<string>(defaultGirls);
+  // Track active sub-tab per theme that has sub-themes
+  const [activeSubTabs, setActiveSubTabs] = useState<Record<string, string>>({});
 
   const handleAddTheme = (key: string) => {
     const isAlreadySelected = selectedThemes.includes(key);
@@ -48,22 +47,20 @@ export function ContentThemes({
     setSelectedThemes((prev) => prev.filter((t) => t !== key));
   };
 
-  const handleAddGirlsTheme = () => {
-    const hasAnyGirls = selectedThemes.find((t) => t.startsWith("girls_"));
-    const isCurrentSelected = selectedThemes.includes(activeGirlsSub);
+  const handleAddSubTheme = (themeKey: string, activeKey: string, subKeys: string[]) => {
+    const existing = selectedThemes.find((k) => subKeys.includes(k));
+    const isCurrentSelected = selectedThemes.includes(activeKey);
 
     if (isCurrentSelected) {
-      setSelectedThemes((prev) => prev.filter((t) => t !== activeGirlsSub));
+      setSelectedThemes((prev) => prev.filter((t) => t !== activeKey));
       return;
     }
 
-    // If another Girls sub-theme is already selected, replace it
-    if (hasAnyGirls && hasAnyGirls !== activeGirlsSub) {
-      setSelectedThemes((prev) => prev.map((t) => (t === hasAnyGirls ? activeGirlsSub : t)));
+    if (existing && existing !== activeKey) {
+      setSelectedThemes((prev) => prev.map((t) => (t === existing ? activeKey : t)));
       return;
     }
 
-    // Otherwise add new, respecting max of 3
     if (selectedThemes.length >= 3) {
       toast.error("Maximum 3 Themes", {
         description:
@@ -71,7 +68,7 @@ export function ContentThemes({
       });
       return;
     }
-    setSelectedThemes((prev) => [...prev, activeGirlsSub]);
+    setSelectedThemes((prev) => [...prev, activeKey]);
   };
 
   return (
@@ -111,15 +108,20 @@ export function ContentThemes({
 
           <div className="space-y-8">
             {CONTENT_THEMES.map((theme) => {
-              // Girls with sub-themes
-              if (theme.key === "girls" && theme.subThemes && theme.subThemes.length > 0) {
-                const isSelected = selectedThemes.includes(activeGirlsSub);
+              // Any theme with sub-themes: render tabs and single-select within group
+              if (theme.subThemes && theme.subThemes.length > 0) {
+                const subKeys = theme.subThemes.map((s) => s.key);
+                const activeKey = activeSubTabs[theme.key] ?? subKeys[0];
+                const isSelected = selectedThemes.includes(activeKey);
 
                 return (
                   <div key={theme.key} className="space-y-4">
                     <h3 className="text-xl font-medium">{theme.label}</h3>
-                    <Tabs value={activeGirlsSub} onValueChange={setActiveGirlsSub}>
-                      <TabsList className="grid grid-cols-4 w-full">
+                    <Tabs
+                      value={activeKey}
+                      onValueChange={(v) => setActiveSubTabs((prev) => ({ ...prev, [theme.key]: v }))}
+                    >
+                      <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full">
                         {theme.subThemes.map((s) => (
                           <TabsTrigger key={s.key} value={s.key} className="capitalize">
                             {s.label}
@@ -145,7 +147,7 @@ export function ContentThemes({
                       variant={isSelected ? "default" : "outline"}
                       size="lg"
                       className="w-full"
-                      onClick={handleAddGirlsTheme}
+                      onClick={() => handleAddSubTheme(theme.key, activeKey, subKeys)}
                     >
                       {isSelected ? (
                         <>

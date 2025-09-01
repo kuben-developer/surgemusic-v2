@@ -40,9 +40,16 @@ export const CONTENT_THEMES: ThemeDef[] = [
   { key: "visualiser", label: "Visualiser", imageFolder: THEME_DEFAULT_FOLDER },
   { key: "dance", label: "Dance", imageFolder: THEME_DEFAULT_FOLDER },
   { key: "gym_workout", label: "Gym / Workout", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "stage_avatars", label: "Stage Avatars", imageFolder: THEME_DEFAULT_FOLDER },
   { key: "rock_aesthetic", label: "Rock Aesthetic", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "live_shows", label: "Live Shows", imageFolder: THEME_DEFAULT_FOLDER },
+  {
+    key: "live_shows",
+    label: "Live Shows",
+    imageFolder: THEME_DEFAULT_FOLDER,
+    subThemes: [
+      { key: "stage_avatars", label: "Stage Avatars", imageFolder: THEME_DEFAULT_FOLDER },
+      { key: "gigs", label: "Gigs", imageFolder: THEME_DEFAULT_FOLDER },
+    ]
+  },
 ];
 
 // Optional helper to get folder for a theme/subtheme key
@@ -72,11 +79,15 @@ function toTitleCase(input: string): string {
 }
 
 export function getLabelForKey(key: string): string {
+  // First pass: search all sub-themes across all themes to avoid collisions
   for (const t of CONTENT_THEMES) {
     if (t.subThemes) {
       const found = t.subThemes.find((s) => s.key === key);
       if (found) return `${t.label}-${found.label}`;
     }
+  }
+  // Second pass: top-level themes
+  for (const t of CONTENT_THEMES) {
     if (t.key === key) return t.label;
   }
   return toTitleCase(key);
