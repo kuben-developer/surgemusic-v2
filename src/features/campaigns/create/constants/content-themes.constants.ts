@@ -63,3 +63,21 @@ export function getImageSrcsForFolder(folder: string): string[] {
   return Array.from({ length: THEME_GIF_COUNT }, (_, i) => `${THEME_IMAGE_BASE_PATH}/${folder}/${i + 1}.gif`);
 }
 
+function toTitleCase(input: string): string {
+  return input
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+export function getLabelForKey(key: string): string {
+  for (const t of CONTENT_THEMES) {
+    if (t.subThemes) {
+      const found = t.subThemes.find((s) => s.key === key);
+      if (found) return found.label;
+    }
+    if (t.key === key) return t.label;
+  }
+  return toTitleCase(key);
+}

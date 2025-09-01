@@ -2,14 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Plus, Zap, Info } from "lucide-react";
+import { Check, Plus, Zap, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   CONTENT_THEMES,
   THEME_DEFAULT_FOLDER,
   getImageFolderForKey,
   getImageSrcsForFolder,
+  getLabelForKey,
 } from "../constants/content-themes.constants";
 
 interface ContentThemesProps {
@@ -40,6 +42,10 @@ export function ContentThemes({
     setSelectedThemes((prev) =>
       isAlreadySelected ? prev.filter((t) => t !== key) : [...prev, key]
     );
+  };
+
+  const handleRemoveTheme = (key: string) => {
+    setSelectedThemes((prev) => prev.filter((t) => t !== key));
   };
 
   const handleAddGirlsTheme = () => {
@@ -84,6 +90,23 @@ export function ContentThemes({
               <Info className="w-4 h-4" />
               <span> Select up to 3 content themes ({selectedThemes.length}/3 selected)</span>
             </div>
+            {selectedThemes.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {selectedThemes.map((key) => (
+                  <Badge key={key} variant="secondary" className="pr-1">
+                    {getLabelForKey(key)}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${getLabelForKey(key)}`}
+                      className="ml-1 inline-flex items-center justify-center rounded hover:opacity-80"
+                      onClick={() => handleRemoveTheme(key)}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-8">
