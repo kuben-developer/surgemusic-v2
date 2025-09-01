@@ -122,6 +122,19 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["express", "custom"],
   },
+  // Move Lyrics Selection to Step 2
+  {
+    id: "lyrics-selection",
+    component: LyricsSelection,
+    propsSelector: (props) => ({
+      selectedLyricsOption: props.selectedLyricsOption,
+      setSelectedLyricsOption: props.setSelectedLyricsOption,
+      lyricsOptionError: props.lyricsOptionError,
+      hasProFeatures: props.hasProFeatures || false,
+      isFirstTimeUser: props.isFirstTimeUser ?? true,
+    }),
+    availableFor: ["express", "custom"],
+  },
   {
     id: "campaign-info",
     component: CampaignInfo,
@@ -156,18 +169,7 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["express", "custom"],
   },
-  {
-    id: "lyrics-selection",
-    component: LyricsSelection,
-    propsSelector: (props) => ({
-      selectedLyricsOption: props.selectedLyricsOption,
-      setSelectedLyricsOption: props.setSelectedLyricsOption,
-      lyricsOptionError: props.lyricsOptionError,
-      hasProFeatures: props.hasProFeatures || false,
-      isFirstTimeUser: props.isFirstTimeUser ?? true,
-    }),
-    availableFor: ["express", "custom"],
-  },
+  // Lyrics Selection moved earlier
   {
     id: "song-audio",
     component: SongAudio,
