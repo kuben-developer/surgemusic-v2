@@ -1,6 +1,6 @@
 "use client"
 
-import { Zap } from "lucide-react"
+import { type LucideIcon, Activity, Disc, Flame, Guitar, Heart, Home, Mic2, Music, Radio, Skull, SlidersHorizontal, Sparkles, Star, Sun, Zap } from "lucide-react"
 
 type GenreKey =
   | "rap"
@@ -45,16 +45,37 @@ const ELECTRONIC_SUB: { key: GenreKey; label: string }[] = [
 ];
 
 export function GenreSelection({ selectedGenre, setSelectedGenre, genreError }: GenreSelectionProps) {
-  const chip = (g: { key: GenreKey; label: string }) => (
-    <button
-      key={g.key}
-      onClick={() => setSelectedGenre(selectedGenre === g.key ? null : g.key)}
-      className={`w-full px-4 cursor-pointer py-2 rounded-md border text-sm transition-colors
-        ${selectedGenre === g.key ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent"}`}
-    >
-      {g.label}
-    </button>
-  );
+  const ICONS: Record<GenreKey, LucideIcon> = {
+    rap: Mic2,
+    pop: Star,
+    indie: Sparkles,
+    country: Guitar,
+    rnb: Heart,
+    afrobeats: Sun,
+    rock: Flame,
+    metal: Skull,
+    reggaeton: Radio,
+    house: Home,
+    techno: Activity,
+    edm: Disc,
+    other_electronic: SlidersHorizontal,
+    other: Music,
+  };
+
+  const chip = (g: { key: GenreKey; label: string }) => {
+    const Icon = ICONS[g.key];
+    return (
+      <button
+        key={g.key}
+        onClick={() => setSelectedGenre(selectedGenre === g.key ? null : g.key)}
+        className={`w-full px-3 cursor-pointer py-2 rounded-md border text-sm transition-colors flex items-center justify-center gap-2
+          ${selectedGenre === g.key ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent"}`}
+      >
+        <Icon className="w-4 h-4" />
+        <span>{g.label}</span>
+      </button>
+    );
+  };
 
   return (
     <section className={`bg-card rounded-xl p-8 shadow-sm border ${genreError ? 'ring-2 ring-red-500' : ''}`}>

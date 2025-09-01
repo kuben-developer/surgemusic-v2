@@ -46,8 +46,9 @@ export const CONTENT_THEMES: ThemeDef[] = [
     label: "Live Shows",
     imageFolder: THEME_DEFAULT_FOLDER,
     subThemes: [
-      { key: "stage_avatars", label: "Stage Avatars", imageFolder: THEME_DEFAULT_FOLDER },
       { key: "gigs", label: "Gigs", imageFolder: THEME_DEFAULT_FOLDER },
+      { key: "stage_avatars", label: "Stage Avatars", imageFolder: THEME_DEFAULT_FOLDER },
+      
     ]
   },
 ];
