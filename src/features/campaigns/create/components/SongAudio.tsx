@@ -7,7 +7,7 @@ import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
 import { LyricsEditor } from "./LyricsEditor"
-import { SubscriptionDialog } from "./SubscriptionDialog"
+import { LyricsFeatureDialog } from "./LyricsFeatureDialog"
 import { convertVideoToAudio } from "@/utils/media-converter.utils"
 import { getAudioDuration } from "@/utils/audio-trimmer.utils"
 import { type LyricsLine, initializeEmptyLyrics } from "@/utils/srt-converter.utils"
@@ -457,11 +457,10 @@ export function SongAudio({
             </div>
         </section>
         
-        <SubscriptionDialog
+        <LyricsFeatureDialog
             open={showSubscriptionDialog}
             onOpenChange={setShowSubscriptionDialog}
             featureDescription="Automatically transcribe your audio and edit lyrics with AI-powered tools. Create perfectly synchronized captions for your videos."
-            isFirstTimeUser={isFirstTimeUser}
         />
     </>
     )

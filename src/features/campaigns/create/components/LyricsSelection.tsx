@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Info, Zap, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SubscriptionDialog } from "./SubscriptionDialog";
+import { LyricsFeatureDialog } from "./LyricsFeatureDialog";
 
 interface LyricsSelectionProps {
   selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
@@ -21,33 +21,33 @@ const OPTIONS: Array<{
   pro?: boolean;
   description?: string;
 }> = [
-  {
-    key: "lyrics",
-    label: "Lyrics",
-    img: "/lyrics_and_hook/lyrics.gif",
-    pro: true,
-    description:
-      "Generate professional lyrics synchronized with your music. Perfect for lyric videos and music content.",
-  },
-  {
-    key: "lyrics-hooks",
-    label: "Lyrics + Viral Hooks",
-    img: "/lyrics_and_hook/lyrics_viral_hook.gif",
-    pro: true,
-    description:
-      "Create engaging content with both lyrics and viral hooks. Maximize engagement with dynamic captions.",
-  },
-  {
-    key: "hooks",
-    label: "Viral Hooks",
-    img: "/lyrics_and_hook/viral_hook.gif",
-  },
-  {
-    key: "video-only",
-    label: "Video Only",
-    img: "/lyrics_and_hook/video_only.gif",
-  },
-];
+    {
+      key: "lyrics",
+      label: "Lyrics",
+      img: "/lyrics_and_hook/lyrics.gif",
+      pro: true,
+      description:
+        "Auto-generate lyrics for all your videos - lyrics increase watch-time and increase chances of virality.",
+    },
+    {
+      key: "lyrics-hooks",
+      label: "Lyrics + Viral Hooks",
+      img: "/lyrics_and_hook/lyrics_viral_hook.gif",
+      pro: true,
+      description:
+        "Auto-generate lyrics for all your videos - lyrics increase watch-time and increase chances of virality.",
+    },
+    {
+      key: "hooks",
+      label: "Viral Hooks",
+      img: "/lyrics_and_hook/viral_hook.gif",
+    },
+    {
+      key: "video-only",
+      label: "Video Only",
+      img: "/lyrics_and_hook/video_only.gif",
+    },
+  ];
 
 export function LyricsSelection({
   selectedLyricsOption,
@@ -95,18 +95,20 @@ export function LyricsSelection({
                 return (
                   <div key={opt.key} className="space-y-3">
                     <div className="relative aspect-[9/16] rounded-lg overflow-hidden border shadow-sm">
-                      {!hasProFeatures && opt.pro && (
+                      {opt.pro && (
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedFeatureDescription(opt.description || "");
-                            setShowSubscriptionDialog(true);
+                            if (!hasProFeatures) {
+                              setSelectedFeatureDescription(opt.description || "");
+                              setShowSubscriptionDialog(true);
+                            }
                           }}
                           className="absolute top-2 right-2"
-                          aria-label="Requires Pro Plan"
+                          aria-label="Growth Feature"
                         >
                           <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 cursor-pointer">
-                            <Sparkles className="w-3 h-3" /> Pro
+                            <Sparkles className="w-3 h-3" />Growth
                           </Badge>
                         </button>
                       )}
@@ -128,11 +130,10 @@ export function LyricsSelection({
         </div>
       </section>
 
-      <SubscriptionDialog
+      <LyricsFeatureDialog
         open={showSubscriptionDialog}
         onOpenChange={setShowSubscriptionDialog}
         featureDescription={selectedFeatureDescription}
-        isFirstTimeUser={isFirstTimeUser}
       />
     </>
   );

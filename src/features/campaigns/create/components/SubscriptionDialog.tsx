@@ -40,25 +40,18 @@ export function SubscriptionDialog({
             <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <DialogTitle className="text-xl">Upgrade to Access Pro Features</DialogTitle>
+            <DialogTitle className="text-xl">Upgrade to Growth Plan to Access Lyrics</DialogTitle>
           </div>
-          <DialogDescription className="text-base">
-            Available on {isFirstTimeUser ? "Free Trial, " : ""}Growth plan and above
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
           <p className="text-muted-foreground">
             {featureDescription}
           </p>
 
           <div className="space-y-3">
-            <p className="font-medium">With Pro access, you'll get:</p>
+            <p className="font-medium">With Growth Plan, you'll get:</p>
             <ul className="space-y-2">
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <span className="text-sm">Access to all Pro features</span>
-              </li>
               <li className="flex items-start gap-2">
                 <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                 <span className="text-sm">Advanced lyrics generation</span>
@@ -75,9 +68,7 @@ export function SubscriptionDialog({
           </div>
 
           <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-            {isFirstTimeUser 
-              ? "Start your free trial or upgrade to the Growth plan (or above) to unlock all Pro features." 
-              : "Upgrade to the Growth plan (or above) to unlock all Pro features."} Note: Starter plan does not include Pro features.
+            Upgrade to the Growth plan (or above) to unlock all these features.
           </p>
         </div>
 
