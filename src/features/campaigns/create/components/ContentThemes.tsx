@@ -114,6 +114,12 @@ export function ContentThemes({
                 const activeKey = activeSubTabs[theme.key] ?? subKeys[0];
                 const isSelected = selectedThemes.includes(activeKey);
 
+                const colsClass = theme.subThemes.length === 2
+                  ? "grid-cols-2"
+                  : theme.subThemes.length === 3
+                  ? "grid-cols-3"
+                  : "grid-cols-4";
+
                 return (
                   <div key={theme.key} className="space-y-4">
                     <h3 className="text-xl font-medium">{theme.label}</h3>
@@ -121,9 +127,9 @@ export function ContentThemes({
                       value={activeKey}
                       onValueChange={(v) => setActiveSubTabs((prev) => ({ ...prev, [theme.key]: v }))}
                     >
-                      <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full">
+                      <TabsList className={`grid ${colsClass} w-full`}>
                         {theme.subThemes.map((s) => (
-                          <TabsTrigger key={s.key} value={s.key} className="capitalize">
+                          <TabsTrigger key={s.key} value={s.key} className="capitalize w-full justify-center">
                             {s.label}
                           </TabsTrigger>
                         ))}
