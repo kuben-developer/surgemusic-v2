@@ -15,23 +15,23 @@ type CustomSidebarProps = LayoutWrapperProps
 
 function SidebarHeader() {
   return (
-    <header 
+    <header
       className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
       role="banner"
     >
       <div className="flex items-center gap-2 px-4 w-full justify-between">
-        <SidebarTrigger 
-          className="-ml-1" 
+        <SidebarTrigger
+          className="-ml-1"
           aria-label="Toggle sidebar"
         />
-        <div 
+        <div
           className="flex items-center space-x-1 gap-2"
           role="toolbar"
           aria-label="User controls"
         >
           <CreditsDisplay />
           <ThemeSwitcher />
-          <UserButton 
+          <UserButton
             appearance={{
               elements: {
                 avatarBox: "w-8 h-8"
@@ -44,15 +44,15 @@ function SidebarHeader() {
   )
 }
 
-export default function Sidebar({ 
+export default function Sidebar({
   children
 }: CustomSidebarProps) {
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar className="w-56" />
       <SidebarInset>
         <SidebarHeader />
-        <main 
+        <main
           className="flex flex-1 flex-col gap-4 p-4 pt-0"
           role="main"
           aria-label="Main application content"
