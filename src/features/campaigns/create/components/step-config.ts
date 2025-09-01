@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { CampaignInfo } from "./CampaignInfo";
+// import { CampaignInfo } from "./CampaignInfo";
 import { ContentThemes } from "./ContentThemes";
 import { GenreSelection } from "./GenreSelection";
 import { ImageAssets } from "./ImageAssets";
@@ -111,7 +111,7 @@ export interface StepConfig {
 }
 
 export const STEP_CONFIGS: StepConfig[] = [
-  // Move Content Themes to Step 1
+  // Step 1: Content Themes
   {
     id: "content-themes",
     component: ContentThemes,
@@ -122,7 +122,7 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["express", "custom"],
   },
-  // Move Lyrics Selection to Step 2
+  // Step 2: Lyrics Selection
   {
     id: "lyrics-selection",
     component: LyricsSelection,
@@ -135,41 +135,7 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["express", "custom"],
   },
-  {
-    id: "campaign-info",
-    component: CampaignInfo,
-    propsSelector: (props) => ({
-      campaignName: props.campaignName,
-      setCampaignName: props.setCampaignName,
-      campaignType: props.campaignType,
-      setCampaignType: props.setCampaignType,
-      campaignNameError: props.campaignNameError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  {
-    id: "genre-selection",
-    component: GenreSelection,
-    propsSelector: (props) => ({
-      selectedGenre: props.selectedGenre,
-      setSelectedGenre: props.setSelectedGenre,
-      genreError: props.genreError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  {
-    id: "song-details",
-    component: SongDetails,
-    propsSelector: (props) => ({
-      songName: props.songName,
-      setSongName: props.setSongName,
-      artistName: props.artistName,
-      setArtistName: props.setArtistName,
-      songDetailsError: props.songDetailsError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  // Lyrics Selection moved earlier
+  // Step 3: Song Audio
   {
     id: "song-audio",
     component: SongAudio,
@@ -190,6 +156,34 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["express", "custom"],
   },
+  // Step 4: Song Details (now includes Campaign Name)
+  {
+    id: "song-details",
+    component: SongDetails,
+    propsSelector: (props) => ({
+      campaignName: props.campaignName,
+      setCampaignName: props.setCampaignName,
+      songName: props.songName,
+      setSongName: props.setSongName,
+      artistName: props.artistName,
+      setArtistName: props.setArtistName,
+      songDetailsError: props.songDetailsError,
+      campaignNameError: props.campaignNameError,
+    }),
+    availableFor: ["express", "custom"],
+  },
+  // Step 5: Genre Selection
+  {
+    id: "genre-selection",
+    component: GenreSelection,
+    propsSelector: (props) => ({
+      selectedGenre: props.selectedGenre,
+      setSelectedGenre: props.setSelectedGenre,
+      genreError: props.genreError,
+    }),
+    availableFor: ["express", "custom"],
+  },
+  // Step 6: Video Assets (conditionally included by navigation hook)
   {
     id: "video-assets",
     component: VideoAssets,
@@ -202,6 +196,7 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["custom"],
   },
+  // Step 7: Image Assets
   {
     id: "image-assets",
     component: ImageAssets,
@@ -214,6 +209,7 @@ export const STEP_CONFIGS: StepConfig[] = [
     }),
     availableFor: ["custom"],
   },
+  // Step 8: Video Count
   {
     id: "video-count",
     component: VideoCount,

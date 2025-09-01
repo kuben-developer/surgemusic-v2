@@ -17,31 +17,33 @@ interface FormErrors {
 interface SectionsProps {
   campaignType: "custom" | "express";
   errors: FormErrors;
+  selectedThemes?: string[]; // used to conditionally show Video Assets
 }
 
-export function useCampaignFormSections({ campaignType, errors }: SectionsProps) {
+export function useCampaignFormSections({ campaignType, errors, selectedThemes = [] }: SectionsProps) {
   const sections = useMemo(() => {
     const baseSections = [
       { title: "Content Themes", error: errors.themesError },
       { title: "Content Appearance", error: errors.lyricsOptionError },
-      { title: "Campaign Info", error: errors.campaignNameError },
-      { title: "Genre Selection", error: errors.genreError },
-      { title: "Song Details", error: errors.songDetailsError },
       { title: "Song Audio", error: errors.songAudioError },
+      { title: "Song & Campaign Details", error: errors.songDetailsError },
+      { title: "Genre Selection", error: errors.genreError },
     ];
 
     // Add custom sections for campaign type
     if (campaignType === "custom") {
-      baseSections.push(
-        { title: "Video Assets", error: errors.musicVideoError },
-        { title: "Image Assets", error: errors.albumArtError },
-      );
+      // Only show Video Assets if the reactions theme was selected in step 1
+      const hasReactions = selectedThemes.includes("reactions");
+      if (hasReactions) {
+        baseSections.push({ title: "Video Assets", error: errors.musicVideoError });
+      }
     }
 
+    baseSections.push({ title: "Image Assets", error: errors.albumArtError });
     baseSections.push({ title: "Video Count", error: errors.videoCountError });
 
     return baseSections;
-  }, [campaignType, errors]);
+  }, [campaignType, errors, selectedThemes]);
 
   return { sections };
 }

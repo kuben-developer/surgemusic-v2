@@ -29,6 +29,7 @@ export function useCampaignForm({ subscriptionPriceId, isTrial }: UseCampaignFor
       themesError: state.themesError,
       lyricsOptionError: state.lyricsOptionError,
     },
+    selectedThemes: state.selectedThemes,
   });
 
   // Use the validation hook

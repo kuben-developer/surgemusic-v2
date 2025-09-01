@@ -5,14 +5,18 @@ import { STEP_CONFIGS, type StepConfig } from "../components/step-config";
 
 interface UseStepNavigationProps {
   campaignType: "custom" | "express";
+  selectedThemes?: string[];
 }
 
-export function useStepNavigation({ campaignType }: UseStepNavigationProps) {
+export function useStepNavigation({ campaignType, selectedThemes = [] }: UseStepNavigationProps) {
+  const includeVideoAssets = selectedThemes.includes("reactions");
   const availableSteps = useMemo(() => {
-    return STEP_CONFIGS.filter(step => 
-      step.availableFor.includes(campaignType)
-    );
-  }, [campaignType]);
+    let steps = STEP_CONFIGS.filter(step => step.availableFor.includes(campaignType));
+    if (!includeVideoAssets) {
+      steps = steps.filter(step => step.id !== "video-assets");
+    }
+    return steps;
+  }, [campaignType, includeVideoAssets]);
 
   const getStepByIndex = (index: number): StepConfig | null => {
     return availableSteps[index] || null;

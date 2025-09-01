@@ -18,7 +18,7 @@ export function StepRenderer({
   isTrial,
   ...stepProps
 }: StepRendererProps) {
-  const { getStepByIndex } = useStepNavigation({ campaignType });
+  const { getStepByIndex } = useStepNavigation({ campaignType, selectedThemes: stepProps.selectedThemes });
   
   // Get the current step configuration
   const currentStep = getStepByIndex(currentSection);
