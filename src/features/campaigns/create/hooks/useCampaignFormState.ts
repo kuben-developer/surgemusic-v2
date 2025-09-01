@@ -30,7 +30,9 @@ export function useCampaignFormState() {
   const [songAudioError, setSongAudioError] = useState(false);
 
   // Genre state
-  const [selectedGenre, setSelectedGenre] = useState<"rap" | "electronic" | "pop" | "other" | null>(null);
+  const [selectedGenre, setSelectedGenre] = useState<
+    | "rap" | "pop" | "indie" | "country" | "rnb" | "afrobeats" | "rock" | "metal" | "reggaeton" | "house" | "techno" | "edm" | "other_electronic" | "other" | null
+  >(null);
   const [genreError, setGenreError] = useState(false);
 
   // Video Count state

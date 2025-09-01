@@ -1,72 +1,86 @@
 "use client"
 
-import { Globe, Headphones, Music, Star, Zap } from "lucide-react"
+import { Zap } from "lucide-react"
+
+type GenreKey =
+  | "rap"
+  | "pop"
+  | "indie"
+  | "country"
+  | "rnb"
+  | "afrobeats"
+  | "rock"
+  | "metal"
+  | "reggaeton"
+  | "house"
+  | "techno"
+  | "edm"
+  | "other_electronic"
+  | "other";
 
 interface GenreSelectionProps {
-    selectedGenre: "rap" | "electronic" | "pop" | "other" | null
-    setSelectedGenre: (genre: "rap" | "electronic" | "pop" | "other" | null) => void
+    selectedGenre: GenreKey | null
+    setSelectedGenre: (genre: GenreKey | null) => void
     genreError: boolean
 }
 
-export function GenreSelection({
-    selectedGenre,
-    setSelectedGenre,
-    genreError
-}: GenreSelectionProps) {
-    return (
-        <section className={`bg-card rounded-xl p-8 shadow-sm border ${genreError ? 'ring-2 ring-red-500' : ''}`}>
-            <div className="max-w-2xl mx-auto space-y-6">
-                <div className="flex items-center gap-3 pb-2 border-b">
-                    <Zap className="w-7 h-7" />
-                    <h2 className="text-2xl font-semibold">Select Genre</h2>
-                </div>
-                <p className="text-muted-foreground text-lg">Choose the genre category that your music falls into.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Rap/Hip-Hop */}
-                    <button
-                        onClick={() => setSelectedGenre(selectedGenre === "rap" ? null : "rap")}
-                        className={`w-full flex items-center gap-4 p-6 rounded-lg border bg-card hover:bg-accent transition-colors ${selectedGenre === "rap" ? "ring-2 ring-primary" : ""}`}
-                    >
-                        <div className="p-3 rounded-lg bg-background">
-                            <Headphones className="w-8 h-8" />
-                        </div>
-                        <span className="text-xl font-medium">Rap / Hip-Hop</span>
-                    </button>
+const MAIN_GENRES: { key: GenreKey; label: string }[] = [
+  { key: "rap", label: "Rap" },
+  { key: "pop", label: "Pop" },
+  { key: "indie", label: "Indie" },
+  { key: "country", label: "Country" },
+  { key: "rnb", label: "R&B" },
+  { key: "afrobeats", label: "Afrobeats" },
+  { key: "rock", label: "Rock" },
+  { key: "metal", label: "Metal" },
+  { key: "reggaeton", label: "Reggaeton" },
+  { key: "other", label: "Other Genres" },
+];
 
-                    {/* Electronic */}
-                    <button
-                        onClick={() => setSelectedGenre(selectedGenre === "electronic" ? null : "electronic")}
-                        className={`w-full flex items-center gap-4 p-6 rounded-lg border bg-card hover:bg-accent transition-colors ${selectedGenre === "electronic" ? "ring-2 ring-primary" : ""}`}
-                    >
-                        <div className="p-3 rounded-lg bg-background">
-                            <Globe className="w-8 h-8" />
-                        </div>
-                        <span className="text-xl font-medium">Electronic</span>
-                    </button>
+const ELECTRONIC_SUB: { key: GenreKey; label: string }[] = [
+  { key: "house", label: "House" },
+  { key: "techno", label: "Techno" },
+  { key: "edm", label: "EDM" },
+  { key: "other_electronic", label: "Other Electronic" },
+];
 
-                    {/* Pop/Indie */}
-                    <button
-                        onClick={() => setSelectedGenre(selectedGenre === "pop" ? null : "pop")}
-                        className={`w-full flex items-center gap-4 p-6 rounded-lg border bg-card hover:bg-accent transition-colors ${selectedGenre === "pop" ? "ring-2 ring-primary" : ""}`}
-                    >
-                        <div className="p-3 rounded-lg bg-background">
-                            <Star className="w-8 h-8" />
-                        </div>
-                        <span className="text-xl font-medium">Pop / Indie</span>
-                    </button>
+export function GenreSelection({ selectedGenre, setSelectedGenre, genreError }: GenreSelectionProps) {
+  const chip = (g: { key: GenreKey; label: string }) => (
+    <button
+      key={g.key}
+      onClick={() => setSelectedGenre(selectedGenre === g.key ? null : g.key)}
+      className={`w-full px-4 cursor-pointer py-2 rounded-md border text-sm transition-colors
+        ${selectedGenre === g.key ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent"}`}
+    >
+      {g.label}
+    </button>
+  );
 
-                    {/* Other Genres */}
-                    <button
-                        onClick={() => setSelectedGenre(selectedGenre === "other" ? null : "other")}
-                        className={`w-full flex items-center gap-4 p-6 rounded-lg border bg-card hover:bg-accent transition-colors ${selectedGenre === "other" ? "ring-2 ring-primary" : ""}`}
-                    >
-                        <div className="p-3 rounded-lg bg-background">
-                            <Music className="w-8 h-8" />
-                        </div>
-                        <span className="text-xl font-medium">Other Genres</span>
-                    </button>
-                </div>
+  return (
+    <section className={`bg-card rounded-xl p-8 shadow-sm border ${genreError ? 'ring-2 ring-red-500' : ''}`}>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center gap-3 pb-2 border-b">
+          <Zap className="w-7 h-7" />
+          <h2 className="text-2xl font-semibold">Select Genre</h2>
+        </div>
+        <p className="text-muted-foreground text-lg">Choose the genre that best describes your music.</p>
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Main Genres</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {MAIN_GENRES.map(chip)}
             </div>
-        </section>
-    )
-} 
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Electronic</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {ELECTRONIC_SUB.map(chip)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}

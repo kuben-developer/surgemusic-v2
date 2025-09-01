@@ -33,8 +33,8 @@ export interface StepProps {
   songAudioError: boolean;
 
   // Genre
-  selectedGenre: "rap" | "electronic" | "pop" | "other" | null;
-  setSelectedGenre: (value: "rap" | "electronic" | "pop" | "other" | null) => void;
+  selectedGenre: "rap" | "pop" | "indie" | "country" | "rnb" | "afrobeats" | "rock" | "metal" | "reggaeton" | "house" | "techno" | "edm" | "other_electronic" | "other" | null;
+  setSelectedGenre: (value: "rap" | "pop" | "indie" | "country" | "rnb" | "afrobeats" | "rock" | "metal" | "reggaeton" | "house" | "techno" | "edm" | "other_electronic" | "other" | null) => void;
   genreError: boolean;
 
   // Video Count
