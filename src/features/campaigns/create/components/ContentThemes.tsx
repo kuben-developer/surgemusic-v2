@@ -129,7 +129,11 @@ export function ContentThemes({
                     >
                       <TabsList className={`grid ${colsClass} w-full`}>
                         {theme.subThemes.map((s) => (
-                          <TabsTrigger key={s.key} value={s.key} className="capitalize w-full justify-center">
+                          <TabsTrigger
+                            key={s.key}
+                            value={s.key}
+                            className="capitalize w-full justify-center bg-transparent hover:bg-accent/30 dark:hover:bg-muted/60 data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-white dark:data-[state=active]:text-black"
+                          >
                             {s.label}
                           </TabsTrigger>
                         ))}
