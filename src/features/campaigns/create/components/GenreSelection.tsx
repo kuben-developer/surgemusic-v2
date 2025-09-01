@@ -68,10 +68,10 @@ export function GenreSelection({ selectedGenre, setSelectedGenre, genreError }: 
       <button
         key={g.key}
         onClick={() => setSelectedGenre(selectedGenre === g.key ? null : g.key)}
-        className={`w-full px-3 cursor-pointer py-2 rounded-md border text-sm transition-colors flex items-center justify-center gap-2
+        className={`w-full px-4 cursor-pointer py-3 rounded-lg border text-base transition-colors flex items-center justify-center gap-3
           ${selectedGenre === g.key ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent"}`}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="w-5 h-5" />
         <span>{g.label}</span>
       </button>
     );
@@ -89,14 +89,14 @@ export function GenreSelection({ selectedGenre, setSelectedGenre, genreError }: 
         <div className="space-y-6">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">Main Genres</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {MAIN_GENRES.map(chip)}
             </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">Electronic</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {ELECTRONIC_SUB.map(chip)}
             </div>
           </div>

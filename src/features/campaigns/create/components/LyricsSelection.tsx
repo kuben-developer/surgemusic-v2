@@ -96,9 +96,19 @@ export function LyricsSelection({
                   <div key={opt.key} className="space-y-3">
                     <div className="relative aspect-[9/16] rounded-lg overflow-hidden border shadow-sm">
                       {!hasProFeatures && opt.pro && (
-                        <Badge className="absolute top-2 right-2 gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
-                          <Sparkles className="w-3 h-3" /> Pro Plan
-                        </Badge>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFeatureDescription(opt.description || "");
+                            setShowSubscriptionDialog(true);
+                          }}
+                          className="absolute top-2 right-2"
+                          aria-label="Requires Pro Plan"
+                        >
+                          <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 cursor-pointer">
+                            <Sparkles className="w-3 h-3" /> Pro
+                          </Badge>
+                        </button>
                       )}
                       <img src={opt.img} alt={`${opt.label} preview`} className="w-full h-full object-cover" />
                     </div>

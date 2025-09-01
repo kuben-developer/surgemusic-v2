@@ -1,9 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Music, Upload, Scissors, FileText, Loader2, Sparkles } from "lucide-react"
+import { Music, Upload, Scissors, Loader2 } from "lucide-react"
 import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
@@ -23,6 +22,7 @@ interface SongAudioProps {
     songAudioError: boolean
     lyrics: LyricsLine[]
     setLyrics: (lyrics: LyricsLine[]) => void
+    selectedLyricsOption?: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null
     hasProFeatures?: boolean
     isFirstTimeUser?: boolean
     wordsData?: Array<{
@@ -59,6 +59,7 @@ export function SongAudio({
     songAudioError,
     lyrics,
     setLyrics,
+    selectedLyricsOption = null,
     hasProFeatures = false,
     isFirstTimeUser = true,
     wordsData,
@@ -152,7 +153,11 @@ export function SongAudio({
                 // If audio is exactly 15 seconds (with small tolerance), skip trimmer
                 if (duration >= 15 && duration < 16) {
                     toast.info("Audio is already 15 seconds, uploading directly...")
-                    await uploadFile(audioFile)
+                    const uploadRes = await uploadFile(audioFile)
+                    const shouldTranscribe = selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks";
+                    if (uploadRes && shouldTranscribe) {
+                        await handleTranscribe(uploadRes.publicUrl)
+                    }
                 } else {
                     setShowTrimmer(true)
                 }
@@ -184,7 +189,11 @@ export function SongAudio({
             // If audio is exactly 15 seconds (with small tolerance), skip trimmer
             if (duration >= 15 && duration < 16) {
                 toast.info("Audio is already 15 seconds, uploading directly...")
-                await uploadFile(file)
+                const uploadRes = await uploadFile(file)
+                const shouldTranscribe = selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks";
+                if (uploadRes && shouldTranscribe) {
+                    await handleTranscribe(uploadRes.publicUrl)
+                }
             } else {
                 setShowTrimmer(true)
             }
@@ -200,7 +209,12 @@ export function SongAudio({
             setSongAudioBase64(base64)
 
             // Upload the trimmed 15-second audio
-            await uploadFile(trimmedFile)
+            const uploadRes = await uploadFile(trimmedFile)
+            // Auto-transcribe after trimming if Lyrics or Lyrics+Hooks selected
+            const shouldTranscribe = selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks";
+            if (uploadRes && shouldTranscribe) {
+                await handleTranscribe(uploadRes.publicUrl)
+            }
         } finally {
             setIsTrimming(false)
         }
@@ -225,16 +239,17 @@ export function SongAudio({
         setLyricsWithWords(undefined)
     }
     
-    const handleTranscribe = async () => {
-        if (!songAudioUrl) {
+    const handleTranscribe = async (urlOverride?: string) => {
+        const urlToUse = urlOverride ?? songAudioUrl;
+        if (!urlToUse) {
             toast.error("No audio to transcribe")
             return
         }
         
         setIsTranscribing(true)
         try {
-            console.log("Starting transcription for URL:", songAudioUrl)
-            const result = await transcribeAudio({ audioUrl: songAudioUrl })
+            console.log("Starting transcription for URL:", urlToUse)
+            const result = await transcribeAudio({ audioUrl: urlToUse })
             console.log("Transcription result:", result)
             
             if (result.success && result.lyrics && result.lyrics.length > 0) {
@@ -356,79 +371,13 @@ export function SongAudio({
                                     Remove Audio
                                 </Button>
                             </div>
-                            
-                            {/* Transcribe Lyrics Section - Separate from audio box */}
-                            {!showLyricsEditor && (
-                                <div className="border rounded-xl p-6 space-y-4 bg-muted/20">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-lg font-semibold">Transcribe Lyrics</h3>
-                                            <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
-                                                <Sparkles className="w-3 h-3" />
-                                                Pro Plan
-                                            </Badge>
-                                        </div>
-                                        
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-primary mt-0.5">•</span>
-                                                <span>Boost video engagement with synchronized lyrics overlays</span>
-                                            </p>
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-primary mt-0.5">•</span>
-                                                <span>Increase viewer retention by making content more accessible</span>
-                                            </p>
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-primary mt-0.5">•</span>
-                                                <span>Create professional-looking videos that stand out on social media</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                            // Check Pro features access first
-                                            if (!hasProFeatures) {
-                                                setShowSubscriptionDialog(true);
-                                                return;
-                                            }
-                                            
-                                            // Check if lyrics have actual content (not just empty entries)
-                                            const hasLyricsContent = lyrics.length > 0 && lyrics.some(l => l.text.trim().length > 0);
-                                            if (hasLyricsContent) {
-                                                setShowLyricsEditor(true);
-                                            } else {
-                                                handleTranscribe();
-                                            }
-                                        }}
-                                        disabled={isTranscribing}
-                                        className="w-full"
-                                    >
-                                        {isTranscribing ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Transcribing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FileText className="w-4 h-4 mr-2" />
-                                                {lyrics.length > 0 && lyrics.some(l => l.text.trim()) ? 'Edit Lyrics' : 'Transcribe & Edit Lyrics'}
-                                            </>
-                                        )}
-                                    </Button>
-                                    
-                                    {lyrics.length > 0 && (
-                                        <div className="text-sm text-muted-foreground mt-2 p-3 bg-background/50 rounded-lg">
-                                            <span className="flex items-center gap-2">
-                                                <FileText className="w-4 h-4 text-primary" />
-                                                <span className="font-medium">Lyrics added</span>
-                                                <span className="text-xs">({lyrics.filter(l => l.text.trim()).length}/15 seconds have text)</span>
-                                            </span>
-                                        </div>
-                                    )}
+                            {isTranscribing && (selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && (
+                                <div className="border rounded-xl p-4 flex items-center justify-center gap-2 bg-muted/20">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Transcribing...</span>
                                 </div>
                             )}
+                            {/* Auto-transcription runs after upload/trim when applicable; no manual transcribe card */}
                         </>
                     ) : showTrimmer && processedAudioFile ? (
                         isTrimming || isUploading ? (

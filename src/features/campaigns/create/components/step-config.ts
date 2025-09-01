@@ -145,6 +145,7 @@ export const STEP_CONFIGS: StepConfig[] = [
       songAudioBase64: props.songAudioBase64,
       setSongAudioBase64: props.setSongAudioBase64,
       songAudioError: props.songAudioError,
+      selectedLyricsOption: props.selectedLyricsOption,
       lyrics: props.lyrics,
       setLyrics: props.setLyrics,
       hasProFeatures: props.hasProFeatures || false,
