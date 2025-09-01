@@ -636,54 +636,54 @@ export const sendWebhook = internalAction({
         srtUrls.push('');
       }
 
-      const isCustomCampaign = args.themes.length > 0;
-      let payload;
+      // Build a single payload format (no express/custom branching)
+      const selected = (key: string) => args.themes.includes(key) ? "Yes" : "No";
 
-      if (isCustomCampaign) {
-        payload = [{
-          "Album Art": args.campaignCoverImageUrl || "",
-          "Artist Name": args.artistName,
-          "Credits": args.videoCount.toString(),
-          "Genre": args.genre,
-          "Girls content": args.themes.includes("girls") ? "Yes" : "No",
-          "luxuryLifestyle": args.themes.includes("luxury_lifestyle") ? "Yes" : "No",
-          "natureLifestyle": args.themes.includes("nature_lifestyle") ? "Yes" : "No",
-          "customEnterpriseContent": args.themes.includes("enterprise") ? "Yes" : "No",
-          "Music": args.songAudioUrl || "",
-          "Music Content": args.themes.includes("recommendation") ? "Yes" : "No",
-          "Performance Video": args.musicVideoUrl || "",
-          "Reaction Content": args.themes.includes("reactions") ? "Yes" : "No",
-          "Song Name": args.songName,
-          "Campaign ID": args.referenceId,
-          "Campaign Setup": "custom",
-          "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics": args.hasLyrics ? "Yes" : "No",
-          "Captions": args.hasCaptions ? "Yes" : "No",
-          "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time
-          "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
-          "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time
-          "lyricsSRT4": srtUrls[3] || "",  // 4 words at a time
-          "lyricsSRT5": srtUrls[4] || "",  // 5 words at a time
-        }];
-      } else {
-        payload = [{
-          "Credits": args.videoCount.toString(),
-          "Music": args.songAudioUrl || "",
-          "Campaign ID": args.referenceId,
-          "Song Name": args.songName,
-          "Artist Name": args.artistName,
-          "Genre": args.genre,
-          "Campaign Setup": "express",
-          "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
-          "Lyrics": args.hasLyrics ? "Yes" : "No",
-          "Captions": args.hasCaptions ? "Yes" : "No",
-          "lyricsSRT1": srtUrls[0] || "",  // 1 word at a time 
-          "lyricsSRT2": srtUrls[1] || "",  // 2 words at a time
-          "lyricsSRT3": srtUrls[2] || "",  // 3 words at a time
-          "lyricsSRT4": srtUrls[3] || "",  // 4 words at a time
-          "lyricsSRT5": srtUrls[4] || "",  // 5 words at a time
-        }];
-      }
+      // Map new themes to Make.com field names (Yes/No per selection)
+      const themeFlags: Record<string, string> = {
+        // Girls sub-themes
+        popGirls: selected("girls_chic"),
+        rapGirls: selected("girls_city"),
+        raveGirls: selected("girls_party"),
+        rockGirls: selected("girls_alternative"),
+
+        // Live shows sub-themes
+        concerts: selected("gigs"),
+        stageAvatars: selected("stage_avatars"),
+
+        // Other themes
+        nature: selected("nature"),
+        reactions: selected("reactions"),
+        rockAesthetic: selected("rock_aesthetic"),
+        visualiser: selected("visualiser"),
+        v01Dance: selected("dance"),
+        musicRec: selected("music_discovery"),
+        gymAesthetic: selected("gym_workout"),
+        girlAesthetic: selected("feminine_energy"),
+        luxuryLifestyle: selected("luxury_lifestyle"),
+      };
+
+      const payload = [{
+        "Album Art": args.campaignCoverImageUrl || "",
+        "Artist Name": args.artistName,
+        "Credits": args.videoCount.toString(),
+        "Genre": args.genre,
+        "Music": args.songAudioUrl || "",
+        "Performance Video": args.musicVideoUrl || "",
+        "Song Name": args.songName,
+        "Campaign ID": args.referenceId,
+        "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
+        "Lyrics": args.hasLyrics ? "Yes" : "No",
+        "Captions": args.hasCaptions ? "Yes" : "No",
+        // SRT variations (1..5 words)
+        "lyricsSRT1": srtUrls[0] || "",
+        "lyricsSRT2": srtUrls[1] || "",
+        "lyricsSRT3": srtUrls[2] || "",
+        "lyricsSRT4": srtUrls[3] || "",
+        "lyricsSRT5": srtUrls[4] || "",
+        // Theme flags
+        ...themeFlags,
+      }];
 
       console.log("Sending webhook payload:", payload);
 
@@ -755,5 +755,3 @@ export const getInternal = internalQuery({
     return campaign;
   },
 })
-
-
