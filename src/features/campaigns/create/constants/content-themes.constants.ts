@@ -83,7 +83,7 @@ export function getLabelForKey(key: string): string {
   for (const t of CONTENT_THEMES) {
     if (t.subThemes) {
       const found = t.subThemes.find((s) => s.key === key);
-      if (found) return `${t.label}-${found.label}`;
+      if (found) return `${found.label} ${t.label}`;
     }
   }
   // Second pass: top-level themes

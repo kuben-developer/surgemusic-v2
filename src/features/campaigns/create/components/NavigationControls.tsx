@@ -34,7 +34,7 @@ export function NavigationControls({
           <Button
             size="lg"
             variant="outline"
-            className="min-w-[140px] gap-2 transition-all duration-200 hover:bg-muted"
+            className="min-w-[140px] gap-2 transition-all duration-200 hover:bg-muted cursor-pointer"
             onClick={onPrevious}
             disabled={currentSection === 0}
           >
@@ -57,7 +57,7 @@ export function NavigationControls({
           {isLastStep ? (
             <Button
               size="lg"
-              className="min-w-[140px] gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
+              className="min-w-[140px] cursor-pointer gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
               onClick={onGenerate}
               disabled={isPending}
             >
@@ -76,7 +76,7 @@ export function NavigationControls({
           ) : (
             <Button
               size="lg"
-              className="min-w-[140px] gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
+              className="min-w-[140px] cursor-pointer gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
               onClick={onNext}
             >
               Next

@@ -95,7 +95,7 @@ export function ContentThemes({
                     <button
                       type="button"
                       aria-label={`Remove ${getLabelForKey(key)}`}
-                      className="ml-1 inline-flex items-center justify-center rounded hover:opacity-80"
+                      className="ml-1 inline-flex items-center justify-center rounded hover:opacity-80 cursor-pointer"
                       onClick={() => handleRemoveTheme(key)}
                     >
                       <X className="w-3 h-3" />
@@ -117,8 +117,8 @@ export function ContentThemes({
                 const colsClass = theme.subThemes.length === 2
                   ? "grid-cols-2"
                   : theme.subThemes.length === 3
-                  ? "grid-cols-3"
-                  : "grid-cols-4";
+                    ? "grid-cols-3"
+                    : "grid-cols-4";
 
                 return (
                   <div key={theme.key} className="space-y-4">
@@ -132,7 +132,7 @@ export function ContentThemes({
                           <TabsTrigger
                             key={s.key}
                             value={s.key}
-                            className="capitalize w-full justify-center bg-transparent hover:bg-accent/30 dark:hover:bg-muted/60 data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-white dark:data-[state=active]:text-black"
+                            className="capitalize w-full cursor-pointer justify-center bg-transparent hover:bg-accent/30 dark:hover:bg-muted/60 data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-white dark:data-[state=active]:text-black"
                           >
                             {s.label}
                           </TabsTrigger>
@@ -156,7 +156,7 @@ export function ContentThemes({
                     <Button
                       variant={isSelected ? "default" : "outline"}
                       size="lg"
-                      className="w-full"
+                      className="w-full cursor-pointer"
                       onClick={() => handleAddSubTheme(theme.key, activeKey, subKeys)}
                     >
                       {isSelected ? (
@@ -191,7 +191,7 @@ export function ContentThemes({
                   <Button
                     variant={isSelected ? "default" : "outline"}
                     size="lg"
-                    className="w-full"
+                    className="w-full cursor-pointer"
                     onClick={() => handleAddTheme(theme.key)}
                   >
                     {isSelected ? (
