@@ -111,6 +111,17 @@ export interface StepConfig {
 }
 
 export const STEP_CONFIGS: StepConfig[] = [
+  // Move Content Themes to Step 1
+  {
+    id: "content-themes",
+    component: ContentThemes,
+    propsSelector: (props) => ({
+      selectedThemes: props.selectedThemes,
+      setSelectedThemes: props.setSelectedThemes,
+      themesError: props.themesError,
+    }),
+    availableFor: ["express", "custom"],
+  },
   {
     id: "campaign-info",
     component: CampaignInfo,
@@ -130,17 +141,6 @@ export const STEP_CONFIGS: StepConfig[] = [
       selectedGenre: props.selectedGenre,
       setSelectedGenre: props.setSelectedGenre,
       genreError: props.genreError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  {
-    id: "content-themes",
-    component: ContentThemes,
-    propsSelector: (props) => ({
-      selectedGenre: props.selectedGenre,
-      selectedThemes: props.selectedThemes,
-      setSelectedThemes: props.setSelectedThemes,
-      themesError: props.themesError,
     }),
     availableFor: ["express", "custom"],
   },

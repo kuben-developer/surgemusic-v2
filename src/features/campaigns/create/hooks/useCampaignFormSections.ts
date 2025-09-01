@@ -22,9 +22,9 @@ interface SectionsProps {
 export function useCampaignFormSections({ campaignType, errors }: SectionsProps) {
   const sections = useMemo(() => {
     const baseSections = [
+      { title: "Content Themes", error: errors.themesError },
       { title: "Campaign Info", error: errors.campaignNameError },
       { title: "Genre Selection", error: errors.genreError },
-      { title: "Content Themes", error: errors.themesError },
       { title: "Song Details", error: errors.songDetailsError },
       { title: "Lyrics Selection", error: errors.lyricsOptionError },
       { title: "Song Audio", error: errors.songAudioError },
