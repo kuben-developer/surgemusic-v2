@@ -75,7 +75,7 @@ export function getLabelForKey(key: string): string {
   for (const t of CONTENT_THEMES) {
     if (t.subThemes) {
       const found = t.subThemes.find((s) => s.key === key);
-      if (found) return found.label;
+      if (found) return `${t.label}-${found.label}`;
     }
     if (t.key === key) return t.label;
   }
