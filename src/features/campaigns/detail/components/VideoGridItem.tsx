@@ -13,6 +13,29 @@ const fadeInUp = {
   transition: { duration: 0.5 }
 };
 
+const themeFlags: Record<string, string> = {
+  // Girls sub-themes
+  popgirls: "Chic Girls",
+  rapgirls: "City Girls",
+  ravegirls: "Party Girls",
+  rockgirls: "Alternative Girls",
+
+  // Live shows sub-themes
+  concerts: "Gigs",
+  stageavatars: "Stage Avatars",
+
+  // Other themes
+  nature: "Nature",
+  reactions: "Reactions",
+  rockaesthetic: "Rock Aesthetic",
+  visualiser: "Visualiser",
+  v01dance: "Dance",
+  musicRec: "Music Discovery",
+  gymaesthetic: "Gym / Workout",
+  girlaesthetic: "Feminine Energy",
+  luxurylifestyle: "Luxury Lifestyle",
+}
+
 interface VideoGridItemProps {
   video: Doc<"generatedVideos">;
   index: number;
@@ -55,24 +78,15 @@ export function VideoGridItem({
           className="absolute top-3 right-3 gap-2 px-3 py-1.5 bg-background/50 backdrop-blur-md border-primary/20 z-20"
         >
           <Film className="w-3.5 h-3.5 text-primary" />
-          <span className="font-medium">{video.video.type}</span>
+          <span className="font-medium">{themeFlags[video.video.type.toLowerCase()]}</span>
         </Badge>
       </div>
-      
+
       <div className="p-4 space-y-4">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <h3 className="font-medium truncate cursor-help">
-                {video.video.name}
-              </h3>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{video.video.name}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
+        <h3 className="font-medium truncate">
+          {themeFlags[video.video.type.toLowerCase()]}
+        </h3>
+
         <Button
           variant="secondary"
           size="sm"

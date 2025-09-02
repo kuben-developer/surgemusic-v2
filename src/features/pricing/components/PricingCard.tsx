@@ -73,8 +73,17 @@ export function PricingCard({
         <ul className="mt-4 space-y-4">
           {plan.features.map((feature: string) => (
             <li key={feature} className="flex items-start">
-              <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0 text-green-500" />
-              <span className="text-sm text-muted-foreground">{feature}</span>
+              {feature.trim().startsWith("-") ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0 text-gray-400" />
+                  <span className="text-sm text-muted-foreground/60 line-through">{feature.replace("-", "")}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0 text-green-500" />
+                  <span className="text-sm text-muted-foreground">{feature}</span>
+                </>
+              )}
             </li>
           ))}
         </ul>
