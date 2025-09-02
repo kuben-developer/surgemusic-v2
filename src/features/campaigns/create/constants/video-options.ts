@@ -21,5 +21,5 @@ export const COMING_SOON_OPTIONS: number[] = [];
 export const CUSTOM_VIDEO_CONFIG = {
   MIN_COUNT: 30,
   MAX_COUNT: 3000,
-  STEP: 5,
+  STEP: 30,
 } as const;
