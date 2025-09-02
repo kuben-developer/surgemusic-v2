@@ -355,26 +355,47 @@ export function SongAudio({
                         />
                     ) : songAudioUrl ? (
                         <>
-                            <div className="border rounded-xl p-4 space-y-4">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                    <Scissors className="w-4 h-4" />
-                                    <span>15-second audio clip ready</span>
+                            {((selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && isTranscribing) ? (
+                                // Block playback until transcription completes; show same style as trimming/uploading
+                                <div className="border rounded-xl p-8 flex flex-col items-center justify-center space-y-4">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                    <p className="text-muted-foreground font-medium">Transcribing...</p>
                                 </div>
-                                <audio controls className="w-full">
-                                    <source src={songAudioBase64 || songAudioUrl} />
-                                </audio>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleRemoveAudio}
-                                    className="w-full"
-                                >
-                                    Remove Audio
-                                </Button>
-                            </div>
-                            {isTranscribing && (selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && (
-                                <div className="border rounded-xl p-4 flex items-center justify-center gap-2 bg-muted/20">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-sm text-muted-foreground">Transcribing...</span>
+                            ) : (
+                                <div className="border rounded-xl p-4 space-y-4">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                        <Scissors className="w-4 h-4" />
+                                        <span>15-second audio clip ready</span>
+                                    </div>
+                                    <audio controls className="w-full">
+                                        <source src={songAudioBase64 || songAudioUrl} />
+                                    </audio>
+                                    {((selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && lyrics && lyrics.length > 0 && !showLyricsEditor) ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <Button
+                                                variant="default"
+                                                onClick={() => setShowLyricsEditor(true)}
+                                                className="w-full"
+                                            >
+                                                Edit Lyrics
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleRemoveAudio}
+                                                className="w-full"
+                                            >
+                                                Remove Audio
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleRemoveAudio}
+                                            className="w-full"
+                                        >
+                                            Remove Audio
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                             {/* Auto-transcription runs after upload/trim when applicable; no manual transcribe card */}

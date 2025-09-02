@@ -144,10 +144,12 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
       isValid = false;
     }
 
-    if (!state.musicVideoUrl) {
+    // Only require music video when the 'reactions' theme is selected
+    const requiresMusicVideo = state.selectedThemes.includes("reactions");
+    if (requiresMusicVideo && !state.musicVideoUrl) {
       setMusicVideoError(true);
       toast.error("Music Video Required", {
-        description: "Please upload a music video clip or performance video",
+        description: "Please upload a music video/performance clip for reactions content",
       });
       isValid = false;
     }
