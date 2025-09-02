@@ -663,6 +663,22 @@ export const sendWebhook = internalAction({
         luxuryLifestyle: selected("luxury_lifestyle"),
       };
 
+      // Determine if the campaign's owner is currently on a free trial
+      let isTrialUser = false;
+      try {
+        const campaignDoc = await ctx.runQuery(internal.app.campaigns.getInternal, {
+          campaignId: args.campaignId as any,
+        });
+        if (campaignDoc) {
+          const userDoc = await ctx.runQuery(internal.app.public.getUserById, {
+            userId: campaignDoc.userId as any,
+          });
+          isTrialUser = Boolean(userDoc?.billing?.isTrial);
+        }
+      } catch (e) {
+        console.warn("Unable to resolve user trial status for webhook payload", e);
+      }
+
       const payload = [{
         "Album Art": args.campaignCoverImageUrl || "",
         "Artist Name": args.artistName,
@@ -675,6 +691,8 @@ export const sendWebhook = internalAction({
         "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         "Lyrics": args.hasLyrics ? "Yes" : "No",
         "Captions": args.hasCaptions ? "Yes" : "No",
+        "Free Trial": isTrialUser ? "Yes" : "No",
+        "Language": "English",
         // SRT variations (1..5 words)
         "lyricsSRT1": srtUrls[0] || "",
         "lyricsSRT2": srtUrls[1] || "",
