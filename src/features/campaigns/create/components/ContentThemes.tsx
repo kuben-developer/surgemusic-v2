@@ -149,7 +149,6 @@ export function ContentThemes({
                                     src={src}
                                     alt={`${s.label} preview ${idx + 1}`}
                                     loading="lazy"
-                                    decoding="async"
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
@@ -194,7 +193,6 @@ export function ContentThemes({
                           src={src}
                           alt={`${theme.label} preview ${idx + 1}`}
                           loading="lazy"
-                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       </div>
