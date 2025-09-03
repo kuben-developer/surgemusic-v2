@@ -21,34 +21,34 @@ export interface ThemeDef {
 // Update imageFolder for each theme/subtheme when you add real folders
 // under `public/content_themes/<folder-name>`.
 export const CONTENT_THEMES: ThemeDef[] = [
-  { key: "luxury_lifestyle", label: "Luxury Lifestyle", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "reactions", label: "Reactions", imageFolder: THEME_DEFAULT_FOLDER },
+  { key: "luxury_lifestyle", label: "Luxury Lifestyle", imageFolder: "luxury_lifestyle" },
+  { key: "reactions", label: "Reactions", imageFolder: "reactions" },
   {
     key: "girls",
     label: "Girls",
     imageFolder: THEME_DEFAULT_FOLDER,
     subThemes: [
-      { key: "girls_chic", label: "Chic", imageFolder: THEME_DEFAULT_FOLDER },
-      { key: "girls_city", label: "City", imageFolder: THEME_DEFAULT_FOLDER },
-      { key: "girls_party", label: "Party", imageFolder: THEME_DEFAULT_FOLDER },
-      { key: "girls_alternative", label: "Alternative", imageFolder: THEME_DEFAULT_FOLDER },
+      { key: "girls_chic", label: "Chic", imageFolder: "girls_chic" },
+      { key: "girls_city", label: "City", imageFolder: "girls_city" },
+      { key: "girls_party", label: "Party", imageFolder: "girls_party" },
+      { key: "girls_alternative", label: "Alternative", imageFolder: "girls_alternative" },
     ],
   },
-  { key: "music_discovery", label: "Music Discovery", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "feminine_energy", label: "Feminine Energy", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "nature", label: "Nature", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "visualiser", label: "Visualiser", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "dance", label: "Dance", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "gym_workout", label: "Gym / Workout", imageFolder: THEME_DEFAULT_FOLDER },
-  { key: "rock_aesthetic", label: "Rock Aesthetic", imageFolder: THEME_DEFAULT_FOLDER },
+  { key: "music_discovery", label: "Music Discovery", imageFolder: "music_discovery" },
+  { key: "feminine_energy", label: "Feminine Energy", imageFolder: "feminine_energy" },
+  { key: "nature", label: "Nature", imageFolder: "nature" },
+  { key: "visualiser", label: "Visualiser", imageFolder: "visualiser" },
+  { key: "dance", label: "Dance", imageFolder: "dance" },
+  { key: "gym_workout", label: "Gym / Workout", imageFolder: "gym_workout" },
+  { key: "rock_aesthetic", label: "Rock Aesthetic", imageFolder: "rock_aesthetic" },
   {
     key: "live_shows",
     label: "Live Shows",
     imageFolder: THEME_DEFAULT_FOLDER,
     subThemes: [
-      { key: "gigs", label: "Gigs", imageFolder: THEME_DEFAULT_FOLDER },
-      { key: "stage_avatars", label: "Stage Avatars", imageFolder: THEME_DEFAULT_FOLDER },
-      
+      { key: "gigs", label: "Gigs", imageFolder: "gigs" },
+      { key: "stage_avatars", label: "Stage Avatars", imageFolder: "stage_avatars" },
+
     ]
   },
 ];
@@ -75,7 +75,7 @@ function toTitleCase(input: string): string {
   return input
     .replace(/_/g, " ")
     .split(" ")
-    .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+    .map((w) => (w.length ? w[0]?.toUpperCase() + w.slice(1) : w))
     .join(" ");
 }
 
