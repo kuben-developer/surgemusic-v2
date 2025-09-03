@@ -7,6 +7,7 @@ export { useStepNavigation } from './hooks/useStepNavigation';
 
 // Components
 export { StepRenderer } from './components/StepRenderer';
+export { PreloadContentThemeImages } from './components/PreloadContentThemeImages';
 
 // Configuration
 export { STEP_CONFIGS, type StepConfig, type StepProps } from './components/step-config';

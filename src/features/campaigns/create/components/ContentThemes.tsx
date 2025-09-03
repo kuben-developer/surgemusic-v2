@@ -145,7 +145,13 @@ export function ContentThemes({
                             <div className="grid grid-cols-4 gap-4">
                               {sImages.map((src, idx) => (
                                 <div key={idx} className="aspect-[9/16] rounded-lg overflow-hidden border shadow-sm">
-                                  <img src={src} alt={`${s.label} preview ${idx + 1}`} className="w-full h-full object-cover" />
+                                  <img
+                                    src={src}
+                                    alt={`${s.label} preview ${idx + 1}`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
                                 </div>
                               ))}
                             </div>
@@ -184,7 +190,13 @@ export function ContentThemes({
                   <div className="grid grid-cols-4 gap-4">
                     {images.map((src, idx) => (
                       <div key={idx} className="aspect-[9/16] rounded-lg overflow-hidden border shadow-sm">
-                        <img src={src} alt={`${theme.label} preview ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img
+                          src={src}
+                          alt={`${theme.label} preview ${idx + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     ))}
                   </div>
