@@ -16,6 +16,19 @@ export function ProgressSection({ campaign, progress }: ProgressSectionProps) {
     return null;
   }
 
+  const getEstimatedMinutes = (count?: number): number | null => {
+    if (!count || count <= 0) return null;
+    // 30 vids = 1 min, 90 vids = 3 min, 180+ vids = 5 min
+    if (count <= 30) return 1;
+    if (count <= 90) return 3;
+    return 5; // Conservative estimate for 120, 150, 180+
+  };
+
+  const estimatedMinutes = getEstimatedMinutes(campaign.videoCount);
+  const etaText = estimatedMinutes
+    ? `This usually takes about ${estimatedMinutes} minute${estimatedMinutes > 1 ? 's' : ''}`
+    : 'This usually takes a few minutes';
+
   return (
     <motion.section
       variants={fadeInUp}
@@ -33,7 +46,7 @@ export function ProgressSection({ campaign, progress }: ProgressSectionProps) {
             <h2 className="text-2xl font-semibold text-foreground">
               Videos are being generated
             </h2>
-            <p className="text-muted-foreground">This usually takes 5-10 minutes</p>
+            <p className="text-muted-foreground">{etaText}</p>
           </div>
         </div>
 
