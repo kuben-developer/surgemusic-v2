@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldAlert, Flame, ShieldCheck } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Info } from "lucide-react";
 
 interface WarmupReminderDialogProps {
   isOpen: boolean;
@@ -35,13 +35,13 @@ export function WarmupReminderDialog({
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="text-left space-y-4">
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/50 px-3 py-2.5">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 aspect-square items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200">
-                  <Flame className="h-4 w-4" />
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
+                <div className="flex items-center gap-3">
+                  <Info className="h-16 w-16 text-primary" />
+                  <p className="text-sm text-muted-foreground leading-6">
+                    Before scheduling posts, give new or inactive social accounts a short warmup period to establish normal activity patterns, reduce automation flags, and improve reach.
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Before scheduling posts, give new or inactive social accounts a short warmup period. This builds normal activity patterns, reduces spam/automation flags, and improves reach.
-                </p>
               </div>
 
               <div className="space-y-2">
