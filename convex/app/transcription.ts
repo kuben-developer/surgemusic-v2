@@ -35,38 +35,62 @@ export const transcribeAudio = action({
       const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" });
 
 
-      console.log("Calling ElevenLabs API for transcription...");
-      const transcription = await elevenlabs.speechToText.convert({
-        file: audioBlob,
-        modelId: "scribe_v1",
-        tagAudioEvents: false, // We don't need audio events for lyrics
-        languageCode: "eng",
-        diarize: false, // Single speaker for song audio
-      });
+      // Helper to pause between retries
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      console.log("Transcription response received:", JSON.stringify(transcription, null, 2));
-
-      // Extract text and words timing from the response
+      // Attempt transcription with retries
+      const maxAttempts = 3;
       let transcribedText = "";
       let wordsData: Array<{ text: string; start: number; end: number; type: string }> = [];
       
-      if (transcription && typeof transcription === 'object') {
-        // Extract the full text
-        if ('text' in transcription) {
-          transcribedText = (transcription as any).text;
-        }
-        
-        // Extract the words array with timing information
-        if ('words' in transcription && Array.isArray((transcription as any).words)) {
-          wordsData = (transcription as any).words;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          console.log(`Calling ElevenLabs API for transcription (attempt ${attempt}/${maxAttempts})...`);
+          const transcription = await elevenlabs.speechToText.convert({
+            file: audioBlob,
+            modelId: "scribe_v1",
+            tagAudioEvents: false, // We don't need audio events for lyrics
+            languageCode: "eng",
+            diarize: false, // Single speaker for song audio
+          });
+
+          console.log("Transcription response received:", JSON.stringify(transcription, null, 2));
+
+          // Extract the full text
+          if (transcription && typeof transcription === "object" && "text" in transcription) {
+            transcribedText = (transcription as any).text ?? "";
+          }
+
+          // Extract the words array with timing information
+          if (
+            transcription &&
+            typeof transcription === "object" &&
+            "words" in transcription &&
+            Array.isArray((transcription as any).words)
+          ) {
+            wordsData = (transcription as any).words;
+          }
+
+          if (!transcribedText || !wordsData.length) {
+            throw new Error("Transcription failed - no text or timing data returned");
+          }
+
+          // Success; break out of retry loop
+          break;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          console.error(`Transcription attempt ${attempt} failed:`, message);
+          if (attempt < maxAttempts) {
+            const backoffMs = 500 * attempt; // simple linear backoff
+            console.log(`Retrying transcription after ${backoffMs}ms...`);
+            await sleep(backoffMs);
+            continue;
+          }
+          // Exhausted retries; rethrow to outer catch
+          throw err;
         }
       }
 
-      if (!transcribedText || !wordsData.length) {
-        console.error("No text or word timing found in transcription response:", JSON.stringify(transcription, null, 2));
-        throw new Error("Transcription failed - no text or timing data returned");
-      }
-      
       console.log("Transcribed text:", transcribedText);
       console.log(`Found ${wordsData.length} word entries with timing`);
 
