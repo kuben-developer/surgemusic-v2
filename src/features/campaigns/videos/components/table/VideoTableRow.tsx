@@ -18,6 +18,7 @@ interface VideoTableRowProps {
   downloadingVideos: { [key: string]: boolean };
   onToggleSelect: (id: string, event?: React.MouseEvent | MouseEvent) => void;
   onDownload: (videoUrl: string, videoName: string, videoId: string) => void;
+  showRowDownload?: boolean;
 }
 
 export function VideoTableRow({
@@ -27,6 +28,7 @@ export function VideoTableRow({
   downloadingVideos,
   onToggleSelect,
   onDownload,
+  showRowDownload = true,
 }: VideoTableRowProps) {
   const { scheduledDate, hasAnyPlatformUploads, displayName } = useVideoRowData({ video });
 
@@ -79,11 +81,13 @@ export function VideoTableRow({
       </TableCell>
 
       <TableCell>
-        <VideoActions
-          video={video}
-          downloadingVideos={downloadingVideos}
-          onDownload={onDownload}
-        />
+        {showRowDownload ? (
+          <VideoActions
+            video={video}
+            downloadingVideos={downloadingVideos}
+            onDownload={onDownload}
+          />
+        ) : null}
       </TableCell>
     </TableRow>
   );

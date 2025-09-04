@@ -10,21 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Video, Download, Loader2, Pencil, Save, X } from "lucide-react";
-import { ViewToggle } from "@/features/campaigns/videos";
+import { Video, Download, Loader2, Pencil, Save, X, CalendarPlus } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
-type ViewMode = "table" | "grid";
-
 interface VideoSectionHeaderProps {
   videosCount: number;
   statusFilter: string;
   onStatusFilterChange: (filter: string) => void;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
+  onOpenScheduleDialog: () => void;
   onDownloadAll: () => void;
   hasVideos: boolean;
   downloadingAll?: boolean;
@@ -38,8 +34,7 @@ export function VideoSectionHeader({
   videosCount,
   statusFilter,
   onStatusFilterChange,
-  viewMode,
-  onViewModeChange,
+  onOpenScheduleDialog,
   onDownloadAll,
   hasVideos,
   downloadingAll = false,
@@ -119,7 +114,15 @@ export function VideoSectionHeader({
             </SelectContent>
           </Select>
 
-          <ViewToggle viewMode={viewMode} setViewMode={onViewModeChange} />
+          {hasVideos && (
+            <Button
+              onClick={onOpenScheduleDialog}
+              className="gap-2"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Schedule Videos
+            </Button>
+          )}
 
           {hasVideos && (
             <Button

@@ -27,6 +27,7 @@ interface VideoTableHeaderProps {
   onClearSelection: () => void;
   onScheduleClick: () => void;
   generateCaption: () => string;
+  showDownloadSelectedButton?: boolean;
 }
 
 export function VideoTableHeader({
@@ -44,6 +45,7 @@ export function VideoTableHeader({
   onClearSelection,
   onScheduleClick,
   generateCaption,
+  showDownloadSelectedButton = true,
 }: VideoTableHeaderProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -89,25 +91,27 @@ export function VideoTableHeader({
 
         {selectedVideos.length > 0 && (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={onDownloadSelected}
-              disabled={isDownloadingSelected}
-            >
-              {isDownloadingSelected ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Downloading...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Download Selected
-                </>
-              )}
-            </Button>
+            {showDownloadSelectedButton && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={onDownloadSelected}
+                disabled={isDownloadingSelected}
+              >
+                {isDownloadingSelected ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Selected
+                  </>
+                )}
+              </Button>
+            )}
 
             <Button
               variant="default"

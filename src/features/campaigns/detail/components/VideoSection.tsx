@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useVideoFiltering } from "@/features/campaigns/videos";
+import { useState } from "react";
+import { filterVideosByStatus } from "@/features/campaigns/videos";
 import { VideoSectionHeader } from "./VideoSectionHeader";
 import { VideoPagination } from "./VideoPagination";
 import { VideoSectionContent } from "./VideoSectionContent";
 import { useVideoPagination } from "../hooks/useVideoPagination";
 import type { VideoSectionProps } from "../types/campaign-detail.types";
+import { ScheduleTableDialog } from "@/features/campaigns/videos";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -19,8 +21,6 @@ export function VideoSection({
   campaignId,
   generatedVideos,
   isVideosLoading,
-  viewMode,
-  onViewModeChange,
   statusFilter,
   onStatusFilterChange,
   currentPage,
@@ -33,8 +33,20 @@ export function VideoSection({
 }: VideoSectionProps) {
   if (!campaign) return null;
 
-  // Use the filtering hook
-  const { filteredVideos, totalScheduledCount } = useVideoFiltering(generatedVideos);
+  // Local state for schedule selection dialog
+  const [isScheduleTableOpen, setIsScheduleTableOpen] = useState(false);
+
+  // Filter videos based on current status filter
+  const allVideos = generatedVideos ?? [];
+  const filteredVideos = filterVideosByStatus(allVideos, statusFilter);
+  const totalScheduledCount = allVideos.filter((v) => {
+    const isScheduled = Boolean(
+      (v.tiktokUpload?.scheduledAt !== null && v.tiktokUpload?.scheduledAt !== undefined) ||
+      (v.instagramUpload?.scheduledAt !== null && v.instagramUpload?.scheduledAt !== undefined) ||
+      (v.youtubeUpload?.scheduledAt !== null && v.youtubeUpload?.scheduledAt !== undefined)
+    );
+    return isScheduled;
+  }).length;
   
   // Use pagination hook for grid view
   const { 
@@ -68,16 +80,15 @@ export function VideoSection({
           videosCount={filteredVideos.length}
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
+          onOpenScheduleDialog={() => setIsScheduleTableOpen(true)}
           onDownloadAll={onDownloadAll}
           hasVideos={filteredVideos.length > 0}
           downloadingAll={downloadingAll}
           campaign={campaign}
         />
 
-        {/* Pagination - Only for grid view */}
-        {totalPagesExternal > 1 && viewMode === "grid" && (
+        {/* Pagination */}
+        {totalPagesExternal > 1 && (
           <VideoPagination
             currentPage={effectiveCurrentPage}
             totalPages={totalPagesExternal}
@@ -91,7 +102,6 @@ export function VideoSection({
           generatedVideos={generatedVideos}
           filteredVideos={filteredVideos}
           currentVideos={currentVideosExternal}
-          viewMode={viewMode}
           downloadingVideos={downloadingVideos}
           onDownloadVideo={onDownloadVideo}
           onDownloadAll={onDownloadAll}
@@ -99,6 +109,23 @@ export function VideoSection({
           campaignId={campaignId}
           statusFilter={statusFilter}
           totalScheduledCount={totalScheduledCount}
+        />
+
+        {/* Schedule selection dialog embedding table view */}
+        <ScheduleTableDialog
+          isOpen={isScheduleTableOpen}
+          onOpenChange={setIsScheduleTableOpen}
+          videos={allVideos}
+          downloadingVideos={downloadingVideos}
+          handleDownloadVideo={onDownloadVideo}
+          handleDownloadAll={onDownloadAll}
+          songName={campaign?.songName || ""}
+          artistName={campaign?.artistName || ""}
+          genre={campaign?.genre || ""}
+          statusFilter={statusFilter}
+          totalVideosCount={filteredVideos.length}
+          totalScheduledCount={totalScheduledCount}
+          campaignId={campaignId}
         />
       </div>
     </motion.section>

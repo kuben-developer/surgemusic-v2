@@ -11,8 +11,6 @@ export interface VideoSectionProps {
   campaignId: string;
   generatedVideos?: Doc<"generatedVideos">[];
   isVideosLoading: boolean;
-  viewMode: "table" | "grid";
-  onViewModeChange: (mode: "table" | "grid") => void;
   statusFilter: string;
   onStatusFilterChange: (filter: string) => void;
   currentPage: number;

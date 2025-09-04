@@ -7,7 +7,6 @@ import type { Id } from "../../../../../convex/_generated/dataModel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import type { ViewMode } from "@/features/campaigns/videos"
 import { CampaignHeader } from "./CampaignHeader"
 import { ProgressSection } from "./ProgressSection"
 import { VideoSection } from "./VideoSection"
@@ -26,7 +25,6 @@ export default function CampaignClient() {
   const params = useParams()
   const campaignId = params.id as string
   const [progress, setProgress] = useState(0)
-  const [viewMode, setViewMode] = useState<ViewMode>("table")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const videosPerPage = 8
@@ -136,8 +134,6 @@ export default function CampaignClient() {
             campaignId={campaignId}
             generatedVideos={generatedVideos}
             isVideosLoading={isVideosLoading}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             currentPage={currentPage}

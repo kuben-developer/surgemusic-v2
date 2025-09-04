@@ -2,7 +2,6 @@
 
 import { FileVideo } from "lucide-react";
 import { motion } from "framer-motion";
-import { VideoTableView } from "@/features/campaigns/videos";
 import { VideoGridItem } from "./VideoGridItem";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
@@ -19,7 +18,6 @@ interface VideoSectionContentProps {
   generatedVideos?: Doc<"generatedVideos">[];
   filteredVideos: Doc<"generatedVideos">[];
   currentVideos: Doc<"generatedVideos">[];
-  viewMode: "table" | "grid";
   downloadingVideos: Record<string, boolean>;
   onDownloadVideo: (url: string, name: string, id: string) => void;
   onDownloadAll: (videos?: Doc<"generatedVideos">[]) => void;
@@ -34,7 +32,6 @@ export function VideoSectionContent({
   generatedVideos,
   filteredVideos,
   currentVideos,
-  viewMode,
   downloadingVideos,
   onDownloadVideo,
   onDownloadAll,
@@ -69,33 +66,6 @@ export function VideoSectionContent({
           <p className="mt-2 text-sm text-muted-foreground">Videos will appear here once generated</p>
         </div>
       </div>
-    );
-  }
-
-  if (viewMode === "table") {
-    return (
-      <VideoTableView
-        videos={filteredVideos}
-        downloadingVideos={downloadingVideos}
-        handleDownloadVideo={onDownloadVideo}
-        handleDownloadAll={async (videos) => {
-          // For table view, pass selected videos for "Download Selected" button
-          // The table's handleDownloadSelected will call this with selected videos
-          if (videos && videos.length > 0) {
-            onDownloadAll(videos);
-          } else {
-            // If no videos specified, download all
-            onDownloadAll();
-          }
-        }}
-        songName={campaign?.songName || ""}
-        artistName={campaign?.artistName || ""}
-        genre={campaign?.genre || ""}
-        statusFilter={statusFilter}
-        totalVideosCount={filteredVideos.length}
-        totalScheduledCount={totalScheduledCount}
-        campaignId={campaignId}
-      />
     );
   }
 

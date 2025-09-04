@@ -36,6 +36,7 @@ interface VideoTableViewProps {
   totalVideosCount: number;
   totalScheduledCount: number;
   campaignId: string;
+  hideDownloads?: boolean;
 }
 
 export function VideoTableView({
@@ -49,7 +50,8 @@ export function VideoTableView({
   statusFilter = "all",
   totalVideosCount,
   totalScheduledCount,
-  campaignId
+  campaignId,
+  hideDownloads = false,
 }: VideoTableViewProps) {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isWarmupDialogOpen, setIsWarmupDialogOpen] = useState(false);
@@ -101,6 +103,7 @@ export function VideoTableView({
         onClearSelection={clearSelection}
         onScheduleClick={handleScheduleClick}
         generateCaption={() => videoCaption}
+        showDownloadSelectedButton={!hideDownloads}
       />
 
       {/* Table */}
@@ -149,6 +152,7 @@ export function VideoTableView({
                       downloadingVideos={downloadingVideos}
                       onToggleSelect={toggleSelectVideo}
                       onDownload={handleDownloadVideo}
+                      showRowDownload={!hideDownloads}
                     />
                   ))
                 )}
