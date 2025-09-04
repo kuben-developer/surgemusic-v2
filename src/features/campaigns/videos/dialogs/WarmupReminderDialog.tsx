@@ -25,7 +25,7 @@ export function WarmupReminderDialog({
 }: WarmupReminderDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="sm:max-w-[560px] rounded-xl">
+      <AlertDialogContent className="sm:max-w-[590px] rounded-xl">
         <AlertDialogHeader>
           <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
             <ShieldAlert className="h-5 w-5" />
@@ -51,19 +51,19 @@ export function WarmupReminderDialog({
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-sm text-muted-foreground">Post 3-5 times over the last 7-14 days (short, natural posts).</span>
+                    <span className="text-sm text-muted-foreground">Days 1-2: Scroll FYP 15 min/day and like some posts. Don't follow any accounts.</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-sm text-muted-foreground">Engage daily: like, comment, follow a few relevant creators.</span>
+                    <span className="text-sm text-muted-foreground">Days 3-5: Start following some accounts, set up bio + profile pic.</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-sm text-muted-foreground">Discover content within your niche using the platform's search bar.</span>
+                    <span className="text-sm text-muted-foreground">Day 5+: Post 1 video daily, ramp up to 2-3/day.</span>
                   </li>
                 </ul>
               </div>

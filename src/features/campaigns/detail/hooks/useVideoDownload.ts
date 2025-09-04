@@ -4,6 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import JSZip from 'jszip';
 import type { Doc } from "../../../../../convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { hasActiveSubscription } from "@/features/credits/utils/credit-utils";
 
 interface UseVideoDownloadProps {
   campaign?: Doc<"campaigns"> | null;
@@ -14,8 +17,22 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
   const [downloadingVideos, setDownloadingVideos] = useState<{ [key: string]: boolean }>({});
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+
+  // Fetch current user to determine subscription status
+  const userData = useQuery(api.app.users.getCurrentUser);
+  const canDownload: boolean | undefined = userData === undefined
+    ? undefined
+    : hasActiveSubscription(userData);
 
   const handleDownloadVideo = async (videoUrl: string, videoName: string, videoId: string) => {
+    // Gate: require active non-trial subscription
+    if (canDownload === false) {
+      setIsDownloadDialogOpen(true);
+      return;
+    }
+    // If user data is still loading, ignore the click to avoid false gating
+    if (canDownload === undefined) return;
     if (!videoUrl) {
       toast.error("Video URL not found");
       return;
@@ -45,6 +62,12 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
   };
 
   const handleDownloadAll = async (videos?: Doc<"generatedVideos">[]) => {
+    // Gate: require active non-trial subscription
+    if (canDownload === false) {
+      setIsDownloadDialogOpen(true);
+      return;
+    }
+    if (canDownload === undefined) return;
     // If no specific videos provided, use ALL videos from the campaign
     const videosToDownload = videos || generatedVideos;
     
@@ -106,6 +129,8 @@ export function useVideoDownload({ campaign, generatedVideos }: UseVideoDownload
     downloadingVideos,
     downloadingAll,
     progress,
+    isDownloadDialogOpen,
+    setIsDownloadDialogOpen,
     handleDownloadVideo,
     handleDownloadAll,
   };

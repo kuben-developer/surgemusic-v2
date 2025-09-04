@@ -12,6 +12,7 @@ import { CampaignHeader } from "./CampaignHeader"
 import { ProgressSection } from "./ProgressSection"
 import { VideoSection } from "./VideoSection"
 import { useVideoDownload } from "../hooks/useVideoDownload"
+import { DownloadFeatureDialog } from "@/features/campaigns/videos"
 
 const staggerContainer = {
   animate: {
@@ -41,6 +42,8 @@ export default function CampaignClient() {
     downloadingAll,
     handleDownloadVideo,
     handleDownloadAll,
+    isDownloadDialogOpen,
+    setIsDownloadDialogOpen,
   } = useVideoDownload({ campaign, generatedVideos })
 
   useEffect(() => {
@@ -146,6 +149,12 @@ export default function CampaignClient() {
             downloadingAll={downloadingAll}
           />
         )}
+
+        {/* Download gating dialog */}
+        <DownloadFeatureDialog
+          open={isDownloadDialogOpen}
+          onOpenChange={setIsDownloadDialogOpen}
+        />
       </motion.div>
     </div>
   )
