@@ -71,7 +71,7 @@ export function WarmupReminderDialog({
 
 
               <p className="text-xs text-muted-foreground">
-                If you've already been active recently, you're good to continue.
+                If your posts are getting 0 views you should repeat the above steps.
               </p>
             </div>
           </AlertDialogDescription>
