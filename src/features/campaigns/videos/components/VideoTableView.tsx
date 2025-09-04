@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Film } from "lucide-react";
 import { UnscheduleDialog } from "../dialogs/UnscheduleDialog";
+import { WarmupReminderDialog } from "../dialogs/WarmupReminderDialog";
 import { 
   VideoTableHeader, 
   VideoTableRow, 
@@ -51,6 +52,7 @@ export function VideoTableView({
   campaignId
 }: VideoTableViewProps) {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isWarmupDialogOpen, setIsWarmupDialogOpen] = useState(false);
   const [isUnscheduleDialogOpen, setIsUnscheduleDialogOpen] = useState(false);
 
   // Use custom hooks for video logic
@@ -76,9 +78,9 @@ export function VideoTableView({
   // Generate caption for videos
   const videoCaption = generateVideoCaption(songName, artistName, genre);
 
-  // Handle schedule button click
+  // Handle schedule button click (show warm-up reminder first)
   const handleScheduleClick = () => {
-    setIsScheduleDialogOpen(true);
+    setIsWarmupDialogOpen(true);
   };
 
   return (
@@ -161,6 +163,16 @@ export function VideoTableView({
         isOpen={isUnscheduleDialogOpen}
         onOpenChange={setIsUnscheduleDialogOpen}
         campaignId={campaignId}
+      />
+
+      {/* Warm-up Reminder Dialog */}
+      <WarmupReminderDialog
+        isOpen={isWarmupDialogOpen}
+        onOpenChange={setIsWarmupDialogOpen}
+        onConfirm={() => {
+          setIsWarmupDialogOpen(false);
+          setIsScheduleDialogOpen(true);
+        }}
       />
     </div>
   );

@@ -38,6 +38,11 @@ export default function CampaignCreatePage() {
         onPrevious={formData.handlePrevious}
         onNext={formData.handleNext}
         onGenerate={formData.handleGenerateVideos}
+        // Make Step 1 (Lyrics Selection) and Step 2 (Content Themes) mandatory before proceeding
+        disableNext={
+          (formData.currentSection === 0 && !formData.selectedLyricsOption) ||
+          (formData.currentSection === 1 && formData.selectedThemes.length === 0)
+        }
       />
 
       {/* Render current section */}

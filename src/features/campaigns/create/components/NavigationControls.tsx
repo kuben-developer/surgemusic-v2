@@ -15,6 +15,7 @@ interface NavigationControlsProps {
   onPrevious: () => void;
   onNext: () => void;
   onGenerate: () => void;
+  disableNext?: boolean;
 }
 
 export function NavigationControls({
@@ -24,6 +25,7 @@ export function NavigationControls({
   onPrevious,
   onNext,
   onGenerate,
+  disableNext = false,
 }: NavigationControlsProps) {
   const isLastStep = currentSection === sections.length - 1;
 
@@ -78,6 +80,7 @@ export function NavigationControls({
               size="lg"
               className="min-w-[140px] cursor-pointer gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
               onClick={onNext}
+              disabled={disableNext}
             >
               Next
               <ChevronRight className="w-4 h-4" />

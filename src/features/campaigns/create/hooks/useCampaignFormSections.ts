@@ -23,8 +23,8 @@ interface SectionsProps {
 export function useCampaignFormSections({ campaignType, errors, selectedThemes = [] }: SectionsProps) {
   const sections = useMemo(() => {
     const baseSections = [
-      { title: "Content Themes", error: errors.themesError },
       { title: "Content Appearance", error: errors.lyricsOptionError },
+      { title: "Content Themes", error: errors.themesError },
       { title: "Song Audio", error: errors.songAudioError },
       { title: "Song & Campaign Details", error: errors.songDetailsError },
       { title: "Genre Selection", error: errors.genreError },
@@ -32,7 +32,7 @@ export function useCampaignFormSections({ campaignType, errors, selectedThemes =
 
     // Add custom sections for campaign type
     if (campaignType === "custom") {
-      // Only show Video Assets if the reactions theme was selected in step 1
+      // Only show Video Assets if the reactions theme was selected
       const hasReactions = selectedThemes.includes("reactions");
       if (hasReactions) {
         baseSections.push({ title: "Video Assets", error: errors.musicVideoError });

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+// DialogTrigger not used here; ScheduleDialog controls its own Dialog
 import {
   CalendarPlus,
   CalendarX,
@@ -109,33 +109,30 @@ export function VideoTableHeader({
               )}
             </Button>
 
-            <Dialog open={isScheduleDialogOpen} onOpenChange={onScheduleDialogChange}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={onScheduleClick}
-                >
-                  <CalendarPlus className="h-4 w-4" />
-                  Schedule Selected
-                </Button>
-              </DialogTrigger>
-              <ScheduleDialog
-                isOpen={isScheduleDialogOpen}
-                onOpenChange={onScheduleDialogChange}
-                selectedVideosCount={selectedVideos.length}
-                selectedVideos={selectedVideos.map(id => {
-                  const video = videos.find(v => String(v._id) === id);
-                  return {
-                    videoUrl: video?.video.url || "",
-                    caption: generateCaption(),
-                    videoName: video?.video.name || "",
-                    videoId: id,
-                  };
-                })}
-              />
-            </Dialog>
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1.5"
+              onClick={onScheduleClick}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Schedule Selected
+            </Button>
+
+            <ScheduleDialog
+              isOpen={isScheduleDialogOpen}
+              onOpenChange={onScheduleDialogChange}
+              selectedVideosCount={selectedVideos.length}
+              selectedVideos={selectedVideos.map(id => {
+                const video = videos.find(v => String(v._id) === id);
+                return {
+                  videoUrl: video?.video.url || "",
+                  caption: generateCaption(),
+                  videoName: video?.video.name || "",
+                  videoId: id,
+                };
+              })}
+            />
           </>
         )}
       </div>

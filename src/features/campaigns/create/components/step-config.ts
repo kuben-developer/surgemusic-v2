@@ -111,18 +111,7 @@ export interface StepConfig {
 }
 
 export const STEP_CONFIGS: StepConfig[] = [
-  // Step 1: Content Themes
-  {
-    id: "content-themes",
-    component: ContentThemes,
-    propsSelector: (props) => ({
-      selectedThemes: props.selectedThemes,
-      setSelectedThemes: props.setSelectedThemes,
-      themesError: props.themesError,
-    }),
-    availableFor: ["express", "custom"],
-  },
-  // Step 2: Lyrics Selection
+  // Step 1: Lyrics Selection (moved before Content Themes)
   {
     id: "lyrics-selection",
     component: LyricsSelection,
@@ -132,6 +121,19 @@ export const STEP_CONFIGS: StepConfig[] = [
       lyricsOptionError: props.lyricsOptionError,
       hasProFeatures: props.hasProFeatures || false,
       isFirstTimeUser: props.isFirstTimeUser ?? true,
+    }),
+    availableFor: ["express", "custom"],
+  },
+  // Step 2: Content Themes (moved after Lyrics Selection)
+  {
+    id: "content-themes",
+    component: ContentThemes,
+    propsSelector: (props) => ({
+      selectedThemes: props.selectedThemes,
+      setSelectedThemes: props.setSelectedThemes,
+      themesError: props.themesError,
+      // pass lyrics option to control theme availability
+      selectedLyricsOption: props.selectedLyricsOption,
     }),
     availableFor: ["express", "custom"],
   },

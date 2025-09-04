@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Plus, Zap, Info, X } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CONTENT_THEMES,
   THEME_DEFAULT_FOLDER,
-  getImageFolderForKey,
   getImageSrcsForFolder,
   getLabelForKey,
 } from "../constants/content-themes.constants";
@@ -18,17 +18,28 @@ interface ContentThemesProps {
   selectedThemes: string[];
   setSelectedThemes: React.Dispatch<React.SetStateAction<string[]>>;
   themesError: boolean;
+  selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
 }
 
 export function ContentThemes({
   selectedThemes,
   setSelectedThemes,
   themesError,
+  selectedLyricsOption,
 }: ContentThemesProps) {
   // Track active sub-tab per theme that has sub-themes
   const [activeSubTabs, setActiveSubTabs] = useState<Record<string, string>>({});
 
   const handleAddTheme = (key: string) => {
+    // Enforce Music Discovery availability based on lyrics option
+    const isMusicDiscovery = key === "music_discovery";
+    const isAllowedForMusicDiscovery =
+      selectedLyricsOption === "lyrics-hooks" || selectedLyricsOption === "hooks";
+    if (isMusicDiscovery && !isAllowedForMusicDiscovery) {
+      // Ignore clicks when not allowed
+      return;
+    }
+
     const isAlreadySelected = selectedThemes.includes(key);
     if (!isAlreadySelected && selectedThemes.length >= 3) {
       toast.error("Maximum 3 Themes", {
@@ -139,7 +150,7 @@ export function ContentThemes({
                         ))}
                       </TabsList>
                       {theme.subThemes.map((s) => {
-                        const sImages = getImageSrcsForFolder(getImageFolderForKey(s.key));
+                        const sImages = getImageSrcsForFolder(s.imageFolder ?? THEME_DEFAULT_FOLDER);
                         return (
                           <TabsContent key={s.key} value={s.key} className="mt-4">
                             <div className="grid grid-cols-4 gap-4">
@@ -177,6 +188,10 @@ export function ContentThemes({
               const folder = theme.imageFolder ?? THEME_DEFAULT_FOLDER;
               const images = getImageSrcsForFolder(folder);
               const isSelected = selectedThemes.includes(theme.key);
+              const isMusicDiscovery = theme.key === "music_discovery";
+              const isAllowedForMusicDiscovery =
+                selectedLyricsOption === "lyrics-hooks" || selectedLyricsOption === "hooks";
+              const isDisabled = isMusicDiscovery && !isAllowedForMusicDiscovery;
 
               return (
                 <div key={theme.key} className="space-y-4">
@@ -188,22 +203,46 @@ export function ContentThemes({
                       </div>
                     ))}
                   </div>
-                  <Button
-                    variant={isSelected ? "default" : "outline"}
-                    size="lg"
-                    className="w-full cursor-pointer"
-                    onClick={() => handleAddTheme(theme.key)}
-                  >
-                    {isSelected ? (
-                      <>
-                        <Check className="w-4 h-4 mr-2" /> Theme Added
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-2" /> Add Content Theme
-                      </>
-                    )}
-                  </Button>
+                  {isDisabled ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="w-full">
+                          <Button
+                            variant={isSelected ? "default" : "outline"}
+                            size="lg"
+                            className="w-full cursor-not-allowed opacity-60"
+                            disabled
+                          >
+                            <>
+                              <Plus className="w-4 h-4 mr-2" /> Add Content Theme
+                            </>
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Music Discovery is only available for
+                        {" "}
+                        <strong>Lyrics + Viral Hooks</strong> or <strong>Viral Hooks</strong> format.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant={isSelected ? "default" : "outline"}
+                      size="lg"
+                      className="w-full cursor-pointer"
+                      onClick={() => handleAddTheme(theme.key)}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2" /> Theme Added
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" /> Add Content Theme
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               );
             })}
