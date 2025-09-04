@@ -6,35 +6,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Download, Film, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
+import { themeFlags } from "../../shared/constants";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5 }
 };
-
-const themeFlags: Record<string, string> = {
-  // Girls sub-themes
-  popgirls: "Chic Girls",
-  rapgirls: "City Girls",
-  ravegirls: "Party Girls",
-  rockgirls: "Alternative Girls",
-
-  // Live shows sub-themes
-  concerts: "Gigs",
-  stageavatars: "Stage Avatars",
-
-  // Other themes
-  nature: "Nature",
-  reactions: "Reactions",
-  rockaesthetic: "Rock Aesthetic",
-  visualiser: "Visualiser",
-  v01dance: "Dance",
-  musicRec: "Music Discovery",
-  gymaesthetic: "Gym / Workout",
-  girlaesthetic: "Feminine Energy",
-  luxurylifestyle: "Luxury Lifestyle",
-}
 
 interface VideoGridItemProps {
   video: Doc<"generatedVideos">;

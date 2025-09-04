@@ -9,6 +9,7 @@ import { PlatformActions } from "./PlatformActions";
 import { ScheduledDate } from "./ScheduledDate";
 import { VideoActions } from "./VideoActions";
 import type { Doc } from "../../../../../../convex/_generated/dataModel";
+import { themeFlags } from "../../../shared/constants";
 
 interface VideoTableRowProps {
   video: Doc<"generatedVideos">;
@@ -30,7 +31,7 @@ export function VideoTableRow({
   const { scheduledDate, hasAnyPlatformUploads, displayName } = useVideoRowData({ video });
 
   return (
-    <TableRow 
+    <TableRow
       className={cn(
         "group cursor-pointer transition-colors",
         isSelected && "bg-muted/50",
@@ -40,8 +41,8 @@ export function VideoTableRow({
         // Only handle click if not on a button or link
         const target = e.target as HTMLElement;
         if (
-          !target.closest('button') && 
-          !target.closest('a') && 
+          !target.closest('button') &&
+          !target.closest('a') &&
           !target.closest('input[type="checkbox"]') &&
           !isScheduled
         ) {
@@ -57,26 +58,26 @@ export function VideoTableRow({
           onToggleSelect={onToggleSelect}
         />
       </TableCell>
-      
+
       <TableCell>
-        <VideoInfo video={video} displayName={displayName} />
+        <VideoInfo video={video} displayName={themeFlags[video.video.type.toLowerCase()] || "Unknown"} />
       </TableCell>
-      
+
       <TableCell>
-        <VideoTypeBadge videoType={video.video.type} />
+        <VideoTypeBadge videoType={themeFlags[video.video.type.toLowerCase()] || "Unknown"} />
       </TableCell>
-      
+
       <TableCell>
         <PlatformActions
           video={video}
           hasAnyPlatformUploads={hasAnyPlatformUploads}
         />
       </TableCell>
-      
+
       <TableCell>
         <ScheduledDate scheduledDate={scheduledDate} />
       </TableCell>
-      
+
       <TableCell>
         <VideoActions
           video={video}
