@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldAlert, Flame, ShieldCheck, Clock, TrendingUp } from "lucide-react";
+import { ShieldAlert, Flame, ShieldCheck } from "lucide-react";
 
 interface WarmupReminderDialogProps {
   isOpen: boolean;
@@ -34,48 +34,45 @@ export function WarmupReminderDialog({
             Did you warm up your accounts?
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="text-left">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                    <Flame className="h-4 w-4" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-medium leading-none">Recent activity</p>
-                    <p className="text-xs text-muted-foreground">Posted and engaged in the last 7–14 days; profile looks complete.</p>
-                  </div>
+            <div className="text-left space-y-4">
+              <div className="flex items-start gap-3 rounded-lg border bg-muted/50 px-3 py-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 aspect-square items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200">
+                  <Flame className="h-4 w-4" />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                    <ShieldCheck className="h-4 w-4" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-medium leading-none">Account health</p>
-                    <p className="text-xs text-muted-foreground">No policy violations, spam patterns, or automation flags.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-medium leading-none">Gradual ramp-up</p>
-                    <p className="text-xs text-muted-foreground">Scale volume over several days; avoid jumping from 0 to high output.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="font-medium leading-none">Consistent cadence</p>
-                    <p className="text-xs text-muted-foreground">Keep a predictable schedule; avoid bursts and long idle periods.</p>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Before scheduling posts, give new or inactive social accounts a short warmup period. This builds normal activity patterns, reduces spam/automation flags, and improves reach.
+                </p>
               </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Quick warmup checklist</p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Post 3-5 times over the last 7-14 days (short, natural posts).</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Engage daily: like, comment, follow a few relevant creators.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 aspect-square items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Discover content within your niche using the platform's search bar.</span>
+                  </li>
+                </ul>
+              </div>
+
+
+
+              <p className="text-xs text-muted-foreground">
+                If you've already been active recently, you're good to continue.
+              </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
