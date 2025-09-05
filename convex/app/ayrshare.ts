@@ -1,4 +1,4 @@
-import { query, mutation, action, internalMutation, internalQuery } from "../_generated/server";
+import { query, action, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 
@@ -449,129 +449,9 @@ export const unschedulePost = action({
   },
 });
 
-// Internal actions that make external API calls
-export const checkProfileWithAPI = action({
-  args: {
-    profileId: v.id("ayrshareProfiles"),
-    profileKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const response = await fetch("https://api.ayrshare.com/api/user", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
-        "Profile-Key": args.profileKey
-      },
-    });
-
-    const result = await response.json();
-    
-    if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
-      await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
-        profileId: args.profileId,
-      });
-      return { message: "Deleted" };
-    }
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to check Ayrshare profile");
-    }
-
-    return { message: "All Good" };
-  },
-});
-
-export const createProfileWithAPI = action({
-  args: {
-    profileName: v.string(),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const response = await fetch("https://api.ayrshare.com/api/profiles", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${AYRSHARE_API_KEY}`
-      },
-      body: JSON.stringify({
-        title: args.profileName,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to create Ayrshare profile");
-    }
-
-    await ctx.runMutation(internal.app.ayrshare.saveProfile, {
-      profileName: args.profileName,
-      profileKey: result.profileKey,
-      userId: args.userId,
-    });
-
-    return { success: true };
-  },
-});
-
-export const deleteProfileWithAPI = action({
-  args: {
-    profileId: v.id("ayrshareProfiles"),
-    profileKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const response = await fetch("https://api.ayrshare.com/api/profiles", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
-        "Profile-Key": args.profileKey
-      }
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to delete Ayrshare profile");
-    }
-
-    await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
-      profileId: args.profileId,
-    });
-
-    return { success: true };
-  },
-});
-
-export const generateProfileManagerUrlWithAPI = action({
-  args: {
-    profileKey: v.string(),
-  },
-  handler: async (_ctx, args) => {
-    const response = await fetch("https://api.ayrshare.com/api/profiles/generateJWT", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${AYRSHARE_API_KEY}`
-      },
-      body: JSON.stringify({
-        domain: AYRSHARE_DOMAIN,
-        privateKey: AYRSHARE_PRIVATE_KEY,
-        profileKey: args.profileKey,
-        logout: true
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to generate profile manager URL");
-    }
-
-    return { url: result.url };
-  },
-});
+// (Removed) background helper actions: checkProfileWithAPI, createProfileWithAPI,
+// deleteProfileWithAPI, generateProfileManagerUrlWithAPI. Logic now handled directly
+// in synchronous actions above.
 
 export const unschedulePostsWithAPI = action({
   args: {
