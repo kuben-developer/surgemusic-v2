@@ -1,13 +1,13 @@
 "use client"
 
-import { useMutation } from "convex/react"
+import { useAction, useMutation } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
 
 export function useProfileActions() {
   const createProfileMutation = useMutation(api.app.ayrshare.createProfile)
   const deleteProfileMutation = useMutation(api.app.ayrshare.deleteProfileMutation)
-  const generateUrlMutation = useMutation(api.app.ayrshare.generateProfileManagerUrl)
+  const generateProfileManagerUrlAction = useAction(api.app.ayrshare.generateProfileManagerUrl)
 
   const createProfile = async (profileName: string) => {
     try {
@@ -33,7 +33,8 @@ export function useProfileActions() {
 
   const openProfileManager = async (profileKey: string) => {
     try {
-      const data = await generateUrlMutation({ profileKey })
+      const data = await generateProfileManagerUrlAction({ profileKey })
+      console.log('generateProfileManagerUrl action response', data)
       if (data && 'url' in data && data.url) {
         window.open(data.url as string, '_blank')
       } else {

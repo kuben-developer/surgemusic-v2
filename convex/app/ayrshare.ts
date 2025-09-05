@@ -190,20 +190,6 @@ export const deleteProfileMutation = mutation({
   },
 });
 
-export const generateProfileManagerUrl = mutation({
-  args: {
-    profileKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Schedule action to generate URL
-    await ctx.scheduler.runAfter(0, api.app.ayrshare.generateProfileManagerUrlWithAPI, {
-      profileKey: args.profileKey,
-    });
-
-    return { message: "Generating profile manager URL..." };
-  },
-});
-
 export const schedulePost = action({
   args: {
     schedules: v.array(v.object({
@@ -220,7 +206,7 @@ export const schedulePost = action({
     const schedules = args.schedules;
     const startTime = Date.now();
     console.log(`[schedulePost] Starting to schedule ${schedules.length} videos at ${new Date().toISOString()}`);
-    
+
     const videoIds = schedules.map(schedule => schedule.videoId);
     const existingVideos = await ctx.runQuery(internal.app.ayrshare.getVideosByIds, { videoIds });
     const existingVideoIds = new Set(existingVideos.map((v: any) => v._id));
@@ -294,18 +280,18 @@ export const schedulePost = action({
       success: boolean;
       error?: string;
     }> = [];
-    
+
     console.log(`[schedulePost] Processing ${schedules.length} schedules with concurrency limit of ${CONCURRENT_LIMIT}`);
-    
+
     for (let i = 0; i < schedules.length; i += CONCURRENT_LIMIT) {
       const batch = schedules.slice(i, i + CONCURRENT_LIMIT);
       const batchStartTime = Date.now();
       console.log(`[schedulePost] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(schedules.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
-      
+
       const batchResults = await Promise.allSettled(
         batch.map(schedule => processSchedule(schedule))
       );
-      
+
       batchResults.forEach((result) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
@@ -318,7 +304,7 @@ export const schedulePost = action({
           });
         }
       });
-      
+
       console.log(`[schedulePost] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
     }
 
@@ -330,7 +316,7 @@ export const schedulePost = action({
     const totalTime = Date.now() - startTime;
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
-    
+
     console.log(`[schedulePost] Completed scheduling ${schedules.length} videos in ${totalTime}ms`);
     console.log(`[schedulePost] Success: ${successCount}, Failed: ${failureCount}`);
     console.log(`[schedulePost] Average time per video: ${Math.round(totalTime / schedules.length)}ms`);
@@ -396,7 +382,7 @@ export const checkProfileWithAPI = action({
     });
 
     const result = await response.json();
-    
+
     if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
       await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
         profileId: args.profileId,
@@ -474,7 +460,7 @@ export const deleteProfileWithAPI = action({
   },
 });
 
-export const generateProfileManagerUrlWithAPI = action({
+export const generateProfileManagerUrl = action({
   args: {
     profileKey: v.string(),
   },
@@ -510,7 +496,7 @@ export const unschedulePostsWithAPI = action({
   },
   handler: async (ctx, args) => {
     console.log(`[unschedulePost] Starting to unschedule ${args.postIds.length} posts`);
-    
+
     // Get videos with the given postIds
     const videos = await ctx.runQuery(internal.app.ayrshare.getVideosByPostIds, {
       postIds: args.postIds,
@@ -523,7 +509,7 @@ export const unschedulePostsWithAPI = action({
 
     // Group videos by profile key
     const videosByProfile = new Map<string, any[]>();
-    
+
     for (const video of videos) {
       // Get profile key from the first scheduled platform
       let profileKey: string | null = null;
@@ -555,13 +541,13 @@ export const unschedulePostsWithAPI = action({
       const postIdsToDelete = profileVideos
         .map(v => v.tiktokUpload?.post?.id || v.instagramUpload?.post?.id || v.youtubeUpload?.post?.id)
         .filter((id): id is string => id !== null);
-      
+
       if (postIdsToDelete.length === 0) continue;
 
       console.log(`[unschedulePost] Calling Ayrshare API to delete ${postIdsToDelete.length} posts for profile ${profileKey}`);
-      
+
       try {
-        const deleteBody = postIdsToDelete.length === 1 
+        const deleteBody = postIdsToDelete.length === 1
           ? { id: postIdsToDelete[0] }
           : { bulk: postIdsToDelete };
 
@@ -597,10 +583,10 @@ export const unschedulePostsWithAPI = action({
       } catch (error) {
         console.error(`[unschedulePost] Error for profile ${profileKey}:`, error);
         postIdsToDelete.forEach(postId => {
-          results.push({ 
-            postId, 
-            success: false, 
-            error: error instanceof Error ? error.message : String(error) 
+          results.push({
+            postId,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
           });
         });
       }
@@ -610,7 +596,7 @@ export const unschedulePostsWithAPI = action({
     const failureCount = results.filter(r => !r.success).length;
 
     console.log(`[unschedulePost] Completed: ${successCount} success, ${failureCount} failed`);
-    
+
     return {
       success: successCount > 0,
       message: `Unscheduled ${successCount} posts${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
@@ -650,7 +636,7 @@ export const getVideosByPostIds = internalQuery({
 
     return allVideos.filter(video => {
       // Check if video belongs to user's campaign
-      const hasPostId = args.postIds.some(postId => 
+      const hasPostId = args.postIds.some(postId =>
         video.tiktokUpload?.post?.id === postId ||
         video.instagramUpload?.post?.id === postId ||
         video.youtubeUpload?.post?.id === postId
@@ -691,7 +677,7 @@ export const updateVideoSchedule = internalMutation({
   handler: async (_ctx, args) => {
     // This is a placeholder - actual implementation depends on video schema
     console.log("updateVideoSchedule called with:", args);
-    
+
     // In a real implementation, you would:
     // 1. Get the video by ID
     // 2. Determine which platforms to update based on socialAccountIds
