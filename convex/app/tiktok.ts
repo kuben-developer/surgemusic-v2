@@ -516,7 +516,7 @@ export const monitorManuallyPostedVideos = internalAction({
 
       for (const username of batch) {
         // Don't await scheduler.runAfter - it's fire-and-forget
-        ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
+        await ctx.scheduler.runAfter(batchDelay, internal.app.tiktok.scrapeManuallyPostedVideos, {
           username: username.trim(),
           captionToCampaignMap: Object.fromEntries(captionToCampaignMap),
         });
