@@ -6,7 +6,9 @@ const SignUpPage = () => {
 
   return (
     <div className="mt-10 flex justify-center">
-      <SignUp  />
+      <SignUp
+        signInUrl="/sign-in"
+      />
     </div>
   );
 };
