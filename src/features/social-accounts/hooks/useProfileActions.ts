@@ -1,17 +1,17 @@
 "use client"
 
-import { useAction, useMutation } from "convex/react"
+import { useAction } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
 
 export function useProfileActions() {
-  const createProfileMutation = useMutation(api.app.ayrshare.createProfile)
-  const deleteProfileMutation = useMutation(api.app.ayrshare.deleteProfileMutation)
+  const createProfileAction = useAction(api.app.ayrshare.createProfile)
+  const deleteProfileAction = useAction(api.app.ayrshare.deleteProfileMutation)
   const generateProfileManagerUrlAction = useAction(api.app.ayrshare.generateProfileManagerUrl)
 
   const createProfile = async (profileName: string) => {
     try {
-      await createProfileMutation({ profileName })
+      await createProfileAction({ profileName })
       toast.success(`Profile "${profileName}" created successfully!`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create profile'
@@ -22,7 +22,7 @@ export function useProfileActions() {
 
   const deleteProfile = async (profileName: string) => {
     try {
-      await deleteProfileMutation({ profileName })
+      await deleteProfileAction({ profileName })
       toast.success(`Profile "${profileName}" deleted successfully!`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete profile'

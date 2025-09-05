@@ -72,7 +72,7 @@ export const getProfiles = query({
   },
 });
 
-export const checkProfiles = mutation({
+export const checkProfiles = action({
   args: {
     profileName: v.string(),
   },
@@ -82,36 +82,53 @@ export const checkProfiles = mutation({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+    // Get user via internal query (actions cannot query DB directly)
+    const user = await ctx.runQuery(internal.app.ayrshare.getUserByClerkId, {
+      clerkId: identity.subject,
+    });
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    const profile = await ctx.db
-      .query("ayrshareProfiles")
-      .withIndex("by_profileName", (q) => q.eq("profileName", args.profileName))
-      .filter((q) => q.eq(q.field("userId"), user._id))
-      .unique();
+    const profile = await ctx.runQuery(internal.app.ayrshare.getProfileByNameForUser, {
+      profileName: args.profileName,
+      userId: user._id,
+    });
 
     if (!profile) {
       throw new Error("Profile not found");
     }
 
-    // Schedule action to check profile
-    await ctx.scheduler.runAfter(0, api.app.ayrshare.checkProfileWithAPI, {
-      profileId: profile._id,
-      profileKey: profile.profileKey,
+    // Call Ayrshare to verify profile synchronously
+    const response = await fetch("https://api.ayrshare.com/api/user", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+        "Profile-Key": profile.profileKey,
+      },
     });
 
-    return { message: "Checking profile..." };
+    const result = await response.json();
+
+    if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
+      // Clean up the missing profile and associated accounts
+      await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
+        profileId: profile._id,
+      });
+      return { profiles: 0, message: "Deleted", status: "deleted" };
+    }
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to check Ayrshare profile");
+    }
+
+    return { profiles: 1, message: "All Good", status: "ok" };
   },
 });
 
-export const createProfile = mutation({
+export const createProfile = action({
   args: {
     profileName: v.string(),
   },
@@ -121,10 +138,9 @@ export const createProfile = mutation({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+    const user = await ctx.runQuery(internal.app.ayrshare.getUserByClerkId, {
+      clerkId: identity.subject,
+    });
 
     if (!user) {
       throw new Error("User not found");
@@ -132,17 +148,35 @@ export const createProfile = mutation({
 
     const profileName = args.profileName + "|" + crypto.randomUUID();
 
-    // Schedule action to create profile via API
-    await ctx.scheduler.runAfter(0, api.app.ayrshare.createProfileWithAPI, {
+    // Create profile via Ayrshare synchronously
+    const response = await fetch("https://api.ayrshare.com/api/profiles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        title: profileName,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to create Ayrshare profile");
+    }
+
+    await ctx.runMutation(internal.app.ayrshare.saveProfile, {
       profileName,
+      profileKey: result.profileKey,
       userId: user._id,
     });
 
-    return { message: "Creating profile..." };
+    return { success: true };
   },
 });
 
-export const deleteProfileMutation = mutation({
+export const deleteProfileMutation = action({
   args: {
     profileName: v.string(),
   },
@@ -152,41 +186,81 @@ export const deleteProfileMutation = mutation({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+    const user = await ctx.runQuery(internal.app.ayrshare.getUserByClerkId, {
+      clerkId: identity.subject,
+    });
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    const profile = await ctx.db
-      .query("ayrshareProfiles")
-      .withIndex("by_profileName", (q) => q.eq("profileName", args.profileName))
-      .filter((q) => q.eq(q.field("userId"), user._id))
-      .unique();
+    const profile = await ctx.runQuery(internal.app.ayrshare.getProfileByNameForUser, {
+      profileName: args.profileName,
+      userId: user._id,
+    });
 
     if (!profile) {
       throw new Error("Profile not found");
     }
 
-    const socialAccounts = await ctx.db
-      .query("socialAccounts")
-      .withIndex("by_ayrshareProfileId", (q) => q.eq("ayrshareProfileId", profile._id))
-      .collect();
+    const socialAccounts = await ctx.runQuery(internal.app.ayrshare.getSocialAccountsForProfile, {
+      profileId: profile._id,
+    });
 
     if (socialAccounts.length > 0) {
       throw new Error("Please unlink all social accounts before deleting this profile");
     }
 
-    // Schedule action to delete profile via API
-    await ctx.scheduler.runAfter(0, api.app.ayrshare.deleteProfileWithAPI, {
+    // Delete profile from Ayrshare synchronously
+    const response = await fetch("https://api.ayrshare.com/api/profiles", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+        "Profile-Key": profile.profileKey,
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to delete Ayrshare profile");
+    }
+
+    await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
       profileId: profile._id,
-      profileKey: profile.profileKey,
     });
 
     return { success: true };
+  },
+});
+
+export const generateProfileManagerUrl = action({
+  args: {
+    profileKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const response = await fetch("https://api.ayrshare.com/api/profiles/generateJWT", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        domain: AYRSHARE_DOMAIN,
+        privateKey: AYRSHARE_PRIVATE_KEY,
+        profileKey: args.profileKey,
+        logout: true,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to generate profile manager URL");
+    }
+
+    return { url: result.url };
   },
 });
 
@@ -206,7 +280,7 @@ export const schedulePost = action({
     const schedules = args.schedules;
     const startTime = Date.now();
     console.log(`[schedulePost] Starting to schedule ${schedules.length} videos at ${new Date().toISOString()}`);
-
+    
     const videoIds = schedules.map(schedule => schedule.videoId);
     const existingVideos = await ctx.runQuery(internal.app.ayrshare.getVideosByIds, { videoIds });
     const existingVideoIds = new Set(existingVideos.map((v: any) => v._id));
@@ -280,18 +354,18 @@ export const schedulePost = action({
       success: boolean;
       error?: string;
     }> = [];
-
+    
     console.log(`[schedulePost] Processing ${schedules.length} schedules with concurrency limit of ${CONCURRENT_LIMIT}`);
-
+    
     for (let i = 0; i < schedules.length; i += CONCURRENT_LIMIT) {
       const batch = schedules.slice(i, i + CONCURRENT_LIMIT);
       const batchStartTime = Date.now();
       console.log(`[schedulePost] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(schedules.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
-
+      
       const batchResults = await Promise.allSettled(
         batch.map(schedule => processSchedule(schedule))
       );
-
+      
       batchResults.forEach((result) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
@@ -304,7 +378,7 @@ export const schedulePost = action({
           });
         }
       });
-
+      
       console.log(`[schedulePost] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
     }
 
@@ -316,7 +390,7 @@ export const schedulePost = action({
     const totalTime = Date.now() - startTime;
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
-
+    
     console.log(`[schedulePost] Completed scheduling ${schedules.length} videos in ${totalTime}ms`);
     console.log(`[schedulePost] Success: ${successCount}, Failed: ${failureCount}`);
     console.log(`[schedulePost] Average time per video: ${Math.round(totalTime / schedules.length)}ms`);
@@ -336,32 +410,42 @@ export const schedulePost = action({
   },
 });
 
-export const unschedulePost = mutation({
+export const unschedulePost = action({
   args: {
     postIds: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean;
+    message: string;
+    results: { postId: string; success: boolean; error?: string }[];
+  }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+    const user = await ctx.runQuery(internal.app.ayrshare.getUserByClerkId, {
+      clerkId: identity.subject,
+    });
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Schedule action to unschedule posts
-    await ctx.scheduler.runAfter(0, api.app.ayrshare.unschedulePostsWithAPI, {
+    // Perform unschedule synchronously
+    const result: {
+      success: boolean;
+      message: string;
+      results: { postId: string; success: boolean; error?: string }[];
+    } = await ctx.runAction(api.app.ayrshare.unschedulePostsWithAPI, {
       postIds: args.postIds,
       userId: user._id,
     });
 
-    return { message: "Unscheduling posts..." };
+    return result;
   },
 });
 
@@ -382,7 +466,7 @@ export const checkProfileWithAPI = action({
     });
 
     const result = await response.json();
-
+    
     if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
       await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
         profileId: args.profileId,
@@ -460,7 +544,7 @@ export const deleteProfileWithAPI = action({
   },
 });
 
-export const generateProfileManagerUrl = action({
+export const generateProfileManagerUrlWithAPI = action({
   args: {
     profileKey: v.string(),
   },
@@ -496,7 +580,7 @@ export const unschedulePostsWithAPI = action({
   },
   handler: async (ctx, args) => {
     console.log(`[unschedulePost] Starting to unschedule ${args.postIds.length} posts`);
-
+    
     // Get videos with the given postIds
     const videos = await ctx.runQuery(internal.app.ayrshare.getVideosByPostIds, {
       postIds: args.postIds,
@@ -509,7 +593,7 @@ export const unschedulePostsWithAPI = action({
 
     // Group videos by profile key
     const videosByProfile = new Map<string, any[]>();
-
+    
     for (const video of videos) {
       // Get profile key from the first scheduled platform
       let profileKey: string | null = null;
@@ -541,13 +625,13 @@ export const unschedulePostsWithAPI = action({
       const postIdsToDelete = profileVideos
         .map(v => v.tiktokUpload?.post?.id || v.instagramUpload?.post?.id || v.youtubeUpload?.post?.id)
         .filter((id): id is string => id !== null);
-
+      
       if (postIdsToDelete.length === 0) continue;
 
       console.log(`[unschedulePost] Calling Ayrshare API to delete ${postIdsToDelete.length} posts for profile ${profileKey}`);
-
+      
       try {
-        const deleteBody = postIdsToDelete.length === 1
+        const deleteBody = postIdsToDelete.length === 1 
           ? { id: postIdsToDelete[0] }
           : { bulk: postIdsToDelete };
 
@@ -583,10 +667,10 @@ export const unschedulePostsWithAPI = action({
       } catch (error) {
         console.error(`[unschedulePost] Error for profile ${profileKey}:`, error);
         postIdsToDelete.forEach(postId => {
-          results.push({
-            postId,
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
+          results.push({ 
+            postId, 
+            success: false, 
+            error: error instanceof Error ? error.message : String(error) 
           });
         });
       }
@@ -596,7 +680,7 @@ export const unschedulePostsWithAPI = action({
     const failureCount = results.filter(r => !r.success).length;
 
     console.log(`[unschedulePost] Completed: ${successCount} success, ${failureCount} failed`);
-
+    
     return {
       success: successCount > 0,
       message: `Unscheduled ${successCount} posts${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
@@ -636,7 +720,7 @@ export const getVideosByPostIds = internalQuery({
 
     return allVideos.filter(video => {
       // Check if video belongs to user's campaign
-      const hasPostId = args.postIds.some(postId =>
+      const hasPostId = args.postIds.some(postId => 
         video.tiktokUpload?.post?.id === postId ||
         video.instagramUpload?.post?.id === postId ||
         video.youtubeUpload?.post?.id === postId
@@ -644,6 +728,41 @@ export const getVideosByPostIds = internalQuery({
 
       return hasPostId;
     });
+  },
+});
+
+// Helper internal queries for actions
+export const getUserByClerkId = internalQuery({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+    return user;
+  },
+});
+
+export const getProfileByNameForUser = internalQuery({
+  args: { profileName: v.string(), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("ayrshareProfiles")
+      .withIndex("by_profileName", (q) => q.eq("profileName", args.profileName))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .unique();
+    return profile;
+  },
+});
+
+export const getSocialAccountsForProfile = internalQuery({
+  args: { profileId: v.id("ayrshareProfiles") },
+  handler: async (ctx, args) => {
+    const socialAccounts = await ctx.db
+      .query("socialAccounts")
+      .withIndex("by_ayrshareProfileId", (q) => q.eq("ayrshareProfileId", args.profileId))
+      .collect();
+    return socialAccounts;
   },
 });
 
@@ -677,7 +796,7 @@ export const updateVideoSchedule = internalMutation({
   handler: async (_ctx, args) => {
     // This is a placeholder - actual implementation depends on video schema
     console.log("updateVideoSchedule called with:", args);
-
+    
     // In a real implementation, you would:
     // 1. Get the video by ID
     // 2. Determine which platforms to update based on socialAccountIds

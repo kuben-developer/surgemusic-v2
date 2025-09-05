@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useMutation } from "convex/react"
+import { useAction } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
 import type { ProfileCheckResult, ProfileWithAccounts, CheckProfilesResult } from '../types/social-accounts.types'
 
 export function useProfileSync() {
-  const checkProfilesMutation = useMutation(api.app.ayrshare.checkProfiles)
+  const checkProfilesAction = useAction(api.app.ayrshare.checkProfiles)
   
   const [profileCheckResults, setProfileCheckResults] = useState<ProfileCheckResult[]>([])
   const [currentCheckIndex, setCurrentCheckIndex] = useState(-1)
@@ -51,15 +51,19 @@ export function useProfileSync() {
         )
 
         try {
-          const result = await checkProfilesMutation({ profileName: profile.profileName }) as CheckProfilesResult
-          
+          const result = await checkProfilesAction({ profileName: profile.profileName }) as CheckProfilesResult
+
+          const message = result?.message
+            ? result.message
+            : (result?.profiles === 0 ? "Deleted" : "All Good")
+
           setProfileCheckResults(prev => 
             prev.map((r, idx) => 
               idx === overallIndex 
                 ? { 
                     ...r, 
                     status: 'success' as const, 
-                    message: result?.profiles === 0 ? "Deleted" : "All Good"
+                    message
                   }
                 : r
             )

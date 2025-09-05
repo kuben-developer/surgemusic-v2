@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import type { ScheduledVideo, UnscheduleResult } from "../types/unschedule.types";
@@ -17,7 +17,7 @@ export function useUnscheduleLogic() {
   const [isUnscheduling, setIsUnscheduling] = useState(false);
   const [unscheduleResults, setUnscheduleResults] = useState<UnscheduleResult[]>([]);
 
-  const unschedulePost = useMutation(api.app.ayrshare.unschedulePost);
+  const unschedulePost = useAction(api.app.ayrshare.unschedulePost);
 
   const toggleSelectAll = (scheduledVideos?: ScheduledVideo[]) => {
     if (!scheduledVideos) return;
