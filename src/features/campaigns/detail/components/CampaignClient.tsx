@@ -47,6 +47,13 @@ export default function CampaignClient() {
   useEffect(() => {
     if (!campaign) return;
 
+    const getEstimatedMinutes = (count?: number): number => {
+      if (!count || count <= 0) return 5;
+      if (count <= 30) return 1;
+      if (count <= 90) return 3;
+      return 5;
+    };
+
     const updateProgress = () => {
       if (campaign.status === 'completed') {
         setProgress(100);
@@ -57,8 +64,10 @@ export default function CampaignClient() {
       const createdAt = new Date(campaign._creationTime);
       const elapsedMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
 
-      // Calculate progress: 0-5 minutes maps to 0-90%
-      const calculatedProgress = Math.min(90, (elapsedMinutes / 5) * 90);
+      // Calculate progress based on estimated generation window derived from video count.
+      // 30 vids ≈ 1 min, 90 vids ≈ 3 min, 120+ vids ≈ 5 min
+      const totalMinutes = getEstimatedMinutes(campaign.videoCount);
+      const calculatedProgress = Math.min(90, (elapsedMinutes / totalMinutes) * 90);
       const progress = Number(calculatedProgress.toFixed(1));
       setProgress(progress);
       if (progress === 89.7) {
