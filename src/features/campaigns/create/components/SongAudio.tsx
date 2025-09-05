@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Music, Upload, Scissors, Loader2 } from "lucide-react"
+import { Music, Upload, Scissors, Loader2, AlertCircle } from "lucide-react"
 import { useConvexUpload } from "@/hooks/useConvexUpload"
 import { useRef, useState } from "react"
 import { AudioTrimmer } from "./AudioTrimmer"
@@ -76,6 +76,8 @@ export function SongAudio({
     const [isTrimming, setIsTrimming] = useState(false)
     const [showLyricsEditor, setShowLyricsEditor] = useState(false)
     const [isTranscribing, setIsTranscribing] = useState(false)
+    const [transcriptionFailed, setTranscriptionFailed] = useState(false)
+    const [transcriptionError, setTranscriptionError] = useState<string | null>(null)
     const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false)
     
     const transcribeAudio = useAction(api.app.transcription.transcribeAudio)
@@ -237,6 +239,8 @@ export function SongAudio({
         setLyrics([])
         setWordsData(undefined)
         setLyricsWithWords(undefined)
+        setTranscriptionFailed(false)
+        setTranscriptionError(null)
     }
     
     const handleTranscribe = async (urlOverride?: string) => {
@@ -247,6 +251,8 @@ export function SongAudio({
         }
         
         setIsTranscribing(true)
+        setTranscriptionFailed(false)
+        setTranscriptionError(null)
         try {
             console.log("Starting transcription for URL:", urlToUse)
             const result = await transcribeAudio({ audioUrl: urlToUse })
@@ -265,17 +271,27 @@ export function SongAudio({
                 toast.success("Audio transcribed successfully")
             } else {
                 console.error("Transcription failed:", result.error)
-                toast.error(result.error || "Transcription failed - opening manual editor")
-                // Initialize empty lyrics and open editor for manual entry
-                setLyrics(initializeEmptyLyrics(15))
-                setShowLyricsEditor(true)
+                setTranscriptionFailed(true)
+                setTranscriptionError(result.error || "Transcription failed.")
+                toast.error("Transcription failed", {
+                    description: "We tried three times on the server. You can retry or edit manually."
+                })
+                // Prepare empty lyrics so user can still open the editor manually
+                if (!lyrics || lyrics.length === 0) {
+                    setLyrics(initializeEmptyLyrics(15))
+                }
             }
         } catch (error) {
             console.error("Transcription error:", error)
-            toast.error("Failed to transcribe audio - opening manual editor")
-            // Initialize empty lyrics and open editor for manual entry
-            setLyrics(initializeEmptyLyrics(15))
-            setShowLyricsEditor(true)
+            setTranscriptionFailed(true)
+            setTranscriptionError(error instanceof Error ? error.message : "Unknown error")
+            toast.error("Failed to transcribe audio", {
+                description: "We tried three times on the server. You can retry or edit manually."
+            })
+            // Prepare empty lyrics so user can still open the editor manually
+            if (!lyrics || lyrics.length === 0) {
+                setLyrics(initializeEmptyLyrics(15))
+            }
         } finally {
             setIsTranscribing(false)
         }
@@ -370,7 +386,40 @@ export function SongAudio({
                                     <audio controls className="w-full">
                                         <source src={songAudioBase64 || songAudioUrl} />
                                     </audio>
-                                    {((selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && lyrics && lyrics.length > 0 && !showLyricsEditor) ? (
+                                    {/* Failure state + retry option */}
+                                    {(selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && transcriptionFailed && !isTranscribing && (
+                                        <div className="border border-red-500/40 bg-red-500/10 rounded-lg p-4 space-y-3">
+                                            <div className="flex items-start gap-2">
+                                                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                                                <div className="space-y-1">
+                                                    <p className="font-medium text-red-700 dark:text-red-300">Transcription failed</p>
+                                                    <p className="text-sm text-red-700/80 dark:text-red-300/80">
+                                                        We tried three times on the server and couldn’t transcribe this audio. You can retry, or edit lyrics manually.
+                                                    </p>
+                                                    {transcriptionError && (
+                                                        <p className="text-xs text-red-700/70 dark:text-red-300/70 truncate">{transcriptionError}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <Button
+                                                    variant="default"
+                                                    onClick={() => handleTranscribe()}
+                                                    className="w-full"
+                                                >
+                                                    Retry Transcription
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => setShowLyricsEditor(true)}
+                                                    className="w-full"
+                                                >
+                                                    Edit Lyrics Manually
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {((selectedLyricsOption === "lyrics" || selectedLyricsOption === "lyrics-hooks") && lyrics && lyrics.length > 0 && !showLyricsEditor && !transcriptionFailed) ? (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Button
                                                 variant="default"
