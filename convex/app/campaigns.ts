@@ -661,6 +661,8 @@ export const sendWebhook = internalAction({
         gymAesthetic: selected("gym_workout"),
         girlAesthetic: selected("feminine_energy"),
         luxuryLifestyle: selected("luxury_lifestyle"),
+        // Admin-only theme
+        Enterprise: selected("enterprise"),
       };
 
       // Determine if the campaign's owner is currently on a free trial

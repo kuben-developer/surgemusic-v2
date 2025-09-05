@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as app_admin from "../app/admin.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_ayrshare from "../app/ayrshare.js";
 import type * as app_campaigns from "../app/campaigns.js";
@@ -42,6 +43,7 @@ import type * as webhooks_test from "../webhooks/test.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "app/admin": typeof app_admin;
   "app/analytics": typeof app_analytics;
   "app/ayrshare": typeof app_ayrshare;
   "app/campaigns": typeof app_campaigns;

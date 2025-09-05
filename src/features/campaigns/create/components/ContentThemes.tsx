@@ -13,6 +13,9 @@ import {
   getImageSrcsForFolder,
   getLabelForKey,
 } from "../constants/content-themes.constants";
+import type { ThemeDef } from "../constants/content-themes.constants";
+import { useMemo } from "react";
+import { useAdmin } from "@/features/admin";
 
 interface ContentThemesProps {
   selectedThemes: string[];
@@ -27,8 +30,21 @@ export function ContentThemes({
   themesError,
   selectedLyricsOption,
 }: ContentThemesProps) {
+  const { isAdmin } = useAdmin();
   // Track active sub-tab per theme that has sub-themes
   const [activeSubTabs, setActiveSubTabs] = useState<Record<string, string>>({});
+
+  // Compose theme list; add Enterprise only for admins
+  const themesToRender = useMemo(() => {
+    const base = CONTENT_THEMES;
+    if (!isAdmin) return base;
+    const enterpriseTheme: ThemeDef = {
+      key: "enterprise",
+      label: "Enterprise",
+      imageFolder: THEME_DEFAULT_FOLDER,
+    };
+    return [...base, enterpriseTheme];
+  }, [isAdmin]);
 
   const handleAddTheme = (key: string) => {
     // Enforce Music Discovery availability based on lyrics option
@@ -118,7 +134,7 @@ export function ContentThemes({
           </div>
 
           <div className="space-y-8">
-            {CONTENT_THEMES.map((theme) => {
+            {themesToRender.map((theme) => {
               // Any theme with sub-themes: render tabs and single-select within group
               if (theme.subThemes && theme.subThemes.length > 0) {
                 const subKeys = theme.subThemes.map((s) => s.key);

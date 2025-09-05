@@ -2,7 +2,7 @@
 // This is designed to be easy to update when adding per-theme image folders.
 
 export const THEME_IMAGE_BASE_PATH = "/content_themes" as const;
-export const THEME_DEFAULT_FOLDER = "placeholder" as const;
+export const THEME_DEFAULT_FOLDER = "default" as const;
 export const THEME_GIF_COUNT = 4 as const;
 
 export interface SubThemeDef {
