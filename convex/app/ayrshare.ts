@@ -837,45 +837,22 @@ export const clearVideoSchedules = internalMutation({
 
       const updateData: any = {};
 
-      // Clear schedule data for each platform
-      if (video.tiktokUpload) {
-        updateData.tiktokUpload = {
-          ...video.tiktokUpload,
-          // Keep object to satisfy schema, but mark unscheduled
-          scheduledAt: 0,
-          post: {
-            ...video.tiktokUpload.post,
-            id: "",
-            refId: undefined,
-          },
-        };
+      // Unset upload fields for each platform if present
+      if (video.tiktokUpload !== undefined) {
+        updateData.tiktokUpload = undefined;
       }
 
-      if (video.instagramUpload) {
-        updateData.instagramUpload = {
-          ...video.instagramUpload,
-          scheduledAt: 0,
-          post: {
-            ...video.instagramUpload.post,
-            id: "",
-            refId: undefined,
-          },
-        };
+      if (video.instagramUpload !== undefined) {
+        updateData.instagramUpload = undefined;
       }
 
-      if (video.youtubeUpload) {
-        updateData.youtubeUpload = {
-          ...video.youtubeUpload,
-          scheduledAt: 0,
-          post: {
-            ...video.youtubeUpload.post,
-            id: "",
-            refId: undefined,
-          },
-        };
+      if (video.youtubeUpload !== undefined) {
+        updateData.youtubeUpload = undefined;
       }
 
-      await ctx.db.patch(videoId, updateData);
+      if (Object.keys(updateData).length > 0) {
+        await ctx.db.patch(videoId, updateData);
+      }
     }
   },
 });
