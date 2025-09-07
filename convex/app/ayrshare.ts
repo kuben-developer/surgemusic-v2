@@ -1,6 +1,7 @@
 import { query, action, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
 
 const AYRSHARE_API_KEY = process.env.AYRSHARE_API_KEY || "";
 const AYRSHARE_DOMAIN = "id-jgi1t";
@@ -280,7 +281,7 @@ export const schedulePost = action({
     const schedules = args.schedules;
     const startTime = Date.now();
     console.log(`[schedulePost] Starting to schedule ${schedules.length} videos at ${new Date().toISOString()}`);
-    
+
     const videoIds = schedules.map(schedule => schedule.videoId);
     const existingVideos = await ctx.runQuery(internal.app.ayrshare.getVideosByIds, { videoIds });
     const existingVideoIds = new Set(existingVideos.map((v: any) => v._id));
@@ -354,18 +355,18 @@ export const schedulePost = action({
       success: boolean;
       error?: string;
     }> = [];
-    
+
     console.log(`[schedulePost] Processing ${schedules.length} schedules with concurrency limit of ${CONCURRENT_LIMIT}`);
-    
+
     for (let i = 0; i < schedules.length; i += CONCURRENT_LIMIT) {
       const batch = schedules.slice(i, i + CONCURRENT_LIMIT);
       const batchStartTime = Date.now();
       console.log(`[schedulePost] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(schedules.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
-      
+
       const batchResults = await Promise.allSettled(
         batch.map(schedule => processSchedule(schedule))
       );
-      
+
       batchResults.forEach((result) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
@@ -378,26 +379,48 @@ export const schedulePost = action({
           });
         }
       });
-      
-      console.log(`[schedulePost] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
-    }
 
-    if (results.length > 0 && results.every(r => !r.success)) {
-      console.log("[schedulePost] All videos failed:", results);
-      throw new Error("Failed to schedule any posts");
+      console.log(`[schedulePost] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
     }
 
     const totalTime = Date.now() - startTime;
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
-    
+
+    // Build a helpful error message when all fail (don't throw, return structured failure)
+    let failureMessage: string | undefined;
+    if (successCount === 0 && results.length > 0) {
+      const extractMsg = (raw?: string) => {
+        if (!raw) return undefined;
+        try {
+          const obj = JSON.parse(raw);
+          const postErr = obj?.posts?.[0]?.errors?.[0];
+          if (postErr?.message) {
+            // Remove URLs from the message
+            return `${postErr.message}`.replace(/https?:\/\/\S+/g, '');
+          }
+          return raw;
+        } catch {
+          return raw;
+        }
+      };
+      const firstErr = results.find(r => !r.success)?.error;
+      failureMessage = extractMsg(firstErr) || "Failed to schedule any posts";
+      console.log("[schedulePost] All videos failed:", results, failureMessage);
+    }
+
     console.log(`[schedulePost] Completed scheduling ${schedules.length} videos in ${totalTime}ms`);
     console.log(`[schedulePost] Success: ${successCount}, Failed: ${failureCount}`);
     console.log(`[schedulePost] Average time per video: ${Math.round(totalTime / schedules.length)}ms`);
 
+    const success = results.some(r => r.success);
+    const message = success
+      ? `Scheduled ${successCount} posts successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`
+      : (failureMessage || "Failed to schedule any posts");
+
     return {
-      success: results.some(r => r.success),
-      message: `Scheduled ${successCount} posts successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+      success,
+      message,
       results,
       performanceMetrics: {
         totalTimeMs: totalTime,
@@ -460,7 +483,7 @@ export const unschedulePostsWithAPI = action({
   },
   handler: async (ctx, args) => {
     console.log(`[unschedulePost] Starting to unschedule ${args.postIds.length} posts`);
-    
+
     // Get videos with the given postIds
     const videos = await ctx.runQuery(internal.app.ayrshare.getVideosByPostIds, {
       postIds: args.postIds,
@@ -473,7 +496,7 @@ export const unschedulePostsWithAPI = action({
 
     // Group videos by profile key
     const videosByProfile = new Map<string, any[]>();
-    
+
     for (const video of videos) {
       // Get profile key from the first scheduled platform
       let profileKey: string | null = null;
@@ -505,13 +528,13 @@ export const unschedulePostsWithAPI = action({
       const postIdsToDelete = profileVideos
         .map(v => v.tiktokUpload?.post?.id || v.instagramUpload?.post?.id || v.youtubeUpload?.post?.id)
         .filter((id): id is string => id !== null);
-      
+
       if (postIdsToDelete.length === 0) continue;
 
       console.log(`[unschedulePost] Calling Ayrshare API to delete ${postIdsToDelete.length} posts for profile ${profileKey}`);
-      
+
       try {
-        const deleteBody = postIdsToDelete.length === 1 
+        const deleteBody = postIdsToDelete.length === 1
           ? { id: postIdsToDelete[0] }
           : { bulk: postIdsToDelete };
 
@@ -547,10 +570,10 @@ export const unschedulePostsWithAPI = action({
       } catch (error) {
         console.error(`[unschedulePost] Error for profile ${profileKey}:`, error);
         postIdsToDelete.forEach(postId => {
-          results.push({ 
-            postId, 
-            success: false, 
-            error: error instanceof Error ? error.message : String(error) 
+          results.push({
+            postId,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
           });
         });
       }
@@ -560,7 +583,7 @@ export const unschedulePostsWithAPI = action({
     const failureCount = results.filter(r => !r.success).length;
 
     console.log(`[unschedulePost] Completed: ${successCount} success, ${failureCount} failed`);
-    
+
     return {
       success: successCount > 0,
       message: `Unscheduled ${successCount} posts${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
@@ -600,7 +623,7 @@ export const getVideosByPostIds = internalQuery({
 
     return allVideos.filter(video => {
       // Check if video belongs to user's campaign
-      const hasPostId = args.postIds.some(postId => 
+      const hasPostId = args.postIds.some(postId =>
         video.tiktokUpload?.post?.id === postId ||
         video.instagramUpload?.post?.id === postId ||
         video.youtubeUpload?.post?.id === postId
@@ -673,14 +696,91 @@ export const updateVideoSchedule = internalMutation({
     postCaption: v.string(),
     socialAccountIds: v.array(v.string()),
   },
-  handler: async (_ctx, args) => {
-    // This is a placeholder - actual implementation depends on video schema
-    console.log("updateVideoSchedule called with:", args);
-    
-    // In a real implementation, you would:
-    // 1. Get the video by ID
-    // 2. Determine which platforms to update based on socialAccountIds
-    // 3. Update the appropriate upload objects (tiktokUpload, instagramUpload, etc.)
+  handler: async (ctx, args) => {
+    // 1) Fetch the video
+    const video = await ctx.db.get(args.videoId as unknown as Id<"generatedVideos">) as Doc<"generatedVideos"> | null;
+    if (!video) {
+      console.warn(`[updateVideoSchedule] Video not found: ${args.videoId}`);
+      return;
+    }
+
+    // 2) Resolve social accounts to determine platforms being scheduled
+    const accounts = await Promise.all(
+      args.socialAccountIds.map(async (id) => {
+        try {
+          return await ctx.db.get(id as unknown as Id<"socialAccounts">) as Doc<"socialAccounts"> | null;
+        } catch (err) {
+          console.error(`[updateVideoSchedule] Failed to fetch social account ${id}:`, err);
+          return null;
+        }
+      })
+    );
+
+    // Filter out null/undefined and de-duplicate by platform
+    const accountsByPlatform = new Map<Doc<"socialAccounts">["platform"], Doc<"socialAccounts">>();
+    for (const account of accounts) {
+      if (!account) continue;
+      // account.platform is one of: 'tiktok' | 'instagram' | 'youtube'
+      if (!accountsByPlatform.has(account.platform)) {
+        accountsByPlatform.set(account.platform, account);
+      }
+    }
+
+    if (accountsByPlatform.size === 0) {
+      console.warn(`[updateVideoSchedule] No valid social accounts to schedule for video ${args.videoId}`);
+      return;
+    }
+
+    // 3) Build patch for each platform present
+    const updateData: any = {};
+
+    const buildPost = (existing: Doc<"generatedVideos">["tiktokUpload"] | Doc<"generatedVideos">["instagramUpload"] | Doc<"generatedVideos">["youtubeUpload"] | undefined) => ({
+      id: args.postId,
+      refId: args.refId,
+      caption: args.postCaption,
+      // Preserve existing URL/templateId if present; URL will be filled by webhook once posted
+      url: existing?.post?.url,
+      templateId: existing?.post?.templateId,
+    });
+
+    type UploadStatus = { isPosted: boolean; isFailed: boolean; failedReason?: string };
+    const baseStatus: UploadStatus = {
+      isPosted: false,
+      isFailed: false,
+      failedReason: undefined as string | undefined,
+    };
+
+    const tiktokAccount = accountsByPlatform.get("tiktok");
+    if (tiktokAccount) {
+      updateData.tiktokUpload = {
+        scheduledAt: args.scheduledAt,
+        socialAccountId: tiktokAccount._id,
+        status: { ...baseStatus },
+        post: buildPost(video.tiktokUpload),
+      };
+    }
+
+    const instagramAccount = accountsByPlatform.get("instagram");
+    if (instagramAccount) {
+      updateData.instagramUpload = {
+        scheduledAt: args.scheduledAt,
+        socialAccountId: instagramAccount._id,
+        status: { ...baseStatus },
+        post: buildPost(video.instagramUpload),
+      };
+    }
+
+    const youtubeAccount = accountsByPlatform.get("youtube");
+    if (youtubeAccount) {
+      updateData.youtubeUpload = {
+        scheduledAt: args.scheduledAt,
+        socialAccountId: youtubeAccount._id,
+        status: { ...baseStatus },
+        post: buildPost(video.youtubeUpload),
+      };
+    }
+
+    await ctx.db.patch(video._id, updateData);
   },
 });
 
@@ -741,7 +841,8 @@ export const clearVideoSchedules = internalMutation({
       if (video.tiktokUpload) {
         updateData.tiktokUpload = {
           ...video.tiktokUpload,
-          scheduledAt: undefined,
+          // Keep object to satisfy schema, but mark unscheduled
+          scheduledAt: 0,
           post: {
             ...video.tiktokUpload.post,
             id: "",
@@ -753,7 +854,7 @@ export const clearVideoSchedules = internalMutation({
       if (video.instagramUpload) {
         updateData.instagramUpload = {
           ...video.instagramUpload,
-          scheduledAt: undefined,
+          scheduledAt: 0,
           post: {
             ...video.instagramUpload.post,
             id: "",
@@ -765,7 +866,7 @@ export const clearVideoSchedules = internalMutation({
       if (video.youtubeUpload) {
         updateData.youtubeUpload = {
           ...video.youtubeUpload,
-          scheduledAt: undefined,
+          scheduledAt: 0,
           post: {
             ...video.youtubeUpload.post,
             id: "",

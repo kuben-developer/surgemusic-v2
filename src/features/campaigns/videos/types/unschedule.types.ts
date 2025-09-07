@@ -5,7 +5,8 @@ export interface ScheduledVideo {
   videoName: string;
   videoUrl: string;
   postId: string;
-  scheduledAt: Date;
+  // Epoch milliseconds; convert to Date in UI as needed
+  scheduledAt: number;
   postCaption: string;
   scheduledSocialAccounts: {
     platform: string;

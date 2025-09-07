@@ -526,12 +526,13 @@ export const getScheduledVideos = query({
           videoName: video.video.name,
           videoUrl: video.video.url,
           postId: postInfo?.id || "",
-          scheduledAt: new Date(earliestSchedule!),
+          // Convex does not support Date in responses; return epoch ms
+          scheduledAt: earliestSchedule!,
           postCaption: postInfo?.caption || "",
           scheduledSocialAccounts: platforms,
         };
       })
-      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+      .sort((a, b) => a.scheduledAt - b.scheduledAt);
 
     return scheduledVideos;
   },
