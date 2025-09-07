@@ -224,7 +224,11 @@ export const getPublicReportAnalytics = internalAction({
     campaignIds: v.array(v.id("campaigns")),
     days: v.number(),
     userId: v.id("users"),
-    hiddenVideoIds: v.optional(v.array(v.union(v.id("generatedVideos"), v.id("manuallyPostedVideos")))),
+    hiddenVideoIds: v.optional(v.array(v.union(
+      v.id("generatedVideos"), 
+      v.id("manuallyPostedVideos"),
+      v.id("ayrsharePostedVideos")
+    ))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
     // Use the internal analytics function with hidden videos filtering

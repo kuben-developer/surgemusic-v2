@@ -108,11 +108,31 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
 
+  ayrsharePostedVideos: defineTable({
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    socialPlatform: socialPlatforms,
+    videoId: v.string(),
+    postedAt: v.number(), // seconds epoch from Ayrshare analytics.created
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    thumbnailUrl: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    updatedAt: v.number(), // ms epoch at write time
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_userId", ["userId"])
+    .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
+
   comments: defineTable({
     commentId: v.string(),
     campaignId: v.id('campaigns'),
     userId: v.id('users'),
-    videoId: v.id('manuallyPostedVideos'),
+    videoId: v.union(v.id('manuallyPostedVideos'), v.id('ayrsharePostedVideos')),
     socialPlatform: socialPlatforms,
     text: v.string(),
     authorUsername: v.string(),
@@ -212,7 +232,11 @@ export default defineSchema({
     userId: v.id('users'),
     publicShareId: v.optional(v.string()),
     campaignIds: v.array(v.id('campaigns')),
-    hiddenVideoIds: v.array(v.union(v.id('generatedVideos'), v.id('manuallyPostedVideos'))),
+    hiddenVideoIds: v.array(v.union(
+      v.id('generatedVideos'), 
+      v.id('manuallyPostedVideos'),
+      v.id('ayrsharePostedVideos')
+    )),
   })
     .index("by_userId", ["userId"]),
 

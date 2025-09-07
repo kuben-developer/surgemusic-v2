@@ -1,4 +1,4 @@
-import { query, action, internalMutation, internalQuery } from "../_generated/server";
+import { query, action, internalMutation, internalQuery, internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -854,5 +854,215 @@ export const clearVideoSchedules = internalMutation({
         await ctx.db.patch(videoId, updateData);
       }
     }
+  },
+});
+
+// Helper to resolve profileKey from socialAccountId
+export const getProfileKeyFromSocialAccountId = internalQuery({
+  args: { socialAccountId: v.id('socialAccounts') },
+  handler: async (ctx, args) => {
+    const socialAccount = await ctx.db.get(args.socialAccountId);
+    if (!socialAccount) return null;
+    
+    const profile = await ctx.db.get(socialAccount.ayrshareProfileId);
+    if (!profile) return null;
+    
+    return profile.profileKey;
+  },
+});
+
+// Store or update Ayrshare posted video analytics
+export const storeAyrsharePostedVideo = internalMutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    socialPlatform: v.union(
+      v.literal("tiktok"),
+      v.literal("instagram"),
+      v.literal("youtube")
+    ),
+    videoId: v.string(),
+    postedAt: v.number(),
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    thumbnailUrl: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Check if video already exists using composite key
+    const existing = await ctx.db
+      .query("ayrsharePostedVideos")
+      .withIndex("by_videoId_socialPlatform", (q) => 
+        q.eq("videoId", args.videoId).eq("socialPlatform", args.socialPlatform)
+      )
+      .filter((q) => q.eq(q.field("campaignId"), args.campaignId))
+      .unique();
+    
+    if (existing) {
+      // Update existing record
+      await ctx.db.patch(existing._id, {
+        views: args.views,
+        likes: args.likes,
+        comments: args.comments,
+        shares: args.shares,
+        saves: args.saves,
+        thumbnailUrl: args.thumbnailUrl,
+        videoUrl: args.videoUrl,
+        updatedAt: Date.now(),
+      });
+      return existing._id;
+    } else {
+      // Insert new record
+      const id = await ctx.db.insert("ayrsharePostedVideos", {
+        ...args,
+        updatedAt: Date.now(),
+      });
+      return id;
+    }
+  },
+});
+
+// Monitor API posted videos and fetch analytics from Ayrshare
+export const monitorApiPostedVideos = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const BATCH_SIZE = 5; // Process 5 videos concurrently
+    
+    // Get all generated videos with at least one posted platform
+    const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
+    
+    // Process in batches
+    for (let i = 0; i < generatedVideos.length; i += BATCH_SIZE) {
+      const batch = generatedVideos.slice(i, i + BATCH_SIZE);
+      
+      await Promise.all(
+        batch.map(async (video) => {
+          const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, { 
+            campaignId: video.campaignId 
+          });
+          
+          if (!campaign) {
+            console.error(`Campaign not found for video ${video._id}`);
+            return;
+          }
+          
+          // Process each platform
+          const platforms: Array<{
+            platform: "tiktok" | "instagram" | "youtube",
+            upload: NonNullable<typeof video.tiktokUpload | typeof video.instagramUpload | typeof video.youtubeUpload>
+          }> = [];
+          
+          if (video.tiktokUpload?.status.isPosted && video.tiktokUpload.post.id) {
+            platforms.push({ platform: "tiktok", upload: video.tiktokUpload });
+          }
+          if (video.instagramUpload?.status.isPosted && video.instagramUpload.post.id) {
+            platforms.push({ platform: "instagram", upload: video.instagramUpload });
+          }
+          if (video.youtubeUpload?.status.isPosted && video.youtubeUpload.post.id) {
+            platforms.push({ platform: "youtube", upload: video.youtubeUpload });
+          }
+          
+          for (const { platform, upload } of platforms) {
+            try {
+              // Get profile key
+              const profileKey = await ctx.runQuery(
+                internal.app.ayrshare.getProfileKeyFromSocialAccountId,
+                { socialAccountId: upload.socialAccountId }
+              );
+              
+              if (!profileKey) {
+                console.error(`Profile key not found for social account ${upload.socialAccountId}`);
+                continue;
+              }
+              
+              // Fetch analytics from Ayrshare
+              const response = await fetch("https://api.ayrshare.com/api/analytics/post", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+                  "Content-Type": "application/json",
+                  "Profile-Key": profileKey,
+                },
+                body: JSON.stringify({
+                  id: upload.post.id,
+                  platforms: [platform],
+                }),
+              });
+              
+              if (!response.ok) {
+                if (response.status === 429) {
+                  // Rate limited, skip and retry later
+                  console.warn(`Rate limited for post ${upload.post.id}`);
+                  continue;
+                }
+                throw new Error(`Failed to fetch analytics: ${response.statusText}`);
+              }
+              
+              const data = await response.json();
+              
+              // Extract analytics based on platform
+              const platformData = data[platform];
+              if (!platformData || !platformData.analytics) {
+                console.warn(`No analytics data for ${platform} post ${upload.post.id}`);
+                continue;
+              }
+              
+              const analytics = platformData.analytics;
+              
+              // Store in database
+              await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
+                campaignId: video.campaignId,
+                userId: campaign.userId,
+                socialPlatform: platform,
+                videoId: platformData.id || upload.post.id,
+                postedAt: analytics.created 
+                  ? Math.floor(new Date(analytics.created).getTime() / 1000) 
+                  : Math.floor(upload.scheduledAt / 1000),
+                videoUrl: platformData.postUrl || upload.post.url || "",
+                thumbnailUrl: analytics.thumbnailUrl || video.video.url,
+                mediaUrl: undefined,
+                views: analytics.videoViews ?? 0,
+                likes: analytics.likeCount ?? 0,
+                comments: analytics.commentsCount ?? 0,
+                shares: analytics.shareCount ?? 0,
+                saves: analytics.favorites ?? 0,
+              });
+              
+            } catch (error) {
+              console.error(`Error processing ${platform} for video ${video._id}:`, error);
+              // Continue with next platform
+            }
+          }
+        })
+      );
+    }
+  },
+});
+
+// Internal queries for the monitor action
+export const getPostedGeneratedVideos = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    // Get all videos that have at least one posted platform
+    const videos = await ctx.db
+      .query("generatedVideos")
+      .collect();
+    
+    return videos.filter(v => 
+      (v.tiktokUpload?.status.isPosted && v.tiktokUpload.post.id) ||
+      (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
+      (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
+    );
+  },
+});
+
+export const getCampaignById = internalQuery({
+  args: { campaignId: v.id('campaigns') },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.campaignId);
   },
 });

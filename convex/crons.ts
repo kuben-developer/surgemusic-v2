@@ -16,5 +16,11 @@ crons.interval(
     {}
 );
 
+crons.interval(
+    "monitorApiPostedVideos",
+    { minutes: 5 },
+    internal.app.ayrshare.monitorApiPostedVideos,
+    {}
+);
 
 export default crons;
