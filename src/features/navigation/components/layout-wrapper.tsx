@@ -7,10 +7,6 @@ import { Toaster } from "@/components/ui/sonner"
 import { Toaster as PublicToaster } from "sonner"
 import { PUBLIC_ROUTE_PREFIXES, UI_CONSTANTS } from "../constants/navigation.constants"
 import type { LayoutWrapperProps } from "../types/navigation.types"
-import { useQuery } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
-import { PricingPage } from "@/features/pricing"
-import { Lock } from "lucide-react"
 
 function PublicLayout({ children }: LayoutWrapperProps) {
   const currentYear = new Date().getFullYear()
@@ -39,11 +35,6 @@ function PublicLayout({ children }: LayoutWrapperProps) {
 }
 
 function PrivateLayout({ children }: LayoutWrapperProps) {
-  // Fetch current user's billing status
-  const user = useQuery(api.app.users.getCurrentUser)
-  const isLoadingUser = user === undefined
-  const isLocked = !user?.subscriptionPriceId && !user?.isTrial
-
   return (
     <>
       <AuthLoading>
@@ -56,41 +47,9 @@ function PrivateLayout({ children }: LayoutWrapperProps) {
       </AuthLoading>
 
       <Authenticated>
-        {isLoadingUser ? (
-          <div className="flex h-screen items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Loading your account...</p>
-            </div>
-          </div>
-        ) : isLocked ? (
-          <div className="min-h-screen w-full bg-background">
-            {!user?.firstTimeUser && (
-              <div className="w-full border-b bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40">
-                <div className="container mx-auto px-4 py-3">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-amber-500/10 p-2 text-amber-700 dark:text-amber-300">
-                      <Lock className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Access locked</p>
-                      <p className="text-sm text-muted-foreground">
-                        Your subscription has ended, so access to Surge is currently locked.
-                        To continue using all features, please renew or start a subscription.
-                        Don't worry—your projects and settings are safely stored and will be waiting for you when you reactivate.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <PricingPage />
-          </div>
-        ) : (
-          <div role="application" aria-label="Surge Music Dashboard">
-            <Sidebar>{children}</Sidebar>
-          </div>
-        )}
+        <div role="application" aria-label="Surge Music Dashboard">
+          <Sidebar>{children}</Sidebar>
+        </div>
         <Toaster />
       </Authenticated>
 
