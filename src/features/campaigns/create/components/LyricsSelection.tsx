@@ -112,13 +112,8 @@ export function LyricsSelection({
                           className="absolute top-2 right-2"
                           aria-label="Growth Feature"
                         >
-                          <Badge className={`gap-1 text-white border-0 cursor-pointer ${
-                            qualifiesForFreeVideos ?
-                            "bg-gradient-to-r from-green-600 to-emerald-600" :
-                            "bg-gradient-to-r from-purple-600 to-blue-600"
-                          }`}>
-                            <Sparkles className="w-3 h-3" />
-                            {qualifiesForFreeVideos ? "FREE" : "Growth"}
+                          <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 cursor-pointer">
+                            <Sparkles className="w-3 h-3" />Growth
                           </Badge>
                         </button>
                       )}

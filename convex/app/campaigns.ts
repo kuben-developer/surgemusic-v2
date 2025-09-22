@@ -738,7 +738,7 @@ export const sendWebhook = internalAction({
         "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         "Lyrics": args.hasLyrics ? "Yes" : "No",
         "Captions": args.hasCaptions ? "Yes" : "No",
-        "Free Trial": isTrialUser ? "Yes" : "No",
+        "Free Trial": args.videoCount == 24 ? "Yes" : "No",
         "Language": "English",
         // SRT variations (1..5 words)
         "lyricsSRT1": srtUrls[0] || "",
