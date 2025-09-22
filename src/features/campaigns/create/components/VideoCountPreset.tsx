@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LockOverlay } from "./LockOverlay";
 import type { VideoOption } from "../constants/video-options";
@@ -23,6 +23,8 @@ export function VideoCountPreset({
   isSubscribed,
   onSelect
 }: VideoCountPresetProps) {
+  const isFreeOption = lockReason === "First campaign free";
+
   return (
     <div className="relative group">
       <Button
@@ -38,6 +40,9 @@ export function VideoCountPreset({
       >
         <div className="flex items-center gap-3">
           <span className="text-lg">{option.count} Videos</span>
+          {isFreeOption && (
+            <Gift className="w-4 h-4 text-blue-600" />
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
