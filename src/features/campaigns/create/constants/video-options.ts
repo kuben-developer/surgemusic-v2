@@ -1,4 +1,4 @@
-export type VideoCountOption = 6 | 24 | 30 | 90 | 180 | 360 | 900 | 1200;
+export type VideoCountOption = 6 | 30 | 90 | 180 | 360 | 900 | 1200;
 
 export interface VideoOption {
   count: VideoCountOption;
@@ -16,7 +16,7 @@ export const VIDEO_OPTIONS: VideoOption[] = [
 
 export const TRIAL_VIDEO_OPTION: VideoOption = { count: 6, required: 6 };
 
-export const FIRST_TIME_USER_VIDEO_OPTION: VideoOption = { count: 24, required: 0 };
+export const FIRST_TIME_USER_VIDEO_OPTION: VideoOption = { count: 30, required: 0 };
 
 export const COMING_SOON_OPTIONS: number[] = [];
 

@@ -65,6 +65,7 @@ export default defineSchema({
       text: v.string(),
       wordIndices: v.array(v.number()), // Indices into wordsData array
     }))),
+    isFreeCampaign: v.optional(v.boolean()),
   })
     .index("by_userId", ["userId"])
     .index("by_referenceId", ["referenceId"])

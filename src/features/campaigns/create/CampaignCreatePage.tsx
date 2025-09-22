@@ -18,12 +18,13 @@ export default function CampaignCreatePage() {
   const isFirstTimeUser = userData?.firstTimeUser ?? true;
   const hasProFeatures = hasProAccess(userData?.subscriptionPriceId, isTrial);
 
-  // Check if user qualifies for free 24 videos
+  // Check if user qualifies for free 30 videos
   const qualifiesForFreeVideos = isFirstTimeUser && !isTrial && !hasExistingCampaigns;
   
   const formData = useCampaignForm({
     subscriptionPriceId: userData?.subscriptionPriceId,
     isTrial,
+    qualifiesForFreeVideos,
   });
 
   return (

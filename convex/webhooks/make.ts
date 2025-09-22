@@ -131,21 +131,10 @@ export const checkCampaignCompletion = internalMutation({
       // Deduct credits from user
       const user = await ctx.db.get(campaign.userId);
       if (user) {
-        // Check if this is a first-time user's free 24 videos
-        // IMPORTANT: Include deleted campaigns to prevent abuse
-        const allUserCampaigns = await ctx.db
-          .query("campaigns")
-          .withIndex("by_userId", (q) => q.eq("userId", user._id))
-          .collect();
+        // Check if this is a free campaign (cleaner approach using isFreeCampaign field)
+        const isFirstTimeUserFreeVideos = campaign.isFreeCampaign === true;
 
-        const isFirstCampaign = allUserCampaigns.length === 1; // Only this campaign exists
-        const isFirstTimeUserFreeVideos =
-          user.billing.firstTimeUser === true &&
-          user.billing.isTrial === false &&
-          isFirstCampaign &&
-          args.totalVideosNeeded === 24;
-
-        // Skip credit deduction for first-time users with 24 free videos
+        // Skip credit deduction for free campaigns
         if (!isFirstTimeUserFreeVideos) {
           let remainingToDeduct = args.totalVideosNeeded;
           let regularCredits = user.credits.videoGeneration;

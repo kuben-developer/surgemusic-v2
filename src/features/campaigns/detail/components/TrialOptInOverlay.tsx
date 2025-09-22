@@ -77,7 +77,7 @@ export function TrialOptInOverlay({ isVisible, onTrialSuccess }: TrialOptInOverl
             {/* Title and Description */}
             <div className="space-y-3">
               <h3 className="text-2xl font-bold text-gray-900">
-                Your 24 videos have been generated!
+                Your 30 videos have been generated!
               </h3>
               <p className="text-gray-600">
                 Start your 3-day free trial to view them and unlock all Growth features.

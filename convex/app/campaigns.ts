@@ -63,7 +63,7 @@ export const create = mutation({
       throw new Error("User not found");
     }
 
-    // Check if this is a first-time user generating 24 free videos
+    // Check if this is a first-time user generating 30 free videos
     // IMPORTANT: Include deleted campaigns to prevent abuse
     const allUserCampaigns = await ctx.db
       .query("campaigns")
@@ -75,9 +75,9 @@ export const create = mutation({
       user.billing.firstTimeUser === true &&
       user.billing.isTrial === false &&
       isFirstCampaign &&
-      args.videoCount === 24;
+      args.videoCount === 30;
 
-    // Skip credit check for first-time users with 24 videos
+    // Skip credit check for first-time users with 30 videos
     if (!allowFreeVideos) {
       const totalCredits = user.credits.videoGeneration + user.credits.videoGenerationAdditional;
       if (totalCredits < args.videoCount) {
@@ -125,6 +125,7 @@ export const create = mutation({
       lyrics: args.lyrics,
       wordsData: args.wordsData,
       lyricsWithWords: args.lyricsWithWords,
+      isFreeCampaign: allowFreeVideos,
     });
 
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
@@ -710,8 +711,9 @@ export const sendWebhook = internalAction({
         Enterprise: selected("enterprise"),
       };
 
-      // Determine if the campaign's owner is currently on a free trial
+      // Determine if the campaign's owner is currently on a free trial and if campaign is free
       let isTrialUser = false;
+      let isFreeCampaign = false;
       try {
         const campaignDoc = await ctx.runQuery(internal.app.campaigns.getInternal, {
           campaignId: args.campaignId as any,
@@ -721,6 +723,7 @@ export const sendWebhook = internalAction({
             userId: campaignDoc.userId as any,
           });
           isTrialUser = Boolean(userDoc?.billing?.isTrial);
+          isFreeCampaign = Boolean(campaignDoc.isFreeCampaign);
         }
       } catch (e) {
         console.warn("Unable to resolve user trial status for webhook payload", e);
@@ -738,7 +741,7 @@ export const sendWebhook = internalAction({
         "Test Content": args.campaignName == "hQobrLIIxsXIe" ? "Yes" : "No",
         "Lyrics": args.hasLyrics ? "Yes" : "No",
         "Captions": args.hasCaptions ? "Yes" : "No",
-        "Free Trial": args.videoCount == 24 ? "Yes" : "No",
+        "Free Trial": isFreeCampaign ? "Yes" : "No",
         "Language": "English",
         // SRT variations (1..5 words)
         "lyricsSRT1": srtUrls[0] || "",

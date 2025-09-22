@@ -15,6 +15,7 @@ interface ValidationState {
   selectedLyricsOption: "lyrics" | "lyrics-hooks" | "hooks" | "video-only" | null;
   subscriptionPriceId?: string;
   isTrial?: boolean;
+  qualifiesForFreeVideos?: boolean;
 }
 
 interface ErrorSetters {
@@ -120,7 +121,9 @@ export function useCampaignFormValidation(state: ValidationState, errorSetters: 
     
     // Check if Pro option selected without Pro access
     const hasProFeatures = hasProAccess(state.subscriptionPriceId, state.isTrial || false);
-    if ((state.selectedLyricsOption === "lyrics" || state.selectedLyricsOption === "lyrics-hooks") && !hasProFeatures) {
+    const hasGrowthAccess = hasProFeatures || state.qualifiesForFreeVideos || false;
+
+    if ((state.selectedLyricsOption === "lyrics" || state.selectedLyricsOption === "lyrics-hooks") && !hasGrowthAccess) {
       setLyricsOptionError(true);
       toast.error("Pro Features Required", {
         description: "This feature requires a Free Trial or Growth plan (or above)",

@@ -9,9 +9,10 @@ export type { CreateCampaignData } from "./useCampaignFormSubmission";
 interface UseCampaignFormProps {
   subscriptionPriceId?: string;
   isTrial: boolean;
+  qualifiesForFreeVideos?: boolean;
 }
 
-export function useCampaignForm({ subscriptionPriceId, isTrial }: UseCampaignFormProps) {
+export function useCampaignForm({ subscriptionPriceId, isTrial, qualifiesForFreeVideos }: UseCampaignFormProps) {
   // Use the state management hook
   const state = useCampaignFormState();
 
@@ -48,6 +49,7 @@ export function useCampaignForm({ subscriptionPriceId, isTrial }: UseCampaignFor
       selectedLyricsOption: state.selectedLyricsOption,
       subscriptionPriceId,
       isTrial,
+      qualifiesForFreeVideos,
     },
     {
       setCampaignNameError: state.setCampaignNameError,

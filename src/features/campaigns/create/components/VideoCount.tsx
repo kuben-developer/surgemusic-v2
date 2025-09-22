@@ -52,7 +52,7 @@ export function VideoCount({
                             />
                         )}
 
-                        {/* Show 24 free videos option for first-time users */}
+                        {/* Show 30 free videos option for first-time users */}
                         {qualifiesForFreeVideos && (
                             <VideoCountPreset
                                 key={FIRST_TIME_USER_VIDEO_OPTION.count}

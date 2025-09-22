@@ -54,7 +54,7 @@ export default function CampaignClient() {
   const shouldShowTrialOverlay =
     campaign &&
     campaign.status === 'completed' &&
-    campaign.videoCount === 24 &&
+    campaign.isFreeCampaign === true &&
     isFirstTimeUser &&
     !isTrial &&
     generatedVideos &&
