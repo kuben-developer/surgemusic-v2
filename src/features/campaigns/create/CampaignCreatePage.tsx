@@ -11,11 +11,15 @@ import { hasProAccess } from "./utils/pro-access.utils";
 export default function CampaignCreatePage() {
   // Fetch user data
   const userData = useQuery(api.app.users.getCurrentUser);
+  const hasExistingCampaigns = useQuery(api.app.campaigns.hasUserCreatedCampaigns);
   const totalCredits = (userData?.videoGenerationCredit ?? 0) + (userData?.videoGenerationAdditionalCredit ?? 0);
   const isSubscribed = Boolean(userData?.subscriptionPriceId);
   const isTrial = userData?.isTrial ?? false;
   const isFirstTimeUser = userData?.firstTimeUser ?? true;
   const hasProFeatures = hasProAccess(userData?.subscriptionPriceId, isTrial);
+
+  // Check if user qualifies for free 24 videos
+  const qualifiesForFreeVideos = isFirstTimeUser && !isTrial && !hasExistingCampaigns;
   
   const formData = useCampaignForm({
     subscriptionPriceId: userData?.subscriptionPriceId,
@@ -54,6 +58,7 @@ export default function CampaignCreatePage() {
         isTrial={isTrial}
         hasProFeatures={hasProFeatures}
         isFirstTimeUser={isFirstTimeUser}
+        qualifiesForFreeVideos={qualifiesForFreeVideos}
         
         // Campaign Info
         campaignName={formData.campaignName}

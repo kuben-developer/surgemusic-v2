@@ -131,30 +131,47 @@ export const checkCampaignCompletion = internalMutation({
       // Deduct credits from user
       const user = await ctx.db.get(campaign.userId);
       if (user) {
-        let remainingToDeduct = args.totalVideosNeeded;
-        let regularCredits = user.credits.videoGeneration;
-        let additionalCredits = user.credits.videoGenerationAdditional;
+        // Check if this is a first-time user's free 24 videos
+        // IMPORTANT: Include deleted campaigns to prevent abuse
+        const allUserCampaigns = await ctx.db
+          .query("campaigns")
+          .withIndex("by_userId", (q) => q.eq("userId", user._id))
+          .collect();
 
-        // First deduct from regular credits
-        if (regularCredits > 0) {
-          const deductFromRegular = Math.min(regularCredits, remainingToDeduct);
-          regularCredits -= deductFromRegular;
-          remainingToDeduct -= deductFromRegular;
+        const isFirstCampaign = allUserCampaigns.length === 1; // Only this campaign exists
+        const isFirstTimeUserFreeVideos =
+          user.billing.firstTimeUser === true &&
+          user.billing.isTrial === false &&
+          isFirstCampaign &&
+          args.totalVideosNeeded === 24;
+
+        // Skip credit deduction for first-time users with 24 free videos
+        if (!isFirstTimeUserFreeVideos) {
+          let remainingToDeduct = args.totalVideosNeeded;
+          let regularCredits = user.credits.videoGeneration;
+          let additionalCredits = user.credits.videoGenerationAdditional;
+
+          // First deduct from regular credits
+          if (regularCredits > 0) {
+            const deductFromRegular = Math.min(regularCredits, remainingToDeduct);
+            regularCredits -= deductFromRegular;
+            remainingToDeduct -= deductFromRegular;
+          }
+
+          // Then deduct from additional credits if needed
+          if (remainingToDeduct > 0 && additionalCredits > 0) {
+            const deductFromAdditional = Math.min(additionalCredits, remainingToDeduct);
+            additionalCredits -= deductFromAdditional;
+          }
+
+          await ctx.db.patch(campaign.userId, {
+            credits: {
+              ...user.credits,
+              videoGeneration: regularCredits,
+              videoGenerationAdditional: additionalCredits,
+            },
+          });
         }
-
-        // Then deduct from additional credits if needed
-        if (remainingToDeduct > 0 && additionalCredits > 0) {
-          const deductFromAdditional = Math.min(additionalCredits, remainingToDeduct);
-          additionalCredits -= deductFromAdditional;
-        }
-
-        await ctx.db.patch(campaign.userId, {
-          credits: {
-            ...user.credits,
-            videoGeneration: regularCredits,
-            videoGenerationAdditional: additionalCredits,
-          },
-        });
       }
     }
   },

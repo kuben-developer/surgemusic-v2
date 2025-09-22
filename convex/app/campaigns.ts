@@ -63,9 +63,26 @@ export const create = mutation({
       throw new Error("User not found");
     }
 
-    const totalCredits = user.credits.videoGeneration + user.credits.videoGenerationAdditional;
-    if (totalCredits < args.videoCount) {
-      throw new Error("Insufficient video generation credits");
+    // Check if this is a first-time user generating 24 free videos
+    // IMPORTANT: Include deleted campaigns to prevent abuse
+    const allUserCampaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const isFirstCampaign = allUserCampaigns.length === 0;
+    const allowFreeVideos =
+      user.billing.firstTimeUser === true &&
+      user.billing.isTrial === false &&
+      isFirstCampaign &&
+      args.videoCount === 24;
+
+    // Skip credit check for first-time users with 24 videos
+    if (!allowFreeVideos) {
+      const totalCredits = user.credits.videoGeneration + user.credits.videoGenerationAdditional;
+      if (totalCredits < args.videoCount) {
+        throw new Error("Insufficient video generation credits");
+      }
     }
 
     // Check if caption is unique before creating campaign
@@ -355,6 +372,33 @@ export const getPostedVideos = query({
       (video.instagramUpload?.post?.url) ||
       (video.youtubeUpload?.post?.url)
     );
+  },
+});
+
+export const hasUserCreatedCampaigns = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check for ANY campaigns (including deleted) to prevent abuse
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+
+    return campaigns !== null;
   },
 });
 

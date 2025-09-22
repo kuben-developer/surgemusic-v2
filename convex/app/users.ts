@@ -73,3 +73,23 @@ export const updateTrial = internalMutation({
     });
   },
 })
+
+export const updateUserFirstTimeAndTrial = internalMutation({
+  args: {
+    userId: v.id("users"),
+    firstTimeUser: v.boolean(),
+    isTrial: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.userId, {
+      billing: {
+        ...user.billing,
+        firstTimeUser: args.firstTimeUser,
+        isTrial: args.isTrial,
+      },
+    });
+  },
+})

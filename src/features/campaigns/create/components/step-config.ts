@@ -46,6 +46,7 @@ export interface StepProps {
   isTrial?: boolean;
   hasProFeatures?: boolean;
   isFirstTimeUser?: boolean;
+  qualifiesForFreeVideos?: boolean;
 
   // Image Assets
   albumArtUrl: string | null;

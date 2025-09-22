@@ -8,6 +8,7 @@ interface StepRendererProps extends StepProps {
   totalCredits: number;
   isSubscribed: boolean;
   isTrial: boolean;
+  qualifiesForFreeVideos?: boolean;
 }
 
 export function StepRenderer({
@@ -16,13 +17,14 @@ export function StepRenderer({
   totalCredits,
   isSubscribed,
   isTrial,
+  qualifiesForFreeVideos,
   ...stepProps
 }: StepRendererProps) {
   const { getStepByIndex } = useStepNavigation({ campaignType, selectedThemes: stepProps.selectedThemes });
-  
+
   // Get the current step configuration
   const currentStep = getStepByIndex(currentSection);
-  
+
   if (!currentStep) {
     return null;
   }
@@ -34,6 +36,7 @@ export function StepRenderer({
     totalCredits,
     isSubscribed,
     isTrial,
+    qualifiesForFreeVideos,
   });
 
   return (

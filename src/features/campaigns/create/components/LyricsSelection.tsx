@@ -12,6 +12,7 @@ interface LyricsSelectionProps {
   lyricsOptionError: boolean;
   hasProFeatures: boolean;
   isFirstTimeUser?: boolean;
+  qualifiesForFreeVideos?: boolean;
 }
 
 const OPTIONS: Array<{
@@ -55,12 +56,16 @@ export function LyricsSelection({
   lyricsOptionError,
   hasProFeatures,
   isFirstTimeUser = true,
+  qualifiesForFreeVideos = false,
 }: LyricsSelectionProps) {
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [selectedFeatureDescription, setSelectedFeatureDescription] = useState("");
 
+  // Allow Growth features for first-time users who qualify for free videos
+  const hasGrowthAccess = hasProFeatures || qualifiesForFreeVideos;
+
   const handleClick = (key: "lyrics" | "lyrics-hooks" | "hooks" | "video-only", pro?: boolean, desc?: string) => {
-    if (pro && !hasProFeatures) {
+    if (pro && !hasGrowthAccess) {
       setSelectedFeatureDescription(desc || "");
       setShowSubscriptionDialog(true);
       return;
@@ -99,7 +104,7 @@ export function LyricsSelection({
                         <button
                           type="button"
                           onClick={() => {
-                            if (!hasProFeatures) {
+                            if (!hasGrowthAccess) {
                               setSelectedFeatureDescription(opt.description || "");
                               setShowSubscriptionDialog(true);
                             }
@@ -107,8 +112,13 @@ export function LyricsSelection({
                           className="absolute top-2 right-2"
                           aria-label="Growth Feature"
                         >
-                          <Badge className="gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 cursor-pointer">
-                            <Sparkles className="w-3 h-3" />Growth
+                          <Badge className={`gap-1 text-white border-0 cursor-pointer ${
+                            qualifiesForFreeVideos ?
+                            "bg-gradient-to-r from-green-600 to-emerald-600" :
+                            "bg-gradient-to-r from-purple-600 to-blue-600"
+                          }`}>
+                            <Sparkles className="w-3 h-3" />
+                            {qualifiesForFreeVideos ? "FREE" : "Growth"}
                           </Badge>
                         </button>
                       )}

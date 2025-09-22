@@ -5,4 +5,5 @@ export interface VideoCountProps {
   totalCredits: number;
   isSubscribed: boolean;
   isTrial?: boolean;
+  qualifiesForFreeVideos?: boolean;
 }
