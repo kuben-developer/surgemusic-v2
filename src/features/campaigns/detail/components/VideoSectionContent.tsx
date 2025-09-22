@@ -25,6 +25,8 @@ interface VideoSectionContentProps {
   campaignId: string;
   statusFilter: string;
   totalScheduledCount: number;
+  /** Whether to show trial overlays on individual videos */
+  showTrialOverlay?: boolean;
 }
 
 export function VideoSectionContent({
@@ -39,6 +41,7 @@ export function VideoSectionContent({
   campaignId,
   statusFilter,
   totalScheduledCount,
+  showTrialOverlay = false,
 }: VideoSectionContentProps) {
   if (isVideosLoading) {
     return (
@@ -81,6 +84,7 @@ export function VideoSectionContent({
           index={index}
           isDownloading={downloadingVideos[String(video._id)] || false}
           onDownload={onDownloadVideo}
+          showTrialOverlay={showTrialOverlay}
         />
       ))}
     </motion.div>

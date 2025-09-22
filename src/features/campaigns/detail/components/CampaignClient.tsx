@@ -12,7 +12,6 @@ import { ProgressSection } from "./ProgressSection"
 import { VideoSection } from "./VideoSection"
 import { useVideoDownload } from "../hooks/useVideoDownload"
 import { DownloadFeatureDialog } from "@/features/campaigns/videos"
-import { TrialOptInOverlay } from "./TrialOptInOverlay"
 
 const staggerContainer = {
   animate: {
@@ -51,7 +50,7 @@ export default function CampaignClient() {
   // Check if user qualifies for trial overlay
   const isFirstTimeUser = userData?.firstTimeUser ?? false
   const isTrial = userData?.isTrial ?? false
-  const shouldShowTrialOverlay =
+  const shouldShowTrialBanner =
     campaign &&
     campaign.status === 'completed' &&
     campaign.isFreeCampaign === true &&
@@ -59,6 +58,8 @@ export default function CampaignClient() {
     !isTrial &&
     generatedVideos &&
     generatedVideos.length > 0
+
+  const shouldShowTrialOverlay = shouldShowTrialBanner
 
   const handleTrialSuccess = () => {
     // The trial success will be handled by the webhook which updates user state
@@ -160,29 +161,24 @@ export default function CampaignClient() {
 
         {/* Videos Section */}
         {(campaign.status as string) === 'completed' && (
-          <div className="relative">
-            <VideoSection
-              campaign={campaign}
-              campaignId={campaignId}
-              generatedVideos={generatedVideos}
-              isVideosLoading={isVideosLoading}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              videosPerPage={videosPerPage}
-              downloadingVideos={downloadingVideos}
-              onDownloadVideo={handleDownloadVideo}
-              onDownloadAll={handleDownloadAll}
-              downloadingAll={downloadingAll}
-            />
-
-            {/* Trial opt-in overlay for first-time users */}
-            <TrialOptInOverlay
-              isVisible={shouldShowTrialOverlay || false}
-              onTrialSuccess={handleTrialSuccess}
-            />
-          </div>
+          <VideoSection
+            campaign={campaign}
+            campaignId={campaignId}
+            generatedVideos={generatedVideos}
+            isVideosLoading={isVideosLoading}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            videosPerPage={videosPerPage}
+            downloadingVideos={downloadingVideos}
+            onDownloadVideo={handleDownloadVideo}
+            onDownloadAll={handleDownloadAll}
+            downloadingAll={downloadingAll}
+            showTrialBanner={shouldShowTrialBanner || false}
+            showTrialOverlay={shouldShowTrialOverlay || false}
+            onTrialSuccess={handleTrialSuccess}
+          />
         )}
 
         {/* Download gating dialog */}

@@ -10,14 +10,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LazyVideo } from "./LazyVideo";
+import { VideoTrialOverlay } from "../../../detail/components/VideoTrialOverlay";
 import type { Doc } from "../../../../../../convex/_generated/dataModel";
 
 interface VideoInfoProps {
   video: Doc<"generatedVideos">;
   displayName: string;
+  /** Whether to show the trial overlay that blurs the video */
+  showTrialOverlay?: boolean;
 }
 
-export function VideoInfo({ video, displayName }: VideoInfoProps) {
+export function VideoInfo({ video, displayName, showTrialOverlay = false }: VideoInfoProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
@@ -62,17 +65,20 @@ export function VideoInfo({ video, displayName }: VideoInfoProps) {
         <div
           ref={anchorRef}
           className="relative h-12 w-7 overflow-visible rounded-md bg-muted/20 flex-shrink-0"
-          onMouseEnter={openOverlay}
-          onMouseLeave={closeOverlaySoon}
+          onMouseEnter={!showTrialOverlay ? openOverlay : undefined}
+          onMouseLeave={!showTrialOverlay ? closeOverlaySoon : undefined}
         >
           <LazyVideo
             videoUrl={video.video.url}
             className="h-full w-full object-cover rounded-md"
-            hoverPlay
+            hoverPlay={!showTrialOverlay}
             muted
             playsInline
             loop
           />
+
+          {/* Trial overlay for blurring individual video previews in table */}
+          <VideoTrialOverlay isVisible={showTrialOverlay} className="rounded-md" />
         </div>
         <div className="flex-grow min-w-0">
           <TooltipProvider>
@@ -90,7 +96,7 @@ export function VideoInfo({ video, displayName }: VideoInfoProps) {
         </div>
       </div>
 
-      {isOverlayOpen && typeof document !== "undefined"
+      {isOverlayOpen && !showTrialOverlay && typeof document !== "undefined"
         ? createPortal(
             <div
               className="fixed z-[9999] pointer-events-auto"

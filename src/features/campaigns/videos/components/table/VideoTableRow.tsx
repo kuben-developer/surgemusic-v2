@@ -19,6 +19,8 @@ interface VideoTableRowProps {
   onToggleSelect: (id: string, event?: React.MouseEvent | MouseEvent) => void;
   onDownload: (videoUrl: string, videoName: string, videoId: string) => void;
   showRowDownload?: boolean;
+  /** Whether to show the trial overlay that blurs the video */
+  showTrialOverlay?: boolean;
 }
 
 export function VideoTableRow({
@@ -29,6 +31,7 @@ export function VideoTableRow({
   onToggleSelect,
   onDownload,
   showRowDownload = true,
+  showTrialOverlay = false,
 }: VideoTableRowProps) {
   const { scheduledDate, hasAnyPlatformUploads, displayName } = useVideoRowData({ video });
 
@@ -62,7 +65,11 @@ export function VideoTableRow({
       </TableCell>
 
       <TableCell>
-        <VideoInfo video={video} displayName={themeFlags[video.video.type.toLowerCase()] || "Unknown"} />
+        <VideoInfo
+          video={video}
+          displayName={themeFlags[video.video.type.toLowerCase()] || "Unknown"}
+          showTrialOverlay={showTrialOverlay}
+        />
       </TableCell>
 
       <TableCell>

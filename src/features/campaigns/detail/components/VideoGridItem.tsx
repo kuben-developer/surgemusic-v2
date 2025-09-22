@@ -7,6 +7,7 @@ import { Download, Film, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { themeFlags } from "../../shared/constants";
+import { VideoTrialOverlay } from "./VideoTrialOverlay";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -19,6 +20,8 @@ interface VideoGridItemProps {
   index: number;
   isDownloading: boolean;
   onDownload: (url: string, name: string, id: string) => void;
+  /** Whether to show the trial overlay that blurs the video */
+  showTrialOverlay?: boolean;
 }
 
 export function VideoGridItem({
@@ -26,6 +29,7 @@ export function VideoGridItem({
   index,
   isDownloading,
   onDownload,
+  showTrialOverlay = false,
 }: VideoGridItemProps) {
   const handleDownload = () => {
     onDownload(video.video.url, video.video.name, String(video._id));
@@ -41,7 +45,7 @@ export function VideoGridItem({
         <video
           src={video.video.url}
           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.02] relative z-10"
-          controls
+          controls={!showTrialOverlay}
           style={{
             aspectRatio: "9 / 16",
             width: "100%",
@@ -58,6 +62,9 @@ export function VideoGridItem({
           <Film className="w-3.5 h-3.5 text-primary" />
           <span className="font-medium">{themeFlags[video.video.type.toLowerCase()]}</span>
         </Badge>
+
+        {/* Trial overlay for blurring individual videos */}
+        <VideoTrialOverlay isVisible={showTrialOverlay} />
       </div>
 
       <div className="p-4 space-y-4">

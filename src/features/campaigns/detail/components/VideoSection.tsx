@@ -6,6 +6,7 @@ import { filterVideosByStatus } from "@/features/campaigns/videos";
 import { VideoSectionHeader } from "./VideoSectionHeader";
 import { VideoPagination } from "./VideoPagination";
 import { VideoSectionContent } from "./VideoSectionContent";
+import { TrialPromotionBanner } from "./TrialPromotionBanner";
 import { useVideoPagination } from "../hooks/useVideoPagination";
 import type { VideoSectionProps } from "../types/campaign-detail.types";
 import { ScheduleTableDialog } from "@/features/campaigns/videos";
@@ -30,6 +31,9 @@ export function VideoSection({
   onDownloadVideo,
   onDownloadAll,
   downloadingAll,
+  showTrialBanner = false,
+  showTrialOverlay = false,
+  onTrialSuccess,
 }: VideoSectionProps) {
   if (!campaign) return null;
 
@@ -87,6 +91,14 @@ export function VideoSection({
           campaign={campaign}
         />
 
+        {/* Trial Promotion Banner */}
+        {showTrialBanner && onTrialSuccess && (
+          <TrialPromotionBanner
+            isVisible={showTrialBanner}
+            onTrialSuccess={onTrialSuccess}
+          />
+        )}
+
         {/* Pagination */}
         {totalPagesExternal > 1 && (
           <VideoPagination
@@ -109,6 +121,7 @@ export function VideoSection({
           campaignId={campaignId}
           statusFilter={statusFilter}
           totalScheduledCount={totalScheduledCount}
+          showTrialOverlay={showTrialOverlay}
         />
 
         {/* Schedule selection dialog embedding table view */}
@@ -126,6 +139,7 @@ export function VideoSection({
           totalVideosCount={filteredVideos.length}
           totalScheduledCount={totalScheduledCount}
           campaignId={campaignId}
+          showTrialOverlay={showTrialOverlay}
         />
       </div>
     </motion.section>

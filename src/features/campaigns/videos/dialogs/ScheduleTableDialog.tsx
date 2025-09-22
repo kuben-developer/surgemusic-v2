@@ -24,6 +24,8 @@ interface ScheduleTableDialogProps {
   totalVideosCount: number;
   totalScheduledCount: number;
   campaignId: string;
+  /** Whether to show trial overlays on individual videos */
+  showTrialOverlay?: boolean;
 }
 
 export function ScheduleTableDialog({
@@ -40,6 +42,7 @@ export function ScheduleTableDialog({
   totalVideosCount,
   totalScheduledCount,
   campaignId,
+  showTrialOverlay = false,
 }: ScheduleTableDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -72,6 +75,7 @@ export function ScheduleTableDialog({
             totalScheduledCount={totalScheduledCount}
             campaignId={campaignId}
             hideDownloads
+            showTrialOverlay={showTrialOverlay}
           />
         </div>
       </DialogContent>

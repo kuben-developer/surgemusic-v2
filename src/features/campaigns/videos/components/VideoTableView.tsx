@@ -37,6 +37,8 @@ interface VideoTableViewProps {
   totalScheduledCount: number;
   campaignId: string;
   hideDownloads?: boolean;
+  /** Whether to show trial overlays on individual videos */
+  showTrialOverlay?: boolean;
 }
 
 export function VideoTableView({
@@ -52,6 +54,7 @@ export function VideoTableView({
   totalScheduledCount,
   campaignId,
   hideDownloads = false,
+  showTrialOverlay = false,
 }: VideoTableViewProps) {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isWarmupDialogOpen, setIsWarmupDialogOpen] = useState(false);
@@ -153,6 +156,7 @@ export function VideoTableView({
                       onToggleSelect={toggleSelectVideo}
                       onDownload={handleDownloadVideo}
                       showRowDownload={!hideDownloads}
+                      showTrialOverlay={showTrialOverlay}
                     />
                   ))
                 )}
