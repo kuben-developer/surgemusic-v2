@@ -1,8 +1,8 @@
 "use client"
 
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, Film, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
@@ -31,8 +31,28 @@ export function VideoGridItem({
   onDownload,
   showTrialOverlay = false,
 }: VideoGridItemProps) {
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const handleDownload = () => {
     onDownload(video.video.url, video.video.name, String(video._id));
+  };
+
+  const handlePlayClick = async () => {
+    if (!videoRef.current) return;
+
+    try {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+        setIsVideoPlaying(false);
+      } else {
+        await videoRef.current.play();
+        setIsVideoPlaying(true);
+      }
+    } catch (error) {
+      console.log('Video play failed:', error);
+      setIsVideoPlaying(false);
+    }
   };
 
   return (
@@ -43,9 +63,11 @@ export function VideoGridItem({
     >
       <div className="aspect-[9/16] bg-muted/30 relative overflow-hidden">
         <video
+          ref={videoRef}
           src={video.video.url}
           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.02] relative z-10"
           controls={!showTrialOverlay}
+          loop
           style={{
             aspectRatio: "9 / 16",
             width: "100%",
@@ -64,7 +86,11 @@ export function VideoGridItem({
         </Badge>
 
         {/* Trial overlay for blurring individual videos */}
-        <VideoTrialOverlay isVisible={showTrialOverlay} />
+        <VideoTrialOverlay
+          isVisible={showTrialOverlay}
+          onPlayClick={handlePlayClick}
+          isPlaying={isVideoPlaying}
+        />
       </div>
 
       <div className="p-4 space-y-4">
