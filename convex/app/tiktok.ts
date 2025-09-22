@@ -11,7 +11,7 @@ const encodeCaption = (caption: string): string => {
   return hex;
 };
 
-const TOKAPI_KEY = "7d9b644435e645dcbd714a90a400e18e"
+const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2"
 const TIKTOK_ACCOUNTS = [
   "MelodyVibes238",
   "melodywhisperer",
