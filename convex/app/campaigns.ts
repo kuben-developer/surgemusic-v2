@@ -131,6 +131,7 @@ export const create = mutation({
     await ctx.scheduler.runAfter(0, internal.app.campaigns.sendWebhook, {
       campaignId,
       referenceId,
+      clerkId: identity.subject,
       ...args,
     });
 
@@ -587,6 +588,7 @@ export const sendWebhook = internalAction({
   args: {
     campaignId: v.any(),
     referenceId: v.string(),
+    clerkId: v.string(),
     campaignName: v.string(),
     songName: v.string(),
     artistName: v.string(),
@@ -742,6 +744,7 @@ export const sendWebhook = internalAction({
         "Lyrics": args.hasLyrics ? "Yes" : "No",
         "Captions": args.hasCaptions ? "Yes" : "No",
         "Free Trial": isFreeCampaign ? "Yes" : "No",
+        "Demo": (args.campaignName.toLowerCase().includes("demo") && args.clerkId === "user_320PTPlBnrtariIi43gWxsmpmcv") ? "Yes" : "No",
         "Language": "English",
         // SRT variations (1..5 words)
         "lyricsSRT1": srtUrls[0] || "",
