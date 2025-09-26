@@ -930,7 +930,7 @@ export const storeAyrsharePostedVideo = internalMutation({
 export const monitorApiPostedVideos = internalAction({
   args: {},
   handler: async (ctx) => {
-    const BATCH_SIZE = 5; // Process 5 videos concurrently
+    const BATCH_SIZE = 25; // Process 25 videos concurrently
     
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);

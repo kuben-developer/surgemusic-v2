@@ -5,20 +5,20 @@ const crons = cronJobs();
 
 crons.interval(
     "monitorManuallyPostedVideos",
-    { minutes: 5 },
+    { minutes: 15 },
     internal.app.tiktok.monitorManuallyPostedVideos,
 );
 
 crons.interval(
     "aggregateCampaignPerformance",
-    { minutes: 5 },
+    { minutes: 15 },
     internal.app.analytics.aggregateCampaignPerformance,
     {}
 );
 
 crons.interval(
     "monitorApiPostedVideos",
-    { minutes: 5 },
+    { minutes: 15 },
     internal.app.ayrshare.monitorApiPostedVideos,
     {}
 );
