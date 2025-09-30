@@ -113,7 +113,10 @@ export const checkProfiles = action({
 
     const result = await response.json();
 
-    if (result.message === "Some profiles not found. Please verify the Profile Keys.") {
+    if (
+      result.message === "Some profiles not found. Please verify the Profile Keys." ||
+      result.message === "The Profile Key is not invalid. Please verify correct Profile Key is being used."
+    ) {
       // Clean up the missing profile and associated accounts
       await ctx.runMutation(internal.app.ayrshare.deleteProfileAndAccounts, {
         profileId: profile._id,

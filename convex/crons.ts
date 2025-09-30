@@ -16,11 +16,11 @@ crons.interval(
     {}
 );
 
-crons.interval(
-    "monitorApiPostedVideos",
-    { minutes: 15 },
-    internal.app.ayrshare.monitorApiPostedVideos,
-    {}
-);
+// crons.interval(
+//     "monitorApiPostedVideos",
+//     { minutes: 15 },
+//     internal.app.ayrshare.monitorApiPostedVideos,
+//     {}
+// );
 
 export default crons;
