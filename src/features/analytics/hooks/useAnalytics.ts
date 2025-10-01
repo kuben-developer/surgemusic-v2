@@ -1,35 +1,42 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import type { 
-  AnalyticsResponse, 
-  UseAnalyticsOptions, 
+import type {
+  AnalyticsResponse,
+  UseAnalyticsOptions,
   GrowthMetrics,
   MetricKey,
-  DailyMetric 
+  DailyMetric
 } from "../types/analytics.types";
+
+interface Campaign {
+  _id: Id<"campaigns">;
+  campaignName: string;
+  _creationTime: number;
+}
 
 interface UseAnalyticsReturn {
   // Data
   data: AnalyticsResponse | null;
+  allCampaigns: Campaign[] | undefined;
   isLoading: boolean;
   error: Error | null;
-  
+
   // State
   dateRange: number;
   activeMetric: MetricKey;
   selectedCampaigns: string[];
   isRefreshing: boolean;
-  
+
   // Actions
   setDateRange: (days: number) => void;
   setActiveMetric: (metric: MetricKey) => void;
   setSelectedCampaigns: (campaigns: string[]) => void;
   refresh: () => Promise<void>;
-  
+
   // Computed
   growth: GrowthMetrics | null;
   formattedEngagementRate: string;
@@ -44,6 +51,9 @@ export function useAnalytics(options: UseAnalyticsOptions): UseAnalyticsReturn {
   const [activeMetric, setActiveMetric] = useState<MetricKey>('views');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>(options.selectedCampaigns || []);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch all campaigns for the dropdown (independent of selected filter)
+  const allCampaigns = useQuery(api.app.campaigns.getAll);
 
   // Actions based on type
   const getCampaignAnalytics = useAction(api.app.analytics.getCampaignAnalytics);
@@ -146,21 +156,22 @@ export function useAnalytics(options: UseAnalyticsOptions): UseAnalyticsReturn {
   return {
     // Data
     data,
+    allCampaigns,
     isLoading,
     error,
-    
+
     // State
     dateRange,
     activeMetric,
     selectedCampaigns,
     isRefreshing,
-    
+
     // Actions
     setDateRange,
     setActiveMetric,
     setSelectedCampaigns,
     refresh,
-    
+
     // Computed
     growth,
     formattedEngagementRate

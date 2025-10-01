@@ -3,11 +3,11 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-crons.interval(
-    "monitorManuallyPostedVideos",
-    { minutes: 15 },
-    internal.app.tiktok.monitorManuallyPostedVideos,
-);
+// crons.interval(
+//     "monitorManuallyPostedVideos",
+//     { minutes: 15 },
+//     internal.app.tiktok.monitorManuallyPostedVideos,
+// );
 
 crons.interval(
     "aggregateCampaignPerformance",
@@ -16,11 +16,11 @@ crons.interval(
     {}
 );
 
-// crons.interval(
-//     "monitorApiPostedVideos",
-//     { minutes: 15 },
-//     internal.app.ayrshare.monitorApiPostedVideos,
-//     {}
-// );
+crons.interval(
+    "monitorApiPostedVideos",
+    { minutes: 15 },
+    internal.app.ayrshare.monitorApiPostedVideos,
+    {}
+);
 
 export default crons;

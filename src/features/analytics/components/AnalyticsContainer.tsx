@@ -146,9 +146,10 @@ export function AnalyticsContainer({
                 }
               }}
               onResetCampaigns={() => analytics.setSelectedCampaigns([])}
-              allCampaigns={analytics.data.campaigns.map(c => ({ 
-                id: c.id, 
-                campaignName: c.name
+              allCampaigns={analytics.allCampaigns?.map(c => ({
+                id: c._id,
+                campaignName: c.campaignName,
+                createdAt: c._creationTime
               }))}
               dateRange={String(analytics.dateRange)}
               onDateRangeChange={(range: string) => analytics.setDateRange(Number(range))}
