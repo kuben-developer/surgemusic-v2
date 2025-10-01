@@ -4,6 +4,7 @@ export { SocialAccountsPage } from './SocialAccountsPage'
 // Component exports
 export { ProfileCard } from './components/ProfileCard'
 export { ProfileList } from './components/ProfileList'
+export { ProfilePagination } from './components/ProfilePagination'
 export { ProfileHeader } from './components/ProfileHeader'
 export { ProfileActions } from './components/ProfileActions'
 export { ProfileContent } from './components/ProfileContent'
@@ -24,6 +25,7 @@ export { useProfileActions } from './hooks/useProfileActions'
 export { useProfileSync } from './hooks/useProfileSync'
 export { useExpandedProfiles } from './hooks/useExpandedProfiles'
 export { useSyncDialog } from './hooks/useSyncDialog'
+export { usePagination } from './hooks/usePagination'
 
 // Constants and utils
 export { PLATFORMS, PLATFORM_STYLES, PLATFORM_NAMES } from './constants/platforms'
