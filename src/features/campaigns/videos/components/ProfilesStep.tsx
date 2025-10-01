@@ -93,10 +93,10 @@ export function ProfilesStep({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                    {profile.profileName.split("|")[0]?.charAt(0).toUpperCase()}
+                    {profile.profileName.split("|").slice(0, -1).join("|")?.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-medium">{profile.profileName.split("|")[0]}</div>
+                    <div className="font-medium">{profile.profileName.split("|").slice(0, -1).join("|")}</div>
                     <div className="text-xs text-muted-foreground">
                       {profile.socialAccounts.length} connected accounts
                     </div>

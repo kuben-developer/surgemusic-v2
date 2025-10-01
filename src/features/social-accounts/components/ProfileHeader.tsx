@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ profile, isExpanded, onToggleExpand }: ProfileHeaderProps) {
-  const profileDisplayName = profile.profileName.split("|")[0]
+  const profileDisplayName = profile.profileName.split("|").slice(0, -1).join("|")
   const accountCount = profile.socialAccounts.length
   
   return (

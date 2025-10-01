@@ -27,7 +27,7 @@ export function useProfileSync() {
     setCurrentCheckIndex(-1)
     
     const initialResults: ProfileCheckResult[] = validProfiles.map(profile => ({
-      profileName: profile.profileName.split("|")[0] ?? "Unknown Profile",
+      profileName: profile.profileName.split("|").slice(0, -1).join("|") || "Unknown Profile",
       message: "Queued",
       status: 'pending'
     }))

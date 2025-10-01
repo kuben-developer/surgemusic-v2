@@ -34,7 +34,7 @@ export function DeleteProfileDialog({
 
   if (!profile) return null
 
-  const profileDisplayName = profile.profileName.split("|")[0]
+  const profileDisplayName = profile.profileName.split("|").slice(0, -1).join("|")
   const hasConnectedAccounts = profile.socialAccounts.length > 0
 
   const handleDelete = async () => {

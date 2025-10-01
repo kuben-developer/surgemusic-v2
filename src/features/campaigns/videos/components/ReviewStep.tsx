@@ -96,10 +96,10 @@ export function ReviewStep({
                   <div key={profileKey} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/10 transition-colors">
                     <div className="flex items-center gap-2">
                       <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
-                        {profile.profileName.split("|")[0]?.charAt(0).toUpperCase()}
+                        {profile.profileName.split("|").slice(0, -1).join("|")?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <span className="text-sm font-medium">{profile.profileName.split("|")[0] || ""}</span>
+                        <span className="text-sm font-medium">{profile.profileName.split("|").slice(0, -1).join("|") || ""}</span>
                         <div className="text-xs text-muted-foreground">{profile.socialAccounts.length} connected accounts</div>
                       </div>
                     </div>
