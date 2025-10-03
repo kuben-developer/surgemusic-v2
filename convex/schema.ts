@@ -172,6 +172,9 @@ export default defineSchema({
       name: v.string(),
       url: v.string(),
       type: v.string(),
+      slot0Id: v.optional(v.string()),
+      caption: v.optional(v.string()),
+      playbook: v.optional(v.string()),
     }),
 
     tiktokUpload: v.optional(v.object({
@@ -187,7 +190,6 @@ export default defineSchema({
         refId: v.optional(v.string()),
         caption: v.string(),
         url: v.optional(v.string()),
-        templateId: v.optional(v.string()),
       }),
     })),
 
@@ -204,7 +206,6 @@ export default defineSchema({
         refId: v.optional(v.string()),
         caption: v.string(),
         url: v.optional(v.string()),
-        templateId: v.optional(v.string()),
       }),
     })),
 
@@ -221,7 +222,6 @@ export default defineSchema({
         refId: v.optional(v.string()),
         caption: v.string(),
         url: v.optional(v.string()),
-        templateId: v.optional(v.string()),
       }),
     })),
 

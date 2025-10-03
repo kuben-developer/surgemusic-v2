@@ -7,11 +7,13 @@ export const makeWebhook = httpAction(async (ctx, request) => {
 
   try {
     const videos = JSON.parse(body) as Array<{
-      URL: string;
+      "URL": string;
       "CAMPAIGN ID": number;
       "CONTENT TYPE": string;
       "TOTAL_VIDEO": number;
-      "TEMPLATE ID": string;
+      "SLOT0_ID": string;
+      "CAPTION": string;
+      "PLAYBOOK": string;
     }>;
 
     // Create a counter for each video type
@@ -35,7 +37,9 @@ export const makeWebhook = httpAction(async (ctx, request) => {
         videoName: videoName,
         videoUrl: video.URL,
         videoType: videoType,
-        templateId: video["TEMPLATE ID"],
+        slot0Id: video["SLOT0_ID"],
+        caption: video["CAPTION"],
+        playbook: video["PLAYBOOK"],
       });
     }
 
@@ -69,7 +73,9 @@ export const createGeneratedVideo = internalMutation({
     videoName: v.string(),
     videoUrl: v.string(),
     videoType: v.string(),
-    templateId: v.string(),
+    slot0Id: v.string(),
+    caption: v.string(),
+    playbook: v.string(),
   },
   handler: async (ctx, args) => {
     // Find campaign by reference ID
@@ -90,6 +96,9 @@ export const createGeneratedVideo = internalMutation({
         name: args.videoName,
         url: args.videoUrl,
         type: args.videoType,
+        slot0Id: args.slot0Id,
+        caption: args.caption,
+        playbook: args.playbook,
       },
       // Initialize upload status objects as undefined (they'll be set when videos are scheduled)
     });

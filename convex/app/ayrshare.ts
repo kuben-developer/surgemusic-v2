@@ -741,9 +741,8 @@ export const updateVideoSchedule = internalMutation({
       id: args.postId,
       refId: args.refId,
       caption: args.postCaption,
-      // Preserve existing URL/templateId if present; URL will be filled by webhook once posted
+      // Preserve existing URL if present; URL will be filled by webhook once posted
       url: existing?.post?.url,
-      templateId: existing?.post?.templateId,
     });
 
     type UploadStatus = { isPosted: boolean; isFailed: boolean; failedReason?: string };
@@ -978,7 +977,10 @@ export const monitorApiPostedVideos = internalAction({
               );
               
               if (!profileKey) {
-                console.error(`Profile key not found for social account ${upload.socialAccountId}`);
+                console.error(`Profile key not found for social account ${upload.socialAccountId}, deleting orphaned account`);
+                await ctx.runMutation(internal.app.ayrshare.deleteSocialAccount, {
+                  socialAccountId: upload.socialAccountId,
+                });
                 continue;
               }
               
@@ -1067,5 +1069,12 @@ export const getCampaignById = internalQuery({
   args: { campaignId: v.id('campaigns') },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.campaignId);
+  },
+});
+
+export const deleteSocialAccount = internalMutation({
+  args: { socialAccountId: v.id('socialAccounts') },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.socialAccountId);
   },
 });
