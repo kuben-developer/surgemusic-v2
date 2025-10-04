@@ -318,6 +318,7 @@ export const schedulePost = action({
         });
 
         const result = await response.json();
+        // console.log("DEBUG KUBEN", JSON.stringify(result, null, 2))
         console.log(`[schedulePost] Ayrshare API call for video ${schedule.videoId} took ${Date.now() - apiStartTime}ms`);
 
         if (!response.ok || result.posts.length === 0 || result.posts[0].status !== "scheduled") {
@@ -865,10 +866,10 @@ export const getProfileKeyFromSocialAccountId = internalQuery({
   handler: async (ctx, args) => {
     const socialAccount = await ctx.db.get(args.socialAccountId);
     if (!socialAccount) return null;
-    
+
     const profile = await ctx.db.get(socialAccount.ayrshareProfileId);
     if (!profile) return null;
-    
+
     return profile.profileKey;
   },
 });
@@ -984,31 +985,31 @@ export const monitorApiPostedVideos = internalAction({
   args: {},
   handler: async (ctx) => {
     const BATCH_SIZE = 50; // Process 25 videos concurrently
-    
+
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
-    
+
     // Process in batches
     for (let i = 0; i < generatedVideos.length; i += BATCH_SIZE) {
       const batch = generatedVideos.slice(i, i + BATCH_SIZE);
-      
+
       await Promise.all(
         batch.map(async (video) => {
-          const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, { 
-            campaignId: video.campaignId 
+          const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, {
+            campaignId: video.campaignId
           });
-          
+
           if (!campaign) {
             console.error(`Campaign not found for video ${video._id}`);
             return;
           }
-          
+
           // Process each platform
           const platforms: Array<{
             platform: "tiktok" | "instagram" | "youtube",
             upload: NonNullable<typeof video.tiktokUpload | typeof video.instagramUpload | typeof video.youtubeUpload>
           }> = [];
-          
+
           if (video.tiktokUpload?.status.isPosted && video.tiktokUpload.post.id) {
             platforms.push({ platform: "tiktok", upload: video.tiktokUpload });
           }
@@ -1018,7 +1019,7 @@ export const monitorApiPostedVideos = internalAction({
           if (video.youtubeUpload?.status.isPosted && video.youtubeUpload.post.id) {
             platforms.push({ platform: "youtube", upload: video.youtubeUpload });
           }
-          
+
           for (const { platform, upload } of platforms) {
             try {
               // Get profile key
@@ -1026,14 +1027,14 @@ export const monitorApiPostedVideos = internalAction({
                 internal.app.ayrshare.getProfileKeyFromSocialAccountId,
                 { socialAccountId: upload.socialAccountId }
               );
-              
+
               if (!profileKey) {
                 await ctx.runMutation(internal.app.ayrshare.deleteSocialAccount, {
                   socialAccountId: upload.socialAccountId,
                 });
                 continue;
               }
-              
+
               // Fetch analytics from Ayrshare
               const response = await fetch("https://api.ayrshare.com/api/analytics/post", {
                 method: "POST",
@@ -1047,7 +1048,7 @@ export const monitorApiPostedVideos = internalAction({
                   platforms: [platform],
                 }),
               });
-              
+
               if (!response.ok) {
                 if (response.status === 429) {
                   // Rate limited, skip and retry later
@@ -1056,16 +1057,16 @@ export const monitorApiPostedVideos = internalAction({
                 }
                 throw new Error(`Failed to fetch analytics: ${response.statusText}`);
               }
-              
+
               const data = await response.json();
-              
+
               // Extract analytics based on platform
               const platformData = data[platform];
               if (!platformData || !platformData.analytics) {
                 console.warn(`No analytics data for ${platform} post ${upload.post.id}`);
                 continue;
               }
-              
+
               const analytics = platformData.analytics;
 
               // if(analytics.videoViewRetention && analytics.videoViewRetention.length > 0) {
@@ -1162,7 +1163,7 @@ export const monitorApiPostedVideos = internalAction({
                 saves: analytics.favorites ?? 0,
                 ...advancedAnalytics,
               });
-              
+
             } catch (error) {
               console.error(`Error processing ${platform} for video ${video._id}:`, error);
               // Continue with next platform
@@ -1182,8 +1183,8 @@ export const getPostedGeneratedVideos = internalQuery({
     const videos = await ctx.db
       .query("generatedVideos")
       .collect();
-    
-    return videos.filter(v => 
+
+    return videos.filter(v =>
       (v.tiktokUpload?.status.isPosted && v.tiktokUpload.post.id) ||
       (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
       (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
