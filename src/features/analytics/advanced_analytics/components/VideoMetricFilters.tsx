@@ -48,7 +48,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 100
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -59,7 +59,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 250
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -70,7 +70,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 500
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -81,7 +81,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 1000
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -92,7 +92,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 2500
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -103,7 +103,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 5000
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -129,7 +129,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 2
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -140,7 +140,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 5
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -151,7 +151,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 8
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -162,7 +162,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 12
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -173,7 +173,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 15
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -184,7 +184,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 20
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -210,7 +210,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 5
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -221,7 +221,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 10
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -232,7 +232,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 15
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -243,7 +243,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 20
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -254,7 +254,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 25
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -265,7 +265,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 30
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -291,7 +291,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 5
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -302,7 +302,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 10
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
@@ -313,7 +313,7 @@ export function VideoMetricFilters({
               className={cn(
                 "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 15
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-500/30"
                   : "bg-muted/40 hover:bg-muted/60"
               )}
             >
