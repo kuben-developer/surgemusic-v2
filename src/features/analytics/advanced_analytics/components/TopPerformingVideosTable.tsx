@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Hash, Eye, TrendingUp, Target, Clock, Globe } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef } from "react";
+import { Hash, Eye, TrendingUp, Target, Clock, Globe, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { VideoTableRow } from "./VideoTableRow";
+import { VideoMetricFilters } from "./VideoMetricFilters";
+import { useVideoTableState } from "../hooks/useVideoTableState";
 import type { AdvancedVideoMetric } from "../types/advanced-analytics.types";
+import type { SortField } from "../hooks/useVideoTableState";
 import { cn } from "@/lib/utils";
 
 interface TopPerformingVideosTableProps {
@@ -13,116 +15,170 @@ interface TopPerformingVideosTableProps {
   onVideoSelect: (videoId: string) => void;
 }
 
-const ITEMS_PER_PAGE = 10;
+const INITIAL_LOAD = 20;
+const LOAD_MORE_COUNT = 20;
 
 export function TopPerformingVideosTable({
   videos,
   selectedVideoId,
   onVideoSelect,
 }: TopPerformingVideosTableProps) {
-  const [currentPage, setCurrentPage] = useState(0);
+  const {
+    minViews,
+    minEngRate,
+    minHookScore,
+    minWatchTime,
+    sortField,
+    sortDirection,
+    processedVideos,
+    setMinViews,
+    setMinEngRate,
+    setMinHookScore,
+    setMinWatchTime,
+    toggleSort,
+    activeFilterCount,
+  } = useVideoTableState(videos);
 
-  const totalPages = Math.ceil(videos.length / ITEMS_PER_PAGE);
-  const startIndex = currentPage * ITEMS_PER_PAGE;
-  const endIndex = Math.min((currentPage + 1) * ITEMS_PER_PAGE, videos.length);
-  const paginatedVideos = videos.slice(startIndex, endIndex);
+  const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreTriggerRef = useRef<HTMLTableRowElement>(null);
 
-  const handlePrevious = () => {
-    setCurrentPage((prev) => Math.max(0, prev - 1));
-  };
+  const displayedVideos = processedVideos.slice(0, displayCount);
+  const hasMore = displayCount < processedVideos.length;
 
-  const handleNext = () => {
-    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
+  // Reset display count when filters or sort change
+  useEffect(() => {
+    setDisplayCount(INITIAL_LOAD);
+  }, [minViews, minEngRate, minHookScore, minWatchTime, sortField, sortDirection]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!loadMoreTriggerRef.current || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry && entry.isIntersecting && !isLoadingMore && hasMore) {
+          setIsLoadingMore(true);
+
+          // Simulate async loading
+          setTimeout(() => {
+            setDisplayCount((prev) => Math.min(prev + LOAD_MORE_COUNT, processedVideos.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, processedVideos.length]);
+
+  // Helper to render sort icon
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 opacity-100" />
+    ) : (
+      <ArrowDown className="h-3 w-3 opacity-100" />
+    );
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Enhanced Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="space-y-2">
-          <h3 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Top Performing Videos
-          </h3>
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-            Click any video to view detailed analytics and insights
-          </p>
-        </div>
-
-        {/* Enhanced Pagination Controls */}
-        {videos.length > 0 && (
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50">
-              <span className="text-sm font-medium text-foreground tabular-nums">
-                {startIndex + 1}–{endIndex}
-              </span>
-              <span className="text-sm text-muted-foreground mx-1.5">of</span>
-              <span className="text-sm font-semibold text-primary tabular-nums">
-                {videos.length}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-lg transition-all hover:scale-105"
-                disabled={currentPage === 0}
-                onClick={handlePrevious}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-lg transition-all hover:scale-105"
-                disabled={currentPage >= totalPages - 1}
-                onClick={handleNext}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="flex flex-col h-full space-y-6">
+      {/* Filter Section */}
+      <VideoMetricFilters
+        minViews={minViews}
+        minEngRate={minEngRate}
+        minHookScore={minHookScore}
+        minWatchTime={minWatchTime}
+        onMinViewsChange={setMinViews}
+        onMinEngRateChange={setMinEngRate}
+        onMinHookScoreChange={setMinHookScore}
+        onMinWatchTimeChange={setMinWatchTime}
+      />
 
       {/* Enhanced Table */}
-      <div className="flex-1 rounded-2xl border border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl overflow-hidden shadow-xl shadow-black/5">
-        <div className="overflow-auto h-full">
+      <div className="rounded-2xl border border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl overflow-hidden shadow-xl shadow-black/5">
+        <div className="overflow-auto max-h-[700px]">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
               <tr className="border-b border-border/40">
+                {/* Video Column - Not Sortable */}
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground tracking-wider">
                   <div className="flex items-center gap-1.5">
                     <Hash className="h-3 w-3" />
                     <span>Video</span>
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-center gap-1.5">
+
+                {/* Views Column - Sortable */}
+                <th
+                  className="px-3 py-2.5 text-center text-xs font-medium tracking-wider cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => toggleSort("views")}
+                >
+                  <div className={cn(
+                    "flex items-center justify-center gap-1.5",
+                    sortField === "views" ? "text-foreground" : "text-muted-foreground"
+                  )}>
                     <Eye className="h-3 w-3" />
                     <span>Views</span>
+                    {renderSortIcon("views")}
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-center gap-1.5">
+
+                {/* Eng Rate Column - Sortable */}
+                <th
+                  className="px-3 py-2.5 text-center text-xs font-medium tracking-wider cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => toggleSort("engagementRate")}
+                >
+                  <div className={cn(
+                    "flex items-center justify-center gap-1.5",
+                    sortField === "engagementRate" ? "text-foreground" : "text-muted-foreground"
+                  )}>
                     <TrendingUp className="h-3 w-3" />
                     <span>Eng Rate</span>
+                    {renderSortIcon("engagementRate")}
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-center gap-1.5">
+
+                {/* Hook Score Column - Sortable */}
+                <th
+                  className="px-3 py-2.5 text-center text-xs font-medium tracking-wider cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => toggleSort("hookScore")}
+                >
+                  <div className={cn(
+                    "flex items-center justify-center gap-1.5",
+                    sortField === "hookScore" ? "text-foreground" : "text-muted-foreground"
+                  )}>
                     <Target className="h-3 w-3" />
                     <span>Hook Score</span>
+                    {renderSortIcon("hookScore")}
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-center gap-1.5">
+
+                {/* Watch Time Column - Sortable */}
+                <th
+                  className="px-3 py-2.5 text-center text-xs font-medium tracking-wider cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => toggleSort("averageTimeWatched")}
+                >
+                  <div className={cn(
+                    "flex items-center justify-center gap-1.5",
+                    sortField === "averageTimeWatched" ? "text-foreground" : "text-muted-foreground"
+                  )}>
                     <Clock className="h-3 w-3" />
                     <span>Watch Time</span>
+                    {renderSortIcon("averageTimeWatched")}
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-end gap-1.5">
+
+                {/* Top Country Column - Not Sortable */}
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-start gap-1.5">
                     <Globe className="h-3 w-3" />
                     <span>Top Country</span>
                   </div>
@@ -131,17 +187,44 @@ export function TopPerformingVideosTable({
             </thead>
             <tbody className={cn(
               "divide-y divide-border/30",
-              paginatedVideos.length === 0 && "divide-y-0"
+              displayedVideos.length === 0 && "divide-y-0"
             )}>
-              {paginatedVideos.length > 0 ? (
-                paginatedVideos.map((video) => (
-                  <VideoTableRow
-                    key={video.id}
-                    video={video}
-                    isSelected={selectedVideoId === video.id}
-                    onClick={() => onVideoSelect(video.id)}
-                  />
-                ))
+              {displayedVideos.length > 0 ? (
+                <>
+                  {displayedVideos.map((video) => (
+                    <VideoTableRow
+                      key={video.id}
+                      video={video}
+                      isSelected={selectedVideoId === video.id}
+                      onClick={() => onVideoSelect(video.id)}
+                    />
+                  ))}
+
+                  {/* Infinite Scroll Trigger */}
+                  {hasMore && (
+                    <tr ref={loadMoreTriggerRef}>
+                      <td colSpan={6} className="px-6 py-8 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm text-muted-foreground">
+                            Loading more videos...
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* All Loaded Message */}
+                  {!hasMore && processedVideos.length > INITIAL_LOAD && (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-6 text-center">
+                        <span className="text-xs text-muted-foreground">
+                          All {processedVideos.length} videos loaded
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-20 text-center">
@@ -170,7 +253,9 @@ export function TopPerformingVideosTable({
                           No videos found
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Try selecting different campaigns or date ranges
+                          {activeFilterCount > 0
+                            ? "Try adjusting your filters"
+                            : "Try selecting different campaigns or date ranges"}
                         </p>
                       </div>
                     </div>

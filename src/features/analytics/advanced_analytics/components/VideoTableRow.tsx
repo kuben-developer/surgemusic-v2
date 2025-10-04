@@ -13,14 +13,6 @@ interface VideoTableRowProps {
 }
 
 export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps) {
-  // Format average watch time
-  const formatWatchTime = (seconds: number | undefined): string => {
-    if (!seconds) return "—";
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-    return `${minutes}m ${remainingSeconds}s`;
-  };
 
   // Format views with K/M notation
   const formatViews = (views: number): string => {
@@ -104,9 +96,9 @@ export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps
       {/* Video ID Column */}
       <TableCell className="px-4 py-3">
         <div className="space-y-1">
-          <div className="text-sm font-mono font-semibold tracking-tight">{video.videoId}</div>
-          <div className="text-xs text-muted-foreground truncate max-w-[200px] group-hover:text-foreground/70 transition-colors">
-            {video.campaignName}
+          {/* <div className="text-xs font-medium">{video.campaignName}</div> */}
+          <div className="text-[11px] font-mono text-muted-foreground/60 truncate max-w-[200px]">
+            {video.videoId.slice(0, 14)}
           </div>
         </div>
       </TableCell>
@@ -117,7 +109,7 @@ export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps
           {video.views >= 1000 && (
             <TrendingUp className="h-3.5 w-3.5 opacity-40" />
           )}
-          <span className={cn("tabular-nums", getViewsSize(video.views))}>
+          <span className={cn("font-mono tabular-nums", getViewsSize(video.views))}>
             {formatViews(video.views)}
           </span>
         </div>
@@ -126,7 +118,7 @@ export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps
       {/* Engagement Rate Column */}
       <TableCell className="px-4 py-3 text-center">
         <div className="flex flex-col items-center gap-1">
-          <span className="text-sm font-semibold tabular-nums">
+          <span className="text-sm font-mono font-semibold tabular-nums">
             {video.engagementRate.toFixed(1)}%
           </span>
           <div className="flex items-center gap-0.5">
@@ -145,9 +137,9 @@ export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps
 
       {/* Hook Score Column */}
       <TableCell className="px-4 py-3 text-center">
-        {video.hookScore !== null ? (
+        {video.hookScore !== null && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-sm font-semibold tabular-nums">
+            <span className="text-sm font-mono font-semibold tabular-nums">
               {Math.round(video.hookScore * 100)}%
             </span>
             <div className="flex items-center gap-0.5">
@@ -162,36 +154,31 @@ export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps
               ))}
             </div>
           </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
         )}
       </TableCell>
 
       {/* Watch Time Column */}
       <TableCell className="px-4 py-3 text-center">
         {video.averageTimeWatched ? (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/30">
-          <Clock className="h-3 w-3 opacity-50" />
-          <span className="text-sm font-medium tabular-nums">
-            {formatWatchTime(video.averageTimeWatched)}
-          </span>
-        </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/30">
+            <Clock className="h-3 w-3 opacity-50" />
+            <span className="text-sm font-mono font-medium tabular-nums">
+              {video.averageTimeWatched}s
+            </span>
+          </div>
+        ) : null}
       </TableCell>
 
       {/* Top Country Column */}
-      <TableCell className="px-4 py-3 text-right">
-        {topCountry ? (
+      <TableCell className="px-4 py-3 text-left">
+        {topCountry && (
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border/40 bg-muted/20">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium">{topCountry.name}</span>
-              <span className="text-xs font-bold opacity-60">{topCountry.percentage}%</span>
+              <span className="text-[11px] font-mono font-bold opacity-60">{topCountry.percentage}%</span>
+              <span className="text-xs font-medium">{topCountry.name}</span>
+
             </div>
           </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
         )}
       </TableCell>
     </TableRow>
