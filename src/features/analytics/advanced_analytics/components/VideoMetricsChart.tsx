@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -119,11 +118,11 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
   const chartConfig = getChartConfig();
 
   return (
-    <Card className="p-6 border border-primary/10 shadow-md overflow-hidden sticky top-4">
-      {/* Video Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative h-16 w-12 rounded overflow-hidden bg-muted flex-shrink-0">
+    <div className="rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden sticky top-4 p-3">
+      {/* Compact Header */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="relative h-10 w-8 rounded overflow-hidden bg-muted/50 flex-shrink-0">
             <video
               src={video.videoUrl}
               className="h-full w-full object-cover"
@@ -131,9 +130,9 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate">{video.campaignName}</h3>
-            <p className="text-sm text-muted-foreground">
-              {video.views.toLocaleString()} views
+            <h4 className="text-xs font-semibold truncate">{video.campaignName}</h4>
+            <p className="text-[10px] text-muted-foreground">
+              {video.views.toLocaleString()}
             </p>
           </div>
         </div>
@@ -141,9 +140,9 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
         <ChartTabs activeChart={activeChart} onChartChange={setActiveChart} />
       </div>
 
-      {/* Chart */}
+      {/* Compact Chart */}
       <motion.div
-        className="h-80 bg-white dark:bg-muted/30 rounded-lg p-4 border border-border/30 shadow-sm"
+        className="h-72 bg-card/50 rounded-lg p-2 border border-border/20"
         key={activeChart}
         variants={chartVariants}
         initial="hidden"
@@ -162,48 +161,48 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
                 <CartesianGrid
                   strokeDasharray="3 3"
                   className="dark:stroke-gray-700 stroke-gray-200"
-                  opacity={0.3}
+                  opacity={0.2}
                 />
                 <XAxis
                   dataKey="name"
                   className="dark:fill-gray-400 fill-gray-500"
-                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
+                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 11 }}
                   axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
                   tickLine={false}
+                  tickFormatter={(value) => `${value.replace("s", "")}`}
                 />
                 <YAxis
                   className="dark:fill-gray-400 fill-gray-500"
-                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
+                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 9 }}
                   axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
                   tickLine={false}
-                  width={40}
+                  width={25}
                   tickFormatter={(value) => `${value}%`}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "var(--background)",
                     border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                    boxShadow:
-                      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                    padding: "8px 12px",
+                    borderRadius: "0.375rem",
+                    padding: "4px 8px",
                     color: "var(--foreground)",
                   }}
-                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: "4px" }}
-                  itemStyle={{ color: "var(--foreground)", fontSize: 14 }}
-                  formatter={(value: number) => [`${Math.round(value)}%`, chartConfig.label]}
+                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, fontSize: 12 }}
+                  itemStyle={{ color: "var(--foreground)", fontSize: 12 }}
+                  formatter={(value: number) => [`${Math.round(value)}%`, chartConfig.label.replace(" %", "")]}
                 />
                 <Line
                   type="monotone"
                   dataKey="value"
                   stroke={chartConfig.color}
-                  strokeWidth={3}
+                  strokeWidth={2}
                   fillOpacity={1}
                   fill={`url(#gradient-${activeChart})`}
+                  dot={false}
                   activeDot={{
-                    r: 6,
+                    r: 3,
                     stroke: chartConfig.color,
-                    strokeWidth: 2,
+                    strokeWidth: 1.5,
                     fill: "var(--background)",
                   }}
                 />
@@ -213,84 +212,80 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
                 <CartesianGrid
                   strokeDasharray="3 3"
                   className="dark:stroke-gray-700 stroke-gray-200"
-                  opacity={0.3}
+                  opacity={0.2}
                 />
                 <XAxis
                   dataKey="name"
                   className="dark:fill-gray-400 fill-gray-500"
-                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
+                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 11 }}
                   axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
                   tickLine={false}
+                  
                 />
                 <YAxis
                   className="dark:fill-gray-400 fill-gray-500"
-                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
+                  tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 9 }}
                   axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
                   tickLine={false}
-                  width={40}
+                  width={25}
                   tickFormatter={(value) => `${value}%`}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "var(--background)",
                     border: "1px solid var(--border)",
-                    borderRadius: "0.5rem",
-                    boxShadow:
-                      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                    padding: "8px 12px",
+                    borderRadius: "0.375rem",
+                    padding: "4px 8px",
                     color: "var(--foreground)",
                   }}
-                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: "4px" }}
-                  itemStyle={{ color: "var(--foreground)", fontSize: 14 }}
+                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, fontSize: 12 }}
+                  itemStyle={{ color: "var(--foreground)", fontSize: 12 }}
                   labelFormatter={(label, payload) => {
-                    // For countries chart, show full country name in tooltip
                     if (activeChart === "countries" && payload?.[0]?.payload?.fullName) {
                       return payload[0].payload.fullName;
                     }
                     return label;
                   }}
-                  formatter={(value: number) => [`${Math.round(value)}%`, chartConfig.label]}
+                  formatter={(value: number) => [`${Math.round(value)}%`, chartConfig.label.replace(" %", "")]}
                 />
-                <Bar dataKey="value" fill={chartConfig.color} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill={chartConfig.color} radius={[3, 3, 0, 0]} />
               </BarChart>
             )}
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            <p>No data available for this chart</p>
+          <div className="h-full flex items-center justify-center">
+            <p className="text-[10px] text-muted-foreground">No data</p>
           </div>
         )}
       </motion.div>
 
-      {/* Chart Stats */}
-      <div className="mt-4 grid grid-cols-2 gap-4">
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground mb-1">Avg Watch Time</div>
-          <div className="text-lg font-semibold">
-            {video.averageTimeWatched
-              ? `${Math.round(video.averageTimeWatched)}s`
-              : "N/A"}
+      {/* Stats Cards */}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-muted/30 p-2">
+          <div className="text-[10px] text-muted-foreground mb-1">Avg Watch Time</div>
+          <div className="text-sm font-semibold tabular-nums">
+            {video.averageTimeWatched ? `${Math.round(video.averageTimeWatched)}s` : "—"}
           </div>
         </div>
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground mb-1">Hook Score</div>
-          <div className="text-lg font-semibold">
-            {video.hookScore !== null ? `${Math.round(video.hookScore * 100)}%` : "N/A"}
+        <div className="rounded-lg bg-muted/30 p-2">
+          <div className="text-[10px] text-muted-foreground mb-1">Hook Score</div>
+          <div className="text-sm font-semibold tabular-nums">
+            {video.hookScore !== null ? `${Math.round(video.hookScore * 100)}%` : "—"}
           </div>
         </div>
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground mb-1">Engagement Rate</div>
-          <div className="text-lg font-semibold">{video.engagementRate.toFixed(1)}%</div>
+        <div className="rounded-lg bg-muted/30 p-2">
+          <div className="text-[10px] text-muted-foreground mb-1">Engagement Rate</div>
+          <div className="text-sm font-semibold tabular-nums">
+            {video.engagementRate.toFixed(1)}%
+          </div>
         </div>
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground mb-1">Full Video Rate</div>
-          <div className="text-lg font-semibold">
-            {video.fullVideoWatchedRate
-              ? `${Math.round(video.fullVideoWatchedRate * 100)}%`
-              : "N/A"}
+        <div className="rounded-lg bg-muted/30 p-2">
+          <div className="text-[10px] text-muted-foreground mb-1">Full Video Rate</div>
+          <div className="text-sm font-semibold tabular-nums">
+            {video.fullVideoWatchedRate ? `${Math.round(video.fullVideoWatchedRate * 100)}%` : "—"}
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

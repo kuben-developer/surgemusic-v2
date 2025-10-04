@@ -80,9 +80,9 @@ export function AdvancedAnalyticsView({ selectedCampaigns }: AdvancedAnalyticsVi
       className="space-y-6"
     >
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left column - Table (takes 3 columns on large screens) */}
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left column - Table (takes 5 columns on large screens) */}
+        <div className="lg:col-span-8">
           <TopPerformingVideosTable
             videos={data.videos}
             selectedVideoId={selectedVideoId}
@@ -90,16 +90,16 @@ export function AdvancedAnalyticsView({ selectedCampaigns }: AdvancedAnalyticsVi
           />
         </div>
 
-        {/* Right column - Chart (takes 2 columns on large screens) */}
-        <div className="lg:col-span-2">
+        {/* Right column - Chart (takes 1 column on large screens) */}
+        <div className="lg:col-span-4">
           {selectedVideo ? (
             <VideoMetricsChart video={selectedVideo} />
           ) : (
-            <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 flex items-center justify-center min-h-[500px]">
+            <div className="border border-dashed border-border/40 rounded-lg p-4 flex items-center justify-center min-h-[300px]">
               <div className="text-center text-muted-foreground">
-                <p className="text-lg">Select a Video</p>
-                <p className="text-sm mt-2">
-                  Click on a video from the table to view detailed analytics
+                <p className="text-xs font-medium">Select Video</p>
+                <p className="text-[10px] mt-1 leading-tight">
+                  Click a video to view analytics
                 </p>
               </div>
             </div>
