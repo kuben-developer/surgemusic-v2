@@ -16,6 +16,7 @@ import {
 import { ChartTabs } from "./ChartTabs";
 import type { AdvancedVideoMetric, ChartType } from "../types/advanced-analytics.types";
 import { countriesCodeName } from "../../../../../public/countries";
+import { Clock, ExternalLink } from "lucide-react";
 
 interface VideoMetricsChartProps {
   video: AdvancedVideoMetric;
@@ -129,11 +130,34 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
               poster={video.thumbnailUrl}
             />
           </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-semibold truncate">{video.campaignName}</h4>
-            <p className="text-[10px] text-muted-foreground">
-              {video.views.toLocaleString()}
-            </p>
+          <div className="flex-1 min-w-0 flex items-start">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-xs truncate group-hover:text-primary transition-colors">
+                {video.campaignName}
+              </div>
+              <div className="flex items-center mt-1 gap-2 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>
+                  {new Date(video.postedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+            {video.platform === "tiktok" && video.videoUrl && (
+              <a
+                href={video.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary/70 hover:text-primary transition-colors ml-3 mt-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="h-3 w-3" />
+                <span>View on TikTok</span>
+              </a>
+            )}
           </div>
         </div>
 
@@ -220,7 +244,7 @@ export function VideoMetricsChart({ video }: VideoMetricsChartProps) {
                   tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 11 }}
                   axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
                   tickLine={false}
-                  
+
                 />
                 <YAxis
                   className="dark:fill-gray-400 fill-gray-500"
