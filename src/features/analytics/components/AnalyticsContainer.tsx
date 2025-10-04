@@ -12,7 +12,7 @@ import { TopContentCard } from "@/components/analytics/TopContentCard";
 import { CommentsSection as OriginalCommentsSection } from "@/components/analytics/CommentsSection";
 import { LoadingState } from "./LoadingState";
 import { ErrorState } from "./ErrorState";
-import { AdvancedAnalyticsView } from "./AdvancedAnalyticsView";
+import { AdvancedAnalyticsView } from "../advanced_analytics";
 import type { AnalyticsContainerProps } from "../types/analytics.types";
 import type { MetricKey, MetricInfo } from "@/types/analytics.types";
 

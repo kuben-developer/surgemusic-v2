@@ -10,7 +10,14 @@ export { CommentsSection } from './components/CommentsSection';
 export { CampaignSelector } from './components/CampaignSelector';
 export { LoadingState } from './components/LoadingState';
 export { ErrorState } from './components/ErrorState';
-export { AdvancedAnalyticsView } from './components/AdvancedAnalyticsView';
+
+// Advanced Analytics Sub-Feature
+export { AdvancedAnalyticsView } from './advanced_analytics';
+export type {
+  AdvancedVideoMetric,
+  AdvancedAnalyticsResponse,
+  ChartType,
+} from './advanced_analytics';
 
 // Hooks
 export { useAnalytics } from './hooks/useAnalytics';
