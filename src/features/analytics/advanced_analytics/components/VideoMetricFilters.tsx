@@ -46,7 +46,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="100"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 100
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -57,7 +57,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="250"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 250
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -68,7 +68,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="500"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 500
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -79,7 +79,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="1000"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 1000
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -90,7 +90,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="2500"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 2500
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -101,7 +101,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="5000"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minViews === 5000
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -127,7 +127,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="2"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 2
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -138,7 +138,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="5"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 5
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -149,7 +149,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="8"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 8
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -160,7 +160,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="12"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 12
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -171,7 +171,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="15"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 15
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -182,7 +182,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="20"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minEngRate === 20
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -208,7 +208,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="5"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 5
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -219,7 +219,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="10"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 10
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -230,7 +230,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="15"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 15
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -241,7 +241,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="20"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 20
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -252,7 +252,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="25"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 25
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -263,7 +263,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="30"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minHookScore === 30
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -289,7 +289,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="5"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 5
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -300,7 +300,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="10"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 10
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"
@@ -311,7 +311,7 @@ export function VideoMetricFilters({
             <ToggleGroupItem
               value="15"
               className={cn(
-                "h-8 text-xs font-medium rounded-lg transition-all",
+                "h-8 text-xs font-medium rounded-lg transition-all cursor-pointer",
                 minWatchTime === 15
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted/40 hover:bg-muted/60"

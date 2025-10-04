@@ -15,8 +15,8 @@ interface TopPerformingVideosTableProps {
   onVideoSelect: (videoId: string) => void;
 }
 
-const INITIAL_LOAD = 20;
-const LOAD_MORE_COUNT = 20;
+const INITIAL_LOAD = 50;
+const LOAD_MORE_COUNT = 50;
 
 export function TopPerformingVideosTable({
   videos,
