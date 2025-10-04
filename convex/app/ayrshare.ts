@@ -977,7 +977,6 @@ export const monitorApiPostedVideos = internalAction({
               );
               
               if (!profileKey) {
-                console.error(`Profile key not found for social account ${upload.socialAccountId}, deleting orphaned account`);
                 await ctx.runMutation(internal.app.ayrshare.deleteSocialAccount, {
                   socialAccountId: upload.socialAccountId,
                 });
@@ -1075,6 +1074,9 @@ export const getCampaignById = internalQuery({
 export const deleteSocialAccount = internalMutation({
   args: { socialAccountId: v.id('socialAccounts') },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.socialAccountId);
+    const account = await ctx.db.get(args.socialAccountId);
+    if (account) {
+      await ctx.db.delete(args.socialAccountId);
+    }
   },
 });

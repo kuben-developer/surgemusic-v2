@@ -17,20 +17,14 @@ This is a SurgeLight application built with:
 
 ```bash
 # Development
-npm run dev          # Start development server with Turbo
-npm run build        # Build for production
-npm run start        # Start production server
-npm run preview      # Build and start production server
+pnpm dev             # Start development server with Turbo
+pnpm build           # Build for production
+pnpm start           # Start production server
 
 # Code Quality
-npm run lint         # Run ESLint
-npm run lint:fix     # Run ESLint with auto-fix
-npm run typecheck    # Run TypeScript type checking
-npm run check        # Run both lint and typecheck
-
-# Formatting
-npm run format:check # Check code formatting with Prettier
-npm run format:write # Format code with Prettier
+pnpm lint            # Run ESLint
+pnpm lint:fix        # Run ESLint with auto-fix
+pnpm typecheck       # Run TypeScript type checking
 ```
 
 ## Key Architecture Patterns

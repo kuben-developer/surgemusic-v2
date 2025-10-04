@@ -4,18 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
-    "check": "next lint && tsc --noEmit",
-    "dev": "npm-run-all --parallel dev:frontend dev:backend",
-    "dev:frontend": "next dev --turbo --port 3322",
-    "dev:backend": "convex dev",
-    "ngrok": "ngrok http 3322 --hostname=dev.surgemusic.io",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "preview": "next build && next start",
+    "dev": "pnpm run --parallel /^dev:/",
+    "dev:nextjs": "next dev --turbo --port 3322",
+    "dev:convex": "npx convex dev",
+    "dev:ngrok": "ngrok http 3322 --hostname=dev.surgemusic.io",
+    "build": "next build --turbopack",
     "start": "next start",
+    "lint": "eslint",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -99,5 +95,9 @@
   "ct3aMetadata": {
     "initVersion": "7.39.3"
   },
-  "packageManager": "npm@10.5.0"
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  }
 }

@@ -4,9 +4,7 @@ import Stripe from "stripe";
 
 export const stripeWebhook = httpAction(async (ctx, request) => {
   // Initialize Stripe inside the handler
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-06-30.basil",
-  });
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
