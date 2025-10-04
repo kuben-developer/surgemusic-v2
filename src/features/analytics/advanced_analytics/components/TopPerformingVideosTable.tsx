@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hash, Eye, TrendingUp, Target, Clock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoTableRow } from "./VideoTableRow";
 import type { AdvancedVideoMetric } from "../types/advanced-analytics.types";
@@ -82,20 +82,41 @@ export function TopPerformingVideosTable({
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/40">
-                <th className="px-6 py-3.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Video
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <Hash className="h-3 w-3" />
+                    <span>Video</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Views
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Eye className="h-3 w-3" />
+                    <span>Views</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Watch Time
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>Eng Rate</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Hook Score
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Target className="h-3 w-3" />
+                    <span>Hook Score</span>
+                  </div>
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Engagement
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    <span>Watch Time</span>
+                  </div>
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Globe className="h-3 w-3" />
+                    <span>Top Country</span>
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -114,7 +135,7 @@ export function TopPerformingVideosTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
                         <svg

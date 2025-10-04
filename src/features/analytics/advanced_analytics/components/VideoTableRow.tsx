@@ -1,8 +1,9 @@
 "use client";
 
-import { ExternalLink, TrendingUp, Clock } from "lucide-react";
 import type { AdvancedVideoMetric } from "../types/advanced-analytics.types";
+import { TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { countriesCodeName } from "../../../../../public/countries.js";
 
 interface VideoTableRowProps {
   video: AdvancedVideoMetric;
@@ -13,129 +14,91 @@ interface VideoTableRowProps {
 export function VideoTableRow({ video, isSelected, onClick }: VideoTableRowProps) {
   // Format average watch time
   const formatWatchTime = (seconds: number | undefined): string => {
-    if (!seconds) return "N/A";
+    if (!seconds) return "—";
     if (seconds < 60) return `${Math.round(seconds)}s`;
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.round(seconds % 60);
     return `${minutes}m ${remainingSeconds}s`;
   };
 
-  // Get performance indicator color
-  const getEngagementColor = (rate: number) => {
-    if (rate >= 8) return "text-emerald-600 dark:text-emerald-400";
-    if (rate >= 5) return "text-blue-600 dark:text-blue-400";
-    if (rate >= 3) return "text-amber-600 dark:text-amber-400";
-    return "text-muted-foreground";
+  // Format views with K/M notation
+  const formatViews = (views: number): string => {
+    if (views >= 1000000) {
+      return `${(views / 1000000).toFixed(1)}M`;
+    }
+    if (views >= 1000) {
+      return `${(views / 1000).toFixed(1)}K`;
+    }
+    return views.toString();
   };
 
-  const getHookScoreColor = (score: number) => {
-    if (score >= 0.8) return "text-emerald-600 dark:text-emerald-400";
-    if (score >= 0.6) return "text-blue-600 dark:text-blue-400";
-    if (score >= 0.4) return "text-amber-600 dark:text-amber-400";
-    return "text-muted-foreground";
+  // Get top country (excluding "Others")
+  const getTopCountry = (): string => {
+    if (!video.audienceCountries || video.audienceCountries.length === 0) {
+      return "—";
+    }
+
+    const topCountry = video.audienceCountries
+      .filter((c) => c.country.toLowerCase() !== "others")
+      .sort((a, b) => b.percentage - a.percentage)[0];
+
+    if (!topCountry) return "—";
+
+    const countryName = (countriesCodeName as Record<string, string>)[topCountry.country] || topCountry.country;
+    return `${countryName} · ${Math.round(topCountry.percentage*100)}%`;
   };
 
   return (
-    <tr
+    <TableRow
       onClick={onClick}
       className={cn(
-        "group cursor-pointer transition-all duration-200 relative",
-        "hover:bg-muted/30",
-        isSelected && "bg-primary/5 hover:bg-primary/10",
-        "after:absolute after:inset-x-6 after:bottom-0 after:h-px after:bg-border/0 hover:after:bg-primary/20 after:transition-colors"
+        "cursor-pointer",
+        isSelected && "bg-primary/5"
       )}
+      data-state={isSelected ? "selected" : undefined}
     >
-      {/* Video Info Column */}
-      <td className="px-6 py-4">
-        <div className="flex items-center gap-4">
-          {/* Thumbnail with overlay effect */}
-          <div className="relative h-16 w-[72px] rounded-lg overflow-hidden bg-muted/50 flex-shrink-0 ring-1 ring-border/20 group-hover:ring-primary/30 transition-all">
-            <video
-              src={video.videoUrl}
-              className="h-full w-full object-cover"
-              poster={video.thumbnailUrl}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-              {video.campaignName}
-            </h4>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>
-                {new Date(video.postedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-            {video.platform === "tiktok" && video.videoUrl && (
-              <a
-                href={video.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary/70 hover:text-primary transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="h-3 w-3" />
-                <span>View on TikTok</span>
-              </a>
-            )}
-          </div>
+      {/* Video ID Column */}
+      <TableCell className="px-3 py-2">
+        <div className="space-y-0.5">
+          <div className="text-xs font-medium tabular-nums">{video.videoId}</div>
+          <div className="text-xs text-muted-foreground truncate">{video.campaignName}</div>
         </div>
-      </td>
+      </TableCell>
 
       {/* Views Column */}
-      <td className="px-6 py-4 text-right">
-        <div className="inline-flex items-center gap-1.5">
-          <span className="font-semibold tabular-nums text-sm">
-            {video.views.toLocaleString()}
-          </span>
-        </div>
-      </td>
-
-      {/* Avg Watch Time Column */}
-      <td className="px-6 py-4 text-right">
-        <span className="text-sm font-medium tabular-nums">
-          {formatWatchTime(video.averageTimeWatched)}
+      <TableCell className="px-3 py-2 text-right">
+        <span className="text-xs tabular-nums">
+          {formatViews(video.views)}
         </span>
-      </td>
-
-      {/* Hook Score Column */}
-      <td className="px-6 py-4 text-right">
-        {video.hookScore !== null ? (
-          <div className="inline-flex items-center gap-1.5">
-            <span className={cn(
-              "font-semibold text-sm tabular-nums",
-              getHookScoreColor(video.hookScore)
-            )}>
-              {Math.round(video.hookScore * 100)}%
-            </span>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground/50">—</span>
-        )}
-      </td>
+      </TableCell>
 
       {/* Engagement Rate Column */}
-      <td className="px-6 py-4 text-right">
-        <div className="inline-flex items-center gap-1.5">
-          <TrendingUp className={cn(
-            "h-3.5 w-3.5",
-            getEngagementColor(video.engagementRate)
-          )} />
-          <span className={cn(
-            "font-semibold text-sm tabular-nums",
-            getEngagementColor(video.engagementRate)
-          )}>
-            {video.engagementRate.toFixed(1)}%
-          </span>
-        </div>
-      </td>
-    </tr>
+      <TableCell className="px-3 py-2 text-right">
+        <span className="text-xs tabular-nums">
+          {video.engagementRate.toFixed(1)}%
+        </span>
+      </TableCell>
+
+      {/* Hook Score Column */}
+      <TableCell className="px-3 py-2 text-right">
+        <span className="text-xs font-medium tabular-nums">
+          {video.hookScore !== null ? `${Math.round(video.hookScore * 100)}%` : "—"}
+        </span>
+      </TableCell>
+
+      {/* Watch Time Column */}
+      <TableCell className="px-3 py-2 text-right">
+        <span className="text-xs tabular-nums">
+          {formatWatchTime(video.averageTimeWatched)}
+        </span>
+      </TableCell>
+
+      {/* Top Country Column */}
+      <TableCell className="px-3 py-2 text-right">
+        <span className="text-xs tabular-nums">
+          {getTopCountry()}
+        </span>
+      </TableCell>
+    </TableRow>
   );
 }
