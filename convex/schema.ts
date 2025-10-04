@@ -123,6 +123,38 @@ export default defineSchema({
     comments: v.number(),
     shares: v.number(),
     saves: v.number(),
+
+    // advanced analytics
+    audienceCities: v.optional(v.array(v.object({
+      city: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceCountries: v.optional(v.array(v.object({
+      country: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceGenders: v.optional(v.array(v.object({
+      gender: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceTypes: v.optional(v.array(v.object({
+      type: v.string(),
+      percentage: v.number(),
+    }))),
+    averageTimeWatched: v.optional(v.number()),
+    engagementLikes: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
+    fullVideoWatchedRate: v.optional(v.number()),
+    newFollowers: v.optional(v.number()),
+    profileViews: v.optional(v.number()),
+    videoDuration: v.optional(v.number()),
+    videoViewRetention: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
+  
     updatedAt: v.number(), // ms epoch at write time
   })
     .index("by_campaignId", ["campaignId"])
@@ -234,7 +266,7 @@ export default defineSchema({
     publicShareId: v.optional(v.string()),
     campaignIds: v.array(v.id('campaigns')),
     hiddenVideoIds: v.array(v.union(
-      v.id('generatedVideos'), 
+      v.id('generatedVideos'),
       v.id('manuallyPostedVideos'),
       v.id('ayrsharePostedVideos')
     )),

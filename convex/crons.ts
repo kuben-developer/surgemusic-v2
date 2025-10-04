@@ -18,7 +18,7 @@ crons.interval(
 
 crons.interval(
     "monitorApiPostedVideos",
-    { minutes: 15 },
+    { minutes: 30 },
     internal.app.ayrshare.monitorApiPostedVideos,
     {}
 );

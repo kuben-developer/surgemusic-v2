@@ -893,35 +893,86 @@ export const storeAyrsharePostedVideo = internalMutation({
     comments: v.number(),
     shares: v.number(),
     saves: v.number(),
+    // Advanced analytics (optional)
+    audienceCities: v.optional(v.array(v.object({
+      city: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceCountries: v.optional(v.array(v.object({
+      country: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceGenders: v.optional(v.array(v.object({
+      gender: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceTypes: v.optional(v.array(v.object({
+      type: v.string(),
+      percentage: v.number(),
+    }))),
+    averageTimeWatched: v.optional(v.number()),
+    engagementLikes: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
+    fullVideoWatchedRate: v.optional(v.number()),
+    newFollowers: v.optional(v.number()),
+    profileViews: v.optional(v.number()),
+    videoDuration: v.optional(v.number()),
+    videoViewRetention: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
   },
   handler: async (ctx, args) => {
     // Check if video already exists using composite key
     const existing = await ctx.db
       .query("ayrsharePostedVideos")
-      .withIndex("by_videoId_socialPlatform", (q) => 
+      .withIndex("by_videoId_socialPlatform", (q) =>
         q.eq("videoId", args.videoId).eq("socialPlatform", args.socialPlatform)
       )
       .filter((q) => q.eq(q.field("campaignId"), args.campaignId))
       .unique();
-    
+
+    // Build update/insert object with all fields
+    const dataToStore: any = {
+      views: args.views,
+      likes: args.likes,
+      comments: args.comments,
+      shares: args.shares,
+      saves: args.saves,
+      thumbnailUrl: args.thumbnailUrl,
+      videoUrl: args.videoUrl,
+      updatedAt: Date.now(),
+    };
+
+    // Add advanced analytics if provided
+    if (args.audienceCities !== undefined) dataToStore.audienceCities = args.audienceCities;
+    if (args.audienceCountries !== undefined) dataToStore.audienceCountries = args.audienceCountries;
+    if (args.audienceGenders !== undefined) dataToStore.audienceGenders = args.audienceGenders;
+    if (args.audienceTypes !== undefined) dataToStore.audienceTypes = args.audienceTypes;
+    if (args.averageTimeWatched !== undefined) dataToStore.averageTimeWatched = args.averageTimeWatched;
+    if (args.engagementLikes !== undefined) dataToStore.engagementLikes = args.engagementLikes;
+    if (args.fullVideoWatchedRate !== undefined) dataToStore.fullVideoWatchedRate = args.fullVideoWatchedRate;
+    if (args.newFollowers !== undefined) dataToStore.newFollowers = args.newFollowers;
+    if (args.profileViews !== undefined) dataToStore.profileViews = args.profileViews;
+    if (args.videoDuration !== undefined) dataToStore.videoDuration = args.videoDuration;
+    if (args.videoViewRetention !== undefined) dataToStore.videoViewRetention = args.videoViewRetention;
+
     if (existing) {
       // Update existing record
-      await ctx.db.patch(existing._id, {
-        views: args.views,
-        likes: args.likes,
-        comments: args.comments,
-        shares: args.shares,
-        saves: args.saves,
-        thumbnailUrl: args.thumbnailUrl,
-        videoUrl: args.videoUrl,
-        updatedAt: Date.now(),
-      });
+      await ctx.db.patch(existing._id, dataToStore);
       return existing._id;
     } else {
       // Insert new record
       const id = await ctx.db.insert("ayrsharePostedVideos", {
-        ...args,
-        updatedAt: Date.now(),
+        campaignId: args.campaignId,
+        userId: args.userId,
+        socialPlatform: args.socialPlatform,
+        videoId: args.videoId,
+        postedAt: args.postedAt,
+        mediaUrl: args.mediaUrl,
+        ...dataToStore,
       });
       return id;
     }
@@ -932,7 +983,7 @@ export const storeAyrsharePostedVideo = internalMutation({
 export const monitorApiPostedVideos = internalAction({
   args: {},
   handler: async (ctx) => {
-    const BATCH_SIZE = 25; // Process 25 videos concurrently
+    const BATCH_SIZE = 50; // Process 25 videos concurrently
     
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
@@ -1017,18 +1068,89 @@ export const monitorApiPostedVideos = internalAction({
               
               const analytics = platformData.analytics;
 
-              if(analytics.videoViewRetention.length > 0) {
-                console.log(analytics);
+              // if(analytics.videoViewRetention && analytics.videoViewRetention.length > 0) {
+              //   console.log(analytics);
+              // }
+
+              // Extract advanced analytics with proper field mapping
+              const advancedAnalytics: any = {};
+
+              // Map audienceCities: city_name → city
+              if (analytics.audienceCities && Array.isArray(analytics.audienceCities)) {
+                advancedAnalytics.audienceCities = analytics.audienceCities.map((item: any) => ({
+                  city: item.city_name,
+                  percentage: item.percentage,
+                }));
               }
-              
-              // Store in database
+
+              // Map audienceCountries
+              if (analytics.audienceCountries && Array.isArray(analytics.audienceCountries)) {
+                advancedAnalytics.audienceCountries = analytics.audienceCountries.map((item: any) => ({
+                  country: item.country,
+                  percentage: item.percentage,
+                }));
+              }
+
+              // Map audienceGenders
+              if (analytics.audienceGenders && Array.isArray(analytics.audienceGenders)) {
+                advancedAnalytics.audienceGenders = analytics.audienceGenders.map((item: any) => ({
+                  gender: item.gender,
+                  percentage: item.percentage,
+                }));
+              }
+
+              // Map audienceTypes
+              if (analytics.audienceTypes && Array.isArray(analytics.audienceTypes)) {
+                advancedAnalytics.audienceTypes = analytics.audienceTypes.map((item: any) => ({
+                  type: item.type,
+                  percentage: item.percentage,
+                }));
+              }
+
+              // Direct numeric fields
+              if (analytics.averageTimeWatched !== undefined) {
+                advancedAnalytics.averageTimeWatched = analytics.averageTimeWatched;
+              }
+
+              if (analytics.fullVideoWatchedRate !== undefined) {
+                advancedAnalytics.fullVideoWatchedRate = analytics.fullVideoWatchedRate;
+              }
+
+              if (analytics.newFollowers !== undefined) {
+                advancedAnalytics.newFollowers = analytics.newFollowers;
+              }
+
+              if (analytics.profileViews !== undefined) {
+                advancedAnalytics.profileViews = analytics.profileViews;
+              }
+
+              if (analytics.videoDuration !== undefined) {
+                advancedAnalytics.videoDuration = analytics.videoDuration;
+              }
+
+              // Array fields
+              if (analytics.engagementLikes && Array.isArray(analytics.engagementLikes)) {
+                advancedAnalytics.engagementLikes = analytics.engagementLikes.map((item: any) => ({
+                  second: String(item.second),
+                  percentage: item.percentage,
+                }));
+              }
+
+              if (analytics.videoViewRetention && Array.isArray(analytics.videoViewRetention)) {
+                advancedAnalytics.videoViewRetention = analytics.videoViewRetention.map((item: any) => ({
+                  second: String(item.second),
+                  percentage: item.percentage,
+                }));
+              }
+
+              // Store in database with all analytics
               await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
                 campaignId: video.campaignId,
                 userId: campaign.userId,
                 socialPlatform: platform,
                 videoId: platformData.id || upload.post.id,
-                postedAt: analytics.created 
-                  ? Math.floor(new Date(analytics.created).getTime() / 1000) 
+                postedAt: analytics.created
+                  ? Math.floor(new Date(analytics.created).getTime() / 1000)
                   : Math.floor(upload.scheduledAt / 1000),
                 videoUrl: platformData.postUrl || upload.post.url || "",
                 thumbnailUrl: analytics.thumbnailUrl || video.video.url,
@@ -1038,6 +1160,7 @@ export const monitorApiPostedVideos = internalAction({
                 comments: analytics.commentsCount ?? 0,
                 shares: analytics.shareCount ?? 0,
                 saves: analytics.favorites ?? 0,
+                ...advancedAnalytics,
               });
               
             } catch (error) {
