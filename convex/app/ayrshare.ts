@@ -1016,6 +1016,10 @@ export const monitorApiPostedVideos = internalAction({
               }
               
               const analytics = platformData.analytics;
+
+              if(analytics.videoViewRetention.length > 0) {
+                console.log(analytics);
+              }
               
               // Store in database
               await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {

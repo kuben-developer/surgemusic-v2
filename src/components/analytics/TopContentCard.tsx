@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,11 @@ export function TopContentCard({
     const totalVideos = filteredVideos.length;
     const totalPages = Math.ceil(totalVideos / itemsPerPage);
 
-    if (currentPage >= totalPages && totalPages > 0) {
-        onPageChange(0);
-    }
+    useEffect(() => {
+        if (currentPage >= totalPages && totalPages > 0) {
+            onPageChange(0);
+        }
+    }, [currentPage, totalPages, onPageChange]);
 
     const handlePrevious = () => {
         onPageChange(Math.max(0, currentPage - 1));

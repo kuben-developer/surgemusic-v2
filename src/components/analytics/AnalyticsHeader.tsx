@@ -38,6 +38,9 @@ interface AnalyticsHeaderProps {
     campaignCount: number;
     reportName?: string;
     lastUpdatedAt?: number | null;
+    isAdmin?: boolean;
+    showAdvancedAnalytics?: boolean;
+    onToggleAdvancedAnalytics?: () => void;
 }
 
 export function AnalyticsHeader({
@@ -51,7 +54,10 @@ export function AnalyticsHeader({
     isRefreshing,
     campaignCount,
     reportName,
-    lastUpdatedAt
+    lastUpdatedAt,
+    isAdmin = false,
+    showAdvancedAnalytics = false,
+    onToggleAdvancedAnalytics
 }: AnalyticsHeaderProps) {
     const [campaignSelectOpen, setCampaignSelectOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -94,7 +100,7 @@ export function AnalyticsHeader({
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500/70 animate-pulse"></span>
                         Updated {formatTimeAgo(new Date(lastUpdatedAt))}
                     </span>
-                </div>:null}
+                </div> : null}
             </div>
 
 
@@ -191,7 +197,7 @@ export function AnalyticsHeader({
                                                             {campaign.campaignName}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground mt-0.5">
-                                                           Created {formatTimeAgo(new Date(campaign.createdAt))}
+                                                            Created {formatTimeAgo(new Date(campaign.createdAt))}
                                                         </div>
                                                     </label>
                                                 </div>
@@ -245,6 +251,16 @@ export function AnalyticsHeader({
                         <RefreshCcw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
                         Refresh Analytics
                     </Button>
+
+                    {isAdmin && onToggleAdvancedAnalytics && (
+                        <Button
+                            variant="outline"
+                            onClick={onToggleAdvancedAnalytics}
+                            className="gap-2"
+                        >
+                            {showAdvancedAnalytics ? "Show Normal Analytics" : "Show Advanced Analytics"}
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>
