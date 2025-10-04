@@ -47,6 +47,7 @@ export function ChartTabs({ activeChart, onChartChange }: ChartTabsProps) {
     <div className="grid grid-cols-4 gap-1 bg-muted/30 rounded-lg p-1">
         {tabs.map((tab) => (
           <button
+            key={tab.key}
             className={cn(
               "p-1.5 text-xs rounded-md transition-all relative overflow-hidden cursor-pointer",
               activeChart === tab.key

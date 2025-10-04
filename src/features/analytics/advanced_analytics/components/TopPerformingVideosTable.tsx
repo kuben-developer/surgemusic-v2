@@ -37,35 +37,44 @@ export function TopPerformingVideosTable({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Modern Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="space-y-1">
-          <h3 className="text-xl font-semibold tracking-tight">Top Performing Videos</h3>
-          <p className="text-sm text-muted-foreground">
+      {/* Enhanced Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="space-y-2">
+          <h3 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Top Performing Videos
+          </h3>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
             Click any video to view detailed analytics and insights
           </p>
         </div>
 
-        {/* Minimal Pagination Controls */}
+        {/* Enhanced Pagination Controls */}
         {videos.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm text-muted-foreground tabular-nums min-w-[140px] text-right">
-              {startIndex + 1}–{endIndex} of {videos.length}
-            </span>
-            <div className="flex items-center gap-0.5 ml-2">
+          <div className="flex items-center gap-3">
+            <div className="px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50">
+              <span className="text-sm font-medium text-foreground tabular-nums">
+                {startIndex + 1}–{endIndex}
+              </span>
+              <span className="text-sm text-muted-foreground mx-1.5">of</span>
+              <span className="text-sm font-semibold text-primary tabular-nums">
+                {videos.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-7 w-7 rounded-md"
+                className="h-8 w-8 rounded-lg transition-all hover:scale-105"
                 disabled={currentPage === 0}
                 onClick={handlePrevious}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-7 w-7 rounded-md"
+                className="h-8 w-8 rounded-lg transition-all hover:scale-105"
                 disabled={currentPage >= totalPages - 1}
                 onClick={handleNext}
               >
@@ -76,8 +85,8 @@ export function TopPerformingVideosTable({
         )}
       </div>
 
-      {/* Modern Table */}
-      <div className="flex-1 rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden">
+      {/* Enhanced Table */}
+      <div className="flex-1 rounded-2xl border border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl overflow-hidden shadow-xl shadow-black/5">
         <div className="overflow-auto h-full">
           <table className="w-full">
             <thead>
@@ -88,26 +97,26 @@ export function TopPerformingVideosTable({
                     <span>Video</span>
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-end gap-1.5">
+                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-center gap-1.5">
                     <Eye className="h-3 w-3" />
                     <span>Views</span>
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-end gap-1.5">
+                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-center gap-1.5">
                     <TrendingUp className="h-3 w-3" />
                     <span>Eng Rate</span>
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-end gap-1.5">
+                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-center gap-1.5">
                     <Target className="h-3 w-3" />
                     <span>Hook Score</span>
                   </div>
                 </th>
-                <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground tracking-wider">
-                  <div className="flex items-center justify-end gap-1.5">
+                <th className="px-3 py-2.5 text-center text-xs font-medium text-muted-foreground tracking-wider">
+                  <div className="flex items-center justify-center gap-1.5">
                     <Clock className="h-3 w-3" />
                     <span>Watch Time</span>
                   </div>
@@ -135,30 +144,35 @@ export function TopPerformingVideosTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6 text-muted-foreground"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                        <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-8 w-8 text-primary/70"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        No videos found
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        Try selecting different campaigns
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-base font-semibold text-foreground">
+                          No videos found
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Try selecting different campaigns or date ranges
+                        </p>
+                      </div>
                     </div>
                   </td>
                 </tr>
