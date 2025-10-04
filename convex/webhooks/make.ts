@@ -37,9 +37,9 @@ export const makeWebhook = httpAction(async (ctx, request) => {
         videoName: videoName,
         videoUrl: video.URL,
         videoType: videoType,
-        slot0Id: video["SLOT0_ID"],
-        caption: video["CAPTION"],
-        playbook: video["PLAYBOOK"],
+        slot0Id: video["SLOT0_ID"] ?? undefined,
+        caption: video["CAPTION"] ?? undefined,
+        playbook: video["PLAYBOOK"] ?? undefined,
       });
     }
 
@@ -73,9 +73,9 @@ export const createGeneratedVideo = internalMutation({
     videoName: v.string(),
     videoUrl: v.string(),
     videoType: v.string(),
-    slot0Id: v.string(),
-    caption: v.string(),
-    playbook: v.string(),
+    slot0Id: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    playbook: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Find campaign by reference ID
