@@ -529,42 +529,81 @@ export const getScheduledVideos = query({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
       .collect();
 
-    // Filter and transform scheduled videos
+    // Filter and transform scheduled videos from both Ayrshare and Late
     const scheduledVideos = videos
       .filter(video => {
-        // Check if video is scheduled but not posted for any platform
+        // Check if video is scheduled but not posted for any platform (Ayrshare)
         const tiktokScheduled = video.tiktokUpload?.scheduledAt && !video.tiktokUpload?.status?.isPosted;
         const instagramScheduled = video.instagramUpload?.scheduledAt && !video.instagramUpload?.status?.isPosted;
         const youtubeScheduled = video.youtubeUpload?.scheduledAt && !video.youtubeUpload?.status?.isPosted;
 
-        return tiktokScheduled || instagramScheduled || youtubeScheduled;
+        // Check if video is scheduled but not posted for any platform (Late)
+        const lateTiktokScheduled = video.lateTiktokUpload?.scheduledAt && !video.lateTiktokUpload?.status?.isPosted;
+        const lateInstagramScheduled = video.lateInstagramUpload?.scheduledAt && !video.lateInstagramUpload?.status?.isPosted;
+        const lateYoutubeScheduled = video.lateYoutubeUpload?.scheduledAt && !video.lateYoutubeUpload?.status?.isPosted;
+
+        return tiktokScheduled || instagramScheduled || youtubeScheduled ||
+               lateTiktokScheduled || lateInstagramScheduled || lateYoutubeScheduled;
       })
       .map(video => {
         // Get the earliest scheduled time and post info
         let earliestSchedule = null;
         let postInfo = null;
         let platforms = [];
+        let provider = "ayrshare"; // default to ayrshare
 
+        // Check Ayrshare uploads
         if (video.tiktokUpload?.scheduledAt && !video.tiktokUpload?.status?.isPosted) {
           earliestSchedule = video.tiktokUpload.scheduledAt;
           postInfo = video.tiktokUpload.post;
-          platforms.push({ platform: "tiktok", username: "TikTok Account" });
+          platforms.push({ platform: "tiktok", username: "TikTok Account (Ayrshare)" });
+          provider = "ayrshare";
         }
 
         if (video.instagramUpload?.scheduledAt && !video.instagramUpload?.status?.isPosted) {
           if (!earliestSchedule || video.instagramUpload.scheduledAt < earliestSchedule) {
             earliestSchedule = video.instagramUpload.scheduledAt;
             postInfo = video.instagramUpload.post;
+            provider = "ayrshare";
           }
-          platforms.push({ platform: "instagram", username: "Instagram Account" });
+          platforms.push({ platform: "instagram", username: "Instagram Account (Ayrshare)" });
         }
 
         if (video.youtubeUpload?.scheduledAt && !video.youtubeUpload?.status?.isPosted) {
           if (!earliestSchedule || video.youtubeUpload.scheduledAt < earliestSchedule) {
             earliestSchedule = video.youtubeUpload.scheduledAt;
             postInfo = video.youtubeUpload.post;
+            provider = "ayrshare";
           }
-          platforms.push({ platform: "youtube", username: "YouTube Account" });
+          platforms.push({ platform: "youtube", username: "YouTube Account (Ayrshare)" });
+        }
+
+        // Check Late uploads
+        if (video.lateTiktokUpload?.scheduledAt && !video.lateTiktokUpload?.status?.isPosted) {
+          if (!earliestSchedule || video.lateTiktokUpload.scheduledAt < earliestSchedule) {
+            earliestSchedule = video.lateTiktokUpload.scheduledAt;
+            postInfo = video.lateTiktokUpload.post;
+            provider = "late";
+          }
+          platforms.push({ platform: "tiktok", username: "TikTok Account (Late)" });
+        }
+
+        if (video.lateInstagramUpload?.scheduledAt && !video.lateInstagramUpload?.status?.isPosted) {
+          if (!earliestSchedule || video.lateInstagramUpload.scheduledAt < earliestSchedule) {
+            earliestSchedule = video.lateInstagramUpload.scheduledAt;
+            postInfo = video.lateInstagramUpload.post;
+            provider = "late";
+          }
+          platforms.push({ platform: "instagram", username: "Instagram Account (Late)" });
+        }
+
+        if (video.lateYoutubeUpload?.scheduledAt && !video.lateYoutubeUpload?.status?.isPosted) {
+          if (!earliestSchedule || video.lateYoutubeUpload.scheduledAt < earliestSchedule) {
+            earliestSchedule = video.lateYoutubeUpload.scheduledAt;
+            postInfo = video.lateYoutubeUpload.post;
+            provider = "late";
+          }
+          platforms.push({ platform: "youtube", username: "YouTube Account (Late)" });
         }
 
         return {
@@ -576,6 +615,7 @@ export const getScheduledVideos = query({
           scheduledAt: earliestSchedule!,
           postCaption: postInfo?.caption || "",
           scheduledSocialAccounts: platforms,
+          provider: provider, // Add provider information
         };
       })
       .sort((a, b) => a.scheduledAt - b.scheduledAt);

@@ -225,9 +225,10 @@ export const getPublicReportAnalytics = internalAction({
     days: v.number(),
     userId: v.id("users"),
     hiddenVideoIds: v.optional(v.array(v.union(
-      v.id("generatedVideos"), 
+      v.id("generatedVideos"),
       v.id("manuallyPostedVideos"),
-      v.id("ayrsharePostedVideos")
+      v.id("ayrsharePostedVideos"),
+      v.id("latePostedVideos")
     ))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {

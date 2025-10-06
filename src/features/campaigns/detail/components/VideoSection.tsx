@@ -9,7 +9,7 @@ import { VideoSectionContent } from "./VideoSectionContent";
 import { TrialPromotionBanner } from "./TrialPromotionBanner";
 import { useVideoPagination } from "../hooks/useVideoPagination";
 import type { VideoSectionProps } from "../types/campaign-detail.types";
-import { ScheduleTableDialog } from "@/features/campaigns/videos";
+import { ScheduleTableDialog, ScheduleLateTableDialog } from "@/features/campaigns/videos";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -37,8 +37,9 @@ export function VideoSection({
 }: VideoSectionProps) {
   if (!campaign) return null;
 
-  // Local state for schedule selection dialog
+  // Local state for schedule selection dialogs
   const [isScheduleTableOpen, setIsScheduleTableOpen] = useState(false);
+  const [isScheduleLateTableOpen, setIsScheduleLateTableOpen] = useState(false);
 
   // Filter videos based on current status filter
   const allVideos = generatedVideos ?? [];
@@ -47,7 +48,10 @@ export function VideoSection({
     const isScheduled = Boolean(
       (v.tiktokUpload?.scheduledAt !== null && v.tiktokUpload?.scheduledAt !== undefined) ||
       (v.instagramUpload?.scheduledAt !== null && v.instagramUpload?.scheduledAt !== undefined) ||
-      (v.youtubeUpload?.scheduledAt !== null && v.youtubeUpload?.scheduledAt !== undefined)
+      (v.youtubeUpload?.scheduledAt !== null && v.youtubeUpload?.scheduledAt !== undefined) ||
+      (v.lateTiktokUpload?.scheduledAt !== null && v.lateTiktokUpload?.scheduledAt !== undefined) ||
+      (v.lateInstagramUpload?.scheduledAt !== null && v.lateInstagramUpload?.scheduledAt !== undefined) ||
+      (v.lateYoutubeUpload?.scheduledAt !== null && v.lateYoutubeUpload?.scheduledAt !== undefined)
     );
     return isScheduled;
   }).length;
@@ -85,6 +89,7 @@ export function VideoSection({
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
           onOpenScheduleDialog={() => setIsScheduleTableOpen(true)}
+          onOpenScheduleLateDialog={() => setIsScheduleLateTableOpen(true)}
           onDownloadAll={onDownloadAll}
           hasVideos={filteredVideos.length > 0}
           downloadingAll={downloadingAll}
@@ -124,7 +129,7 @@ export function VideoSection({
           showTrialOverlay={showTrialOverlay}
         />
 
-        {/* Schedule selection dialog embedding table view */}
+        {/* Schedule selection dialog embedding table view (Ayrshare) */}
         <ScheduleTableDialog
           isOpen={isScheduleTableOpen}
           onOpenChange={setIsScheduleTableOpen}
@@ -138,6 +143,22 @@ export function VideoSection({
           statusFilter={statusFilter}
           totalVideosCount={filteredVideos.length}
           totalScheduledCount={totalScheduledCount}
+          campaignId={campaignId}
+          showTrialOverlay={showTrialOverlay}
+        />
+
+        {/* Schedule selection dialog embedding table view (Late) */}
+        <ScheduleLateTableDialog
+          isOpen={isScheduleLateTableOpen}
+          onOpenChange={setIsScheduleLateTableOpen}
+          videos={allVideos}
+          downloadingVideos={downloadingVideos}
+          handleDownloadVideo={onDownloadVideo}
+          songName={campaign?.songName || ""}
+          artistName={campaign?.artistName || ""}
+          genre={campaign?.genre || ""}
+          statusFilter={statusFilter}
+          totalVideosCount={filteredVideos.length}
           campaignId={campaignId}
           showTrialOverlay={showTrialOverlay}
         />

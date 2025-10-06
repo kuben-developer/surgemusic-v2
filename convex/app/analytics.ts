@@ -69,7 +69,7 @@ export interface AnalyticsResponse {
 interface CommentsResponse {
   comments: Array<{
     id: string;
-    videoId: Id<"manuallyPostedVideos"> | Id<"ayrsharePostedVideos">;
+    videoId: Id<"manuallyPostedVideos"> | Id<"ayrsharePostedVideos"> | Id<"latePostedVideos">;
     campaignId: Id<"campaigns">;
     campaignName: string;
     videoUrl: string;
@@ -265,14 +265,20 @@ export const aggregateCampaignPerformance = internalMutation({
         .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
         .collect();
 
-      // Get all API posted videos for this campaign
-      const apiVideos = await ctx.db
+      // Get all Ayrshare API posted videos for this campaign
+      const ayrshareVideos = await ctx.db
         .query("ayrsharePostedVideos")
         .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
         .collect();
 
-      // Combine both video sources
-      const allVideos = [...manualVideos, ...apiVideos];
+      // Get all Late API posted videos for this campaign
+      const lateVideos = await ctx.db
+        .query("latePostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      // Combine all video sources
+      const allVideos = [...manualVideos, ...ayrshareVideos, ...lateVideos];
 
       if (allVideos.length === 0) {
         // No videos to aggregate for this campaign
@@ -402,9 +408,10 @@ export const getCampaignAnalytics = action({
     campaignIds: v.optional(v.array(v.string())),
     days: v.number(),
     hiddenVideoIds: v.optional(v.array(v.union(
-      v.id("generatedVideos"), 
+      v.id("generatedVideos"),
       v.id("manuallyPostedVideos"),
-      v.id("ayrsharePostedVideos")
+      v.id("ayrsharePostedVideos"),
+      v.id("latePostedVideos")
     ))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
@@ -591,9 +598,10 @@ export const fetchAnalyticsFromConvex = internalAction({
     days: v.number(),
     userId: v.id("users"),
     hiddenVideoIds: v.optional(v.array(v.union(
-      v.id("generatedVideos"), 
+      v.id("generatedVideos"),
       v.id("manuallyPostedVideos"),
-      v.id("ayrsharePostedVideos")
+      v.id("ayrsharePostedVideos"),
+      v.id("latePostedVideos")
     ))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
@@ -634,19 +642,29 @@ export const fetchAnalyticsFromConvex = internalAction({
       campaignIds: args.campaignIds as Id<"campaigns">[],
     });
 
-    // Fetch API posted videos
-    const apiVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideos, {
+    // Fetch Ayrshare API posted videos
+    const ayrshareVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideos, {
+      campaignIds: args.campaignIds as Id<"campaigns">[],
+    });
+
+    // Fetch Late API posted videos
+    const lateVideos = await ctx.runQuery(internal.app.analytics.getLatePostedVideos, {
       campaignIds: args.campaignIds as Id<"campaigns">[],
     });
 
     // Normalize postedAt for API videos (convert seconds to milliseconds)
-    const normalizedApiVideos = apiVideos.map(video => ({
+    const normalizedAyrshareVideos = ayrshareVideos.map((video: Doc<"ayrsharePostedVideos">) => ({
       ...video,
       postedAt: video.postedAt * 1000 // Convert seconds to milliseconds
     }));
 
-    // Combine both sources
-    const allVideos = [...manualVideos, ...normalizedApiVideos];
+    const normalizedLateVideos = lateVideos.map((video: Doc<"latePostedVideos">) => ({
+      ...video,
+      postedAt: video.postedAt * 1000 // Convert seconds to milliseconds
+    }));
+
+    // Combine all sources
+    const allVideos = [...manualVideos, ...normalizedAyrshareVideos, ...normalizedLateVideos];
 
     // Filter out hidden videos
     const videos = allVideos.filter(video => !hiddenVideoIds.includes(video._id));
@@ -731,7 +749,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     );
 
     // Process video metrics (only visible videos)
-    const videoMetrics = videos.map((video: Doc<"manuallyPostedVideos"> | Doc<"ayrsharePostedVideos">) => {
+    const videoMetrics = videos.map((video: Doc<"manuallyPostedVideos"> | Doc<"ayrsharePostedVideos"> | Doc<"latePostedVideos">) => {
       const campaign = campaigns.find(c => c.id === video.campaignId);
       return {
         videoId: video._id,
@@ -752,7 +770,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     });
 
     // Process ALL video metrics (including hidden) if we're filtering (for report manage videos modal)
-    const allVideoMetrics = args.hiddenVideoIds !== undefined ? allVideos.map((video: Doc<"manuallyPostedVideos"> | Doc<"ayrsharePostedVideos">) => {
+    const allVideoMetrics = args.hiddenVideoIds !== undefined ? allVideos.map((video: Doc<"manuallyPostedVideos"> | Doc<"ayrsharePostedVideos"> | Doc<"latePostedVideos">) => {
       const campaign = campaigns.find(c => c.id === video.campaignId);
       return {
         videoId: video._id,
@@ -869,7 +887,7 @@ export const getAyrsharePostedVideos = internalQuery({
   },
   handler: async (ctx, args) => {
     const videos = [];
-    
+
     for (const campaignId of args.campaignIds) {
       const campaignVideos = await ctx.db
         .query("ayrsharePostedVideos")
@@ -877,7 +895,26 @@ export const getAyrsharePostedVideos = internalQuery({
         .collect();
       videos.push(...campaignVideos);
     }
-    
+
+    return videos;
+  },
+});
+
+export const getLatePostedVideos = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+  },
+  handler: async (ctx, args) => {
+    const videos = [];
+
+    for (const campaignId of args.campaignIds) {
+      const campaignVideos = await ctx.db
+        .query("latePostedVideos")
+        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
+        .collect();
+      videos.push(...campaignVideos);
+    }
+
     return videos;
   },
 });

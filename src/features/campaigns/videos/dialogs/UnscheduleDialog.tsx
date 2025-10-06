@@ -40,7 +40,9 @@ export function UnscheduleDialog({ isOpen, onOpenChange, campaignId, onUnschedul
 
   // Handle unschedule action
   const handleUnschedule = () => {
-    handleBulkUnschedule(onUnscheduleComplete, onOpenChange);
+    if (scheduledVideos) {
+      handleBulkUnschedule(scheduledVideos, onUnscheduleComplete, onOpenChange);
+    }
   };
 
   return (

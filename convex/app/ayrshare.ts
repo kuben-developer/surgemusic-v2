@@ -994,7 +994,7 @@ export const monitorApiPostedVideos = internalAction({
       const batch = generatedVideos.slice(i, i + BATCH_SIZE);
 
       await Promise.all(
-        batch.map(async (video) => {
+        batch.map(async (video: Doc<"generatedVideos">) => {
           const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, {
             campaignId: video.campaignId
           });

@@ -20,6 +20,7 @@ import type * as app_ayrshare from "../app/ayrshare.js";
 import type * as app_campaigns from "../app/campaigns.js";
 import type * as app_files from "../app/files.js";
 import type * as app_folders from "../app/folders.js";
+import type * as app_late from "../app/late.js";
 import type * as app_public from "../app/public.js";
 import type * as app_reports from "../app/reports.js";
 import type * as app_stripe from "../app/stripe.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   "app/campaigns": typeof app_campaigns;
   "app/files": typeof app_files;
   "app/folders": typeof app_folders;
+  "app/late": typeof app_late;
   "app/public": typeof app_public;
   "app/reports": typeof app_reports;
   "app/stripe": typeof app_stripe;

@@ -20,6 +20,22 @@ export interface ScheduleData {
   socialAccountIds?: Record<string, string>;
 }
 
+export interface ScheduleDataLate {
+  content: string;
+  platforms: Array<{
+    platform: string;
+    accountId: string;
+  }>;
+  mediaItems: Array<{
+    type: string;
+    url: string;
+  }>;
+  scheduleDate: string;
+  lateProfileId: string;
+  videoId: string;
+  socialAccountIds?: Record<string, string>;
+}
+
 export interface SchedulingProgress {
   total: number;
   completed: number;

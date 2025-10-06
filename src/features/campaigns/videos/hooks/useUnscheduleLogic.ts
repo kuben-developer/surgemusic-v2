@@ -17,7 +17,8 @@ export function useUnscheduleLogic() {
   const [isUnscheduling, setIsUnscheduling] = useState(false);
   const [unscheduleResults, setUnscheduleResults] = useState<UnscheduleResult[]>([]);
 
-  const unschedulePost = useAction(api.app.ayrshare.unschedulePost);
+  const unschedulePostAyrshare = useAction(api.app.ayrshare.unschedulePost);
+  const unschedulePostLate = useAction(api.app.late.unschedulePost);
 
   const toggleSelectAll = (scheduledVideos?: ScheduledVideo[]) => {
     if (!scheduledVideos) return;
@@ -39,7 +40,11 @@ export function useUnscheduleLogic() {
     );
   };
 
-  const handleBulkUnschedule = async (onComplete?: () => void, onClose?: (open: boolean) => void) => {
+  const handleBulkUnschedule = async (
+    scheduledVideos: ScheduledVideo[],
+    onComplete?: () => void,
+    onClose?: (open: boolean) => void
+  ) => {
     if (selectedVideos.length === 0) {
       toast.error("Please select at least one video to unschedule");
       return;
@@ -50,24 +55,53 @@ export function useUnscheduleLogic() {
     setUnscheduleResults([]);
 
     try {
-      const result = await unschedulePost({ postIds: selectedVideos }) as UnscheduleResponse;
-      
-      setUnschedulingProgress(100);
-      
-      if (result.results && Array.isArray(result.results)) {
-        setUnscheduleResults(result.results);
+      // Group selected videos by provider
+      const ayrsharePostIds: string[] = [];
+      const latePostIds: string[] = [];
+
+      selectedVideos.forEach(postId => {
+        const video = scheduledVideos.find(v => v.postId === postId);
+        if (video) {
+          if (video.provider === "late") {
+            latePostIds.push(postId);
+          } else {
+            ayrsharePostIds.push(postId);
+          }
+        }
+      });
+
+      // Call unschedule APIs based on provider
+      const results: UnscheduleResult[] = [];
+
+      if (ayrsharePostIds.length > 0) {
+        const ayrshareResult = await unschedulePostAyrshare({ postIds: ayrsharePostIds }) as UnscheduleResponse;
+        if (ayrshareResult.results) {
+          results.push(...ayrshareResult.results);
+        }
       }
 
-      toast.success(result.message || "Unscheduling complete");
-      
+      if (latePostIds.length > 0) {
+        const lateResult = await unschedulePostLate({ postIds: latePostIds }) as UnscheduleResponse;
+        if (lateResult.results) {
+          results.push(...lateResult.results);
+        }
+      }
+
+      setUnschedulingProgress(100);
+      setUnscheduleResults(results);
+
+      const failureCount = results.filter(r => !r.success).length;
+
+      if (failureCount > 0) {
+        toast.warning(`Unscheduling completed with ${failureCount} failure(s)`);
+      } else {
+        toast.success("All posts unscheduled successfully");
+      }
+
       if (onComplete) {
         onComplete();
       }
 
-      const failureCount = result.results 
-        ? result.results.filter(r => !r.success).length 
-        : 0;
-        
       if (failureCount === 0 && onClose) {
         setTimeout(() => {
           onClose(false);

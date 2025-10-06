@@ -58,7 +58,7 @@ export function CreateProfileDialog({ isOpen, onOpenChange, onCreate }: CreatePr
         <DialogHeader>
           <DialogTitle>Create a new user profile</DialogTitle>
           <DialogDescription>
-            Create a profile to organize your social accounts
+            Create a profile to organize your Late social accounts
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

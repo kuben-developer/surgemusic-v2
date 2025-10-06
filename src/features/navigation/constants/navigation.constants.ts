@@ -75,6 +75,11 @@ export const navigationData: { navMain: NavSection[] } = {
           icon: Link2,
         },
         {
+          title: "Social Accounts (Late)",
+          url: "/social-accounts-late",
+          icon: Link2,
+        },
+        {
           title: "Reports",
           url: "/reports",
           icon: FileText,

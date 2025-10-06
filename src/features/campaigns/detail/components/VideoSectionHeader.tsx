@@ -21,6 +21,7 @@ interface VideoSectionHeaderProps {
   statusFilter: string;
   onStatusFilterChange: (filter: string) => void;
   onOpenScheduleDialog: () => void;
+  onOpenScheduleLateDialog: () => void;
   onDownloadAll: () => void;
   hasVideos: boolean;
   downloadingAll?: boolean;
@@ -35,6 +36,7 @@ export function VideoSectionHeader({
   statusFilter,
   onStatusFilterChange,
   onOpenScheduleDialog,
+  onOpenScheduleLateDialog,
   onDownloadAll,
   hasVideos,
   downloadingAll = false,
@@ -115,13 +117,23 @@ export function VideoSectionHeader({
           </Select>
 
           {hasVideos && (
-            <Button
-              onClick={onOpenScheduleDialog}
-              className="gap-2"
-            >
-              <CalendarPlus className="w-4 h-4" />
-              Schedule Videos
-            </Button>
+            <>
+              <Button
+                onClick={onOpenScheduleDialog}
+                className="gap-2"
+              >
+                <CalendarPlus className="w-4 h-4" />
+                Schedule (Ayrshare)
+              </Button>
+              <Button
+                onClick={onOpenScheduleLateDialog}
+                variant="outline"
+                className="gap-2 bg-background/50 hover:bg-background"
+              >
+                <CalendarPlus className="w-4 h-4" />
+                Schedule (Late)
+              </Button>
+            </>
           )}
 
           {hasVideos && (

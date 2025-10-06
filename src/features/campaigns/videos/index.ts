@@ -6,9 +6,11 @@ export type { ViewMode } from './components/ViewToggle';
 
 // Dialogs
 export { ScheduleDialog } from './dialogs/ScheduleDialog';
+export { ScheduleLateDialog } from './dialogs/ScheduleLateDialog';
+export { ScheduleTableDialog } from './dialogs/ScheduleTableDialog';
+export { ScheduleLateTableDialog } from './dialogs/ScheduleLateTableDialog';
 export { UnscheduleDialog } from './dialogs/UnscheduleDialog';
 export { DownloadFeatureDialog } from './dialogs/DownloadFeatureDialog';
-export { ScheduleTableDialog } from './dialogs/ScheduleTableDialog';
 
 // Hooks
 export { useVideoFiltering } from './hooks/useVideoFiltering';

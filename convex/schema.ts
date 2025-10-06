@@ -154,7 +154,59 @@ export default defineSchema({
       second: v.string(),
       percentage: v.number(),
     }))),
-  
+
+    updatedAt: v.number(), // ms epoch at write time
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_userId", ["userId"])
+    .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
+
+  latePostedVideos: defineTable({
+    campaignId: v.id('campaigns'),
+    userId: v.id('users'),
+    socialPlatform: socialPlatforms,
+    videoId: v.string(),
+    postedAt: v.number(), // seconds epoch from Late post creation
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    thumbnailUrl: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+
+    // advanced analytics (Late may have different fields than Ayrshare)
+    audienceCities: v.optional(v.array(v.object({
+      city: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceCountries: v.optional(v.array(v.object({
+      country: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceGenders: v.optional(v.array(v.object({
+      gender: v.string(),
+      percentage: v.number(),
+    }))),
+    audienceTypes: v.optional(v.array(v.object({
+      type: v.string(),
+      percentage: v.number(),
+    }))),
+    averageTimeWatched: v.optional(v.number()),
+    engagementLikes: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
+    fullVideoWatchedRate: v.optional(v.number()),
+    newFollowers: v.optional(v.number()),
+    profileViews: v.optional(v.number()),
+    videoDuration: v.optional(v.number()),
+    videoViewRetention: v.optional(v.array(v.object({
+      second: v.string(),
+      percentage: v.number(),
+    }))),
+
     updatedAt: v.number(), // ms epoch at write time
   })
     .index("by_campaignId", ["campaignId"])
@@ -165,7 +217,7 @@ export default defineSchema({
     commentId: v.string(),
     campaignId: v.id('campaigns'),
     userId: v.id('users'),
-    videoId: v.union(v.id('manuallyPostedVideos'), v.id('ayrsharePostedVideos')),
+    videoId: v.union(v.id('manuallyPostedVideos'), v.id('ayrsharePostedVideos'), v.id('latePostedVideos')),
     socialPlatform: socialPlatforms,
     text: v.string(),
     authorUsername: v.string(),
@@ -196,6 +248,28 @@ export default defineSchema({
   })
     .index("by_ayrshareProfileId", ["ayrshareProfileId"])
     .index("by_platform", ["platform"]),
+
+  lateProfiles: defineTable({
+    profileName: v.string(),
+    lateProfileId: v.string(), // Late API profile ID
+    userId: v.id('users'),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_profileName", ["profileName"])
+    .index("by_lateProfileId", ["lateProfileId"]),
+
+  lateSocialAccounts: defineTable({
+    lateProfileId: v.id('lateProfiles'),
+    platform: socialPlatforms,
+    lateAccountId: v.string(), // Late API account ID
+    profileUrl: v.string(),
+    userImage: v.string(),
+    username: v.string(),
+    displayName: v.optional(v.string()),
+  })
+    .index("by_lateProfileId", ["lateProfileId"])
+    .index("by_platform", ["platform"])
+    .index("by_lateAccountId", ["lateAccountId"]),
 
   generatedVideos: defineTable({
     campaignId: v.id('campaigns'),
@@ -257,6 +331,55 @@ export default defineSchema({
       }),
     })),
 
+    // Late API uploads
+    lateTiktokUpload: v.optional(v.object({
+      scheduledAt: v.number(),
+      socialAccountId: v.id('lateSocialAccounts'),
+      status: v.object({
+        isPosted: v.boolean(),
+        isFailed: v.boolean(),
+        failedReason: v.optional(v.string()),
+      }),
+      post: v.object({
+        id: v.string(),
+        refId: v.optional(v.string()),
+        caption: v.string(),
+        url: v.optional(v.string()),
+      }),
+    })),
+
+    lateInstagramUpload: v.optional(v.object({
+      scheduledAt: v.number(),
+      socialAccountId: v.id('lateSocialAccounts'),
+      status: v.object({
+        isPosted: v.boolean(),
+        isFailed: v.boolean(),
+        failedReason: v.optional(v.string()),
+      }),
+      post: v.object({
+        id: v.string(),
+        refId: v.optional(v.string()),
+        caption: v.string(),
+        url: v.optional(v.string()),
+      }),
+    })),
+
+    lateYoutubeUpload: v.optional(v.object({
+      scheduledAt: v.number(),
+      socialAccountId: v.id('lateSocialAccounts'),
+      status: v.object({
+        isPosted: v.boolean(),
+        isFailed: v.boolean(),
+        failedReason: v.optional(v.string()),
+      }),
+      post: v.object({
+        id: v.string(),
+        refId: v.optional(v.string()),
+        caption: v.string(),
+        url: v.optional(v.string()),
+      }),
+    })),
+
   })
     .index("by_campaignId", ["campaignId"]),
 
@@ -268,7 +391,8 @@ export default defineSchema({
     hiddenVideoIds: v.array(v.union(
       v.id('generatedVideos'),
       v.id('manuallyPostedVideos'),
-      v.id('ayrsharePostedVideos')
+      v.id('ayrsharePostedVideos'),
+      v.id('latePostedVideos')
     )),
   })
     .index("by_userId", ["userId"]),

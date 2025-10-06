@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { ScheduleData, SchedulingProgress } from "../types/schedule.types";
 
-export function useScheduleState() {
-  const [schedules, setSchedules] = useState<ScheduleData[]>([]);
+export function useScheduleState<T = ScheduleData>() {
+  const [schedules, setSchedules] = useState<T[]>([]);
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [isScheduling, setIsScheduling] = useState(false);
   const [schedulingProgress, setSchedulingProgress] = useState<SchedulingProgress>({

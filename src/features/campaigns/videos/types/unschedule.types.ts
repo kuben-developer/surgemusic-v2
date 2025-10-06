@@ -12,6 +12,7 @@ export interface ScheduledVideo {
     platform: string;
     username: string;
   }[];
+  provider: "ayrshare" | "late";
 }
 
 export interface UnscheduleResult {

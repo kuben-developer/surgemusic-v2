@@ -23,4 +23,11 @@ crons.interval(
     {}
 );
 
+crons.interval(
+    "monitorLatePostedVideos",
+    { minutes: 30 },
+    internal.app.late.monitorLatePostedVideos,
+    {}
+);
+
 export default crons;
