@@ -396,7 +396,7 @@ export const aggregateSingleCampaign = action({
     const result = await ctx.runMutation(internal.app.analytics.aggregateCampaignPerformance, {
       campaignId: args.campaignId,
     });
-    
+
     return result;
   },
 });
@@ -407,12 +407,6 @@ export const getCampaignAnalytics = action({
   args: {
     campaignIds: v.optional(v.array(v.string())),
     days: v.number(),
-    hiddenVideoIds: v.optional(v.array(v.union(
-      v.id("generatedVideos"),
-      v.id("manuallyPostedVideos"),
-      v.id("ayrsharePostedVideos"),
-      v.id("latePostedVideos")
-    ))),
   },
   handler: async (ctx, args): Promise<AnalyticsResponse> => {
     const identity = await ctx.auth.getUserIdentity();
@@ -463,10 +457,9 @@ export const getCampaignAnalytics = action({
 
     // Fetch analytics data from Convex tables
     const result = await ctx.runAction(internal.app.analytics.fetchAnalyticsFromConvex, {
-      campaignIds,
+      campaignIds: campaignIds as Id<"campaigns">[],
       days: args.days,
       userId: user._id,
-      hiddenVideoIds: args.hiddenVideoIds,
     });
 
     return result;
@@ -594,7 +587,7 @@ export const getComments = action({
 // Internal helper to fetch analytics from Convex tables
 export const fetchAnalyticsFromConvex = internalAction({
   args: {
-    campaignIds: v.array(v.string()),
+    campaignIds: v.array(v.id("campaigns")),
     days: v.number(),
     userId: v.id("users"),
     hiddenVideoIds: v.optional(v.array(v.union(
@@ -616,6 +609,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       videoCount: number;
       status: string;
     }> = [];
+
     for (const campaignId of args.campaignIds) {
       const campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
         campaignId: campaignId as Id<"campaigns">,
@@ -643,7 +637,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     });
 
     // Fetch Ayrshare API posted videos
-    const ayrshareVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideos, {
+    const ayrshareVideos = await ctx.runAction(internal.app.analytics.getAyrsharePostedVideos, {
       campaignIds: args.campaignIds as Id<"campaigns">[],
     });
 
@@ -711,7 +705,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       saves: number;
       posts: number;
     }>();
-    
+
     snapshots.forEach((snapshot: Doc<"campaignPerformanceSnapshots">) => {
       // Convert DD-MM-YYYY to YYYY-MM-DD
       const parts = snapshot.date.split('-');
@@ -720,7 +714,7 @@ export const fetchAnalyticsFromConvex = internalAction({
       const month = parts[1]!;
       const year = parts[2]!;
       const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      
+
       const existing = dailyMetricsMap.get(isoDate) || {
         date: isoDate,
         views: 0,
@@ -730,7 +724,7 @@ export const fetchAnalyticsFromConvex = internalAction({
         saves: 0,
         posts: 0,
       };
-      
+
       // Apply adjustment ratios to account for hidden videos
       dailyMetricsMap.set(isoDate, {
         date: isoDate,
@@ -744,7 +738,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     });
 
     // Sort daily metrics by date
-    const dailyMetrics = Array.from(dailyMetricsMap.values()).sort((a, b) => 
+    const dailyMetrics = Array.from(dailyMetricsMap.values()).sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
@@ -838,13 +832,13 @@ export const getPerformanceSnapshots = internalQuery({
   },
   handler: async (ctx, args) => {
     const snapshots = [];
-    
+
     for (const campaignId of args.campaignIds) {
       const campaignSnapshots = await ctx.db
         .query("campaignPerformanceSnapshots")
         .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
         .collect();
-      
+
       // Filter by date range
       const filtered = campaignSnapshots.filter(snapshot => {
         // Convert DD-MM-YYYY to timestamp for comparison
@@ -854,10 +848,10 @@ export const getPerformanceSnapshots = internalQuery({
         const snapshotDate = new Date(`${year}-${month}-${day}`).getTime();
         return snapshotDate >= args.startDate && snapshotDate <= args.endDate;
       });
-      
+
       snapshots.push(...filtered);
     }
-    
+
     return snapshots;
   },
 });
@@ -868,7 +862,7 @@ export const getManuallyPostedVideos = internalQuery({
   },
   handler: async (ctx, args) => {
     const videos = [];
-    
+
     for (const campaignId of args.campaignIds) {
       const campaignVideos = await ctx.db
         .query("manuallyPostedVideos")
@@ -876,29 +870,43 @@ export const getManuallyPostedVideos = internalQuery({
         .collect();
       videos.push(...campaignVideos);
     }
-    
+
     return videos;
   },
 });
 
-export const getAyrsharePostedVideos = internalQuery({
+export const getAyrsharePostedVideos = internalAction({
   args: {
     campaignIds: v.array(v.id("campaigns")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Doc<"ayrsharePostedVideos">[]> => {
     const videos = [];
 
     for (const campaignId of args.campaignIds) {
-      const campaignVideos = await ctx.db
-        .query("ayrsharePostedVideos")
-        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
-        .collect();
+      const campaignVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideo, {
+        campaignId: campaignId as Id<"campaigns">,
+      });
+      console.log("campaignVideos:", campaignVideos.length);
       videos.push(...campaignVideos);
     }
 
     return videos;
   },
 });
+
+export const getAyrsharePostedVideo = internalQuery({
+  args: {
+    campaignId: v.id("campaigns"),
+  },
+  handler: async (ctx, args): Promise<Doc<"ayrsharePostedVideos">[]> => {
+    return await ctx.db
+      .query("ayrsharePostedVideos")
+      .withIndex("by_campaignId_views", q => q.eq("campaignId", args.campaignId).gt("views", 100))
+      .collect();
+  },
+});
+
+
 
 export const getLatePostedVideos = internalQuery({
   args: {
@@ -928,14 +936,14 @@ export const fetchCommentsFromConvex = internalQuery({
   },
   handler: async (ctx, args) => {
     const allComments = [];
-    
+
     for (const campaignId of args.campaignIds) {
       // Get comments for this campaign
       const comments = await ctx.db
         .query("comments")
         .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
         .collect();
-      
+
       // Get video information for each comment
       for (const comment of comments) {
         const video = await ctx.db.get(comment.videoId);
@@ -961,13 +969,13 @@ export const fetchCommentsFromConvex = internalQuery({
         }
       }
     }
-    
+
     // Sort by createdAt descending
     allComments.sort((a, b) => b.comment.createdAt - a.comment.createdAt);
-    
+
     // Apply pagination
     const paginatedComments = allComments.slice(args.offset, args.offset + args.limit);
-    
+
     return {
       comments: paginatedComments,
       metadata: {

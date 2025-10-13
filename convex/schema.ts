@@ -158,6 +158,7 @@ export default defineSchema({
     updatedAt: v.number(), // ms epoch at write time
   })
     .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_views", ["campaignId", "views"])
     .index("by_userId", ["userId"])
     .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
 
