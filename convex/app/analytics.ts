@@ -886,7 +886,6 @@ export const getAyrsharePostedVideos = internalAction({
       const campaignVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideo, {
         campaignId: campaignId as Id<"campaigns">,
       });
-      console.log("campaignVideos:", campaignVideos.length);
       videos.push(...campaignVideos);
     }
 
