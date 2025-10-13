@@ -900,7 +900,7 @@ export const getAyrsharePostedVideo = internalQuery({
   handler: async (ctx, args): Promise<Doc<"ayrsharePostedVideos">[]> => {
     return await ctx.db
       .query("ayrsharePostedVideos")
-      .withIndex("by_campaignId_views", q => q.eq("campaignId", args.campaignId).gt("views", 100))
+      .withIndex("by_campaignId_views", q => q.eq("campaignId", args.campaignId))
       .collect();
   },
 });

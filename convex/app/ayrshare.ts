@@ -984,7 +984,7 @@ export const storeAyrsharePostedVideo = internalMutation({
 export const monitorApiPostedVideos = internalAction({
   args: {},
   handler: async (ctx) => {
-    const BATCH_SIZE = 50; // Process 25 videos concurrently
+    const BATCH_SIZE = 200; // Process 25 videos concurrently
 
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
@@ -1184,11 +1184,15 @@ export const getPostedGeneratedVideos = internalQuery({
       .query("generatedVideos")
       .collect();
 
-    return videos.filter(v =>
-      (v.tiktokUpload?.status.isPosted && v.tiktokUpload.post.id) ||
-      (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
-      (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
-    );
+    // First sort all videos by latest _creationTime (descending), then filter for those that have at least one platform posted
+    return videos
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .filter(
+        (v) =>
+          (v.tiktokUpload?.status.isPosted && v.tiktokUpload.post.id) ||
+          (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
+          (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
+      );
   },
 });
 
