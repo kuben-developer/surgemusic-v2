@@ -33,9 +33,9 @@ export function PerformanceSummary({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-2"
+      className="space-y-2 md:space-y-3"
     >
-      <h2 className="text-xl font-semibold">Performance Summary</h2>
+      <h2 className="text-lg md:text-xl font-semibold">Performance Summary</h2>
       <KpiMetricsGrid
         campaignsCount={campaignCount}
         totalVideos={totalVideos || 0}

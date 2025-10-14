@@ -45,7 +45,7 @@ export function PerformanceCharts({
   return (
     <motion.div
       variants={animationVariants.fadeInUp}
-      className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+      className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8"
     >
       <PerformanceChartCard
         dailyData={dailyData}

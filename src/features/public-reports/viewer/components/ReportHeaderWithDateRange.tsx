@@ -23,9 +23,9 @@ export function ReportHeaderWithDateRange({
   onDateRangeChange
 }: ReportHeaderWithDateRangeProps) {
   return (
-    <motion.div 
-      variants={animationVariants.fadeInUp} 
-      className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6"
+    <motion.div
+      variants={animationVariants.fadeInUp}
+      className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-4 md:mb-6"
     >
       <ReportHeader 
         reportName={reportName} 

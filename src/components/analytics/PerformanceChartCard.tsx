@@ -73,10 +73,10 @@ export function PerformanceChartCard({
                 {/* Metric Info Display */}
                 <div className="flex items-center gap-3 mb-4">
                     <div className="h-10 w-10 rounded-full flex items-center justify-center"
-                         style={{ backgroundColor: `${metricInfo[activeMetric].color}20` }}>
+                        style={{ backgroundColor: `${metricInfo[activeMetric].color}20` }}>
                         <div className="flex items-center justify-center h-6 w-6" style={{ color: metricInfo[activeMetric].color }}>
-                             {/* Clone element to ensure icon styles are applied if needed, or just render directly */}
-                             {React.isValidElement(metricInfo[activeMetric].icon) ? metricInfo[activeMetric].icon : null}
+                            {/* Clone element to ensure icon styles are applied if needed, or just render directly */}
+                            {React.isValidElement(metricInfo[activeMetric].icon) ? metricInfo[activeMetric].icon : null}
                         </div>
                     </div>
                     <div>
@@ -108,7 +108,7 @@ export function PerformanceChartCard({
                             )}
                             <div className="flex items-center justify-center gap-2">
                                 {metricInfo[metric].icon}
-                                <span>{metricInfo[metric].label}</span>
+                                <span className="hidden sm:inline">{metricInfo[metric].label}</span>
                             </div>
                         </button>
                     ))}
@@ -211,7 +211,7 @@ export function PerformanceChartCard({
                     <div className="text-xs text-muted-foreground mb-1">Trend</div>
                     <div className="flex items-center gap-1">
                         {activeGrowth.value === 0 ? (
-                             <span className="text-lg font-semibold">--</span>
+                            <span className="text-lg font-semibold">--</span>
                         ) : (
                             <>
                                 <ArrowUpRight className={`h-4 w-4 ${activeGrowth.isPositive ? 'text-green-500' : 'rotate-180 text-red-500'}`} />

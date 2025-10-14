@@ -49,16 +49,20 @@ export function TopContentCard({
         .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
     return (
-        <Card className="p-6 border border-primary/10">
-            <div className="mb-6 space-y-2">
-                <h3 className="text-lg font-semibold">Top Performing Content</h3>
-                <p className="text-sm text-muted-foreground">Videos with highest engagement across selected campaigns</p>
+        <Card className="p-4 md:p-6 border border-primary/10">
+            <div className="mb-4 md:mb-6 space-y-1 md:space-y-2">
+                <h3 className="text-base md:text-lg font-semibold">Top Performing Content</h3>
+                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Videos with highest engagement across selected campaigns</p>
+                <p className="text-xs text-muted-foreground sm:hidden">Highest engagement videos</p>
             </div>
 
-            <div className="flex justify-between items-center mb-4">
-                <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                <div className="text-xs md:text-sm text-muted-foreground">
                     {totalVideos > 0 ? (
-                        `Showing ${startItem} - ${endItem} of ${totalVideos} videos`
+                        <>
+                            <span className="hidden sm:inline">{`Showing ${startItem} - ${endItem} of ${totalVideos} videos`}</span>
+                            <span className="sm:hidden">{`${startItem}-${endItem} of ${totalVideos}`}</span>
+                        </>
                     ) : (
                         "No videos found"
                     )}
@@ -69,21 +73,24 @@ export function TopContentCard({
                         size="sm"
                         disabled={currentPage === 0}
                         onClick={handlePrevious}
+                        className="h-8 text-xs md:text-sm"
                     >
-                        Previous
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
                     </Button>
                     <Button
                         variant="outline"
                         size="sm"
                         disabled={currentPage >= totalPages - 1}
                         onClick={handleNext}
+                        className="h-8 text-xs md:text-sm"
                     >
                         Next
                     </Button>
                 </div>
             </div>
 
-            <div className="overflow-auto space-y-4">
+            <div className="overflow-auto space-y-3 md:space-y-4">
                 {paginatedVideos.length > 0 ? (
                     paginatedVideos.map((video, index) => (
                         <TopContentItem

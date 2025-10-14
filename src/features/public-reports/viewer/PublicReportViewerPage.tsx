@@ -11,7 +11,7 @@ export function PublicReportViewerPage() {
   return (
     <>
       <PublicReportHeader />
-      <div className="container relative py-6 md:py-10">
+      <div className="container relative py-4 md:py-6 lg:py-10 px-4 md:px-6">
         <PublicReportContent shareId={shareId} />
       </div>
     </>

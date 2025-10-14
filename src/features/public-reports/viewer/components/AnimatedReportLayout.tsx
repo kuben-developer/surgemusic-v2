@@ -11,9 +11,9 @@ interface AnimatedReportLayoutProps {
 /**
  * Reusable animated layout wrapper for report content
  */
-export function AnimatedReportLayout({ 
-  children, 
-  className = "pt-8 pb-16 space-y-8" 
+export function AnimatedReportLayout({
+  children,
+  className = "pt-6 md:pt-8 pb-12 md:pb-16 space-y-6 md:space-y-8"
 }: AnimatedReportLayoutProps) {
   return (
     <motion.div
