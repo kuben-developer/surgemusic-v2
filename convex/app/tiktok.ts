@@ -480,7 +480,187 @@ export const scrapeManuallyPostedVideos = internalAction({
     }
     
     if (pagesProcessed >= MAX_PAGES) {
-      console.log(`Reached maximum page limit (${MAX_PAGES}) for @${args.username}`);
+    }
+  },
+});
+
+
+export const scrapeManuallyPostedVideosFromJson = internalAction({
+  args: {
+    videos: v.array(v.object({
+      campaignId: v.string(),
+      username: v.string(),
+      tiktokVideoId: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    // Step 1: Group videos by username for efficient batch processing
+    const videosByUsername = new Map<string, Array<{
+      campaignId: string;
+      tiktokVideoId: string;
+    }>>();
+
+    for (const entry of args.videos) {
+      // Skip if tiktokVideoId is empty
+      if (!entry.tiktokVideoId || entry.tiktokVideoId.trim() === '') {
+        continue;
+      }
+
+      if (!videosByUsername.has(entry.username)) {
+        videosByUsername.set(entry.username, []);
+      }
+
+      videosByUsername.get(entry.username)!.push({
+        campaignId: entry.campaignId,
+        tiktokVideoId: entry.tiktokVideoId,
+      });
+    }
+
+
+    // Step 2: Process each username once
+    for (const [username, videosToFind] of videosByUsername) {
+
+      // Fetch campaign data for all videos from this username
+      const campaignCache = new Map<string, { _id: Id<"campaigns">; userId: Id<"users"> } | null>();
+      for (const video of videosToFind) {
+        if (!campaignCache.has(video.campaignId)) {
+          const campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
+            campaignId: video.campaignId as Id<"campaigns">
+          });
+          campaignCache.set(video.campaignId, campaign);
+        }
+      }
+
+      // Fetch all videos from this user (with pagination)
+      const allUserVideos: Array<{
+        videoId: string;
+        postedAt: number;
+        videoUrl: string;
+        mediaUrl?: string;
+        thumbnailUrl: string;
+        views: number;
+        likes: number;
+        comments: number;
+        shares: number;
+        saves: number;
+        description: string;
+      }> = [];
+
+      let currentMaxCursor: number | null = null;
+      let pagesProcessed = 0;
+      const MAX_PAGES = 1;
+
+      while (pagesProcessed < MAX_PAGES) {
+        pagesProcessed++;
+
+        let result: {
+          maxCursor: number | null;
+          hasMore: boolean;
+          videos: Array<{
+            videoId: string;
+            postedAt: number;
+            videoUrl: string;
+            mediaUrl?: string;
+            thumbnailUrl: string;
+            views: number;
+            likes: number;
+            comments: number;
+            shares: number;
+            saves: number;
+            description: string;
+          }>;
+        } = { maxCursor: null, hasMore: false, videos: [] };
+
+        try {
+          result = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
+            username: username,
+            maxCursor: currentMaxCursor
+          });
+        } catch (error) {
+          console.error(`Error fetching videos for @${username}:`, error);
+          break;
+        }
+
+        const { maxCursor, hasMore, videos } = result;
+        allUserVideos.push(...videos);
+
+        // Continue to next page if more available
+        if (!hasMore || !maxCursor) break;
+        currentMaxCursor = maxCursor;
+      }
+
+      // Step 3: Match all videos for this username in one pass
+      const videoIdSet = new Set(videosToFind.map(v => v.tiktokVideoId));
+      let matchedCount = 0;
+
+      for (const userVideo of allUserVideos) {
+        // Find if this video is in our list
+        const videoToStore = videosToFind.find(v => v.tiktokVideoId === userVideo.videoId);
+
+        if (videoToStore) {
+          const campaign = campaignCache.get(videoToStore.campaignId);
+
+          if (!campaign) {
+            console.error(`  ✗ Campaign not found or deleted: ${videoToStore.campaignId}`);
+            continue;
+          }
+
+          try {
+            // Store the video
+            const storedVideo = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+              campaignId: campaign._id,
+              userId: campaign.userId,
+              videoId: userVideo.videoId,
+              postedAt: userVideo.postedAt,
+              videoUrl: userVideo.videoUrl,
+              mediaUrl: userVideo.mediaUrl,
+              thumbnailUrl: userVideo.thumbnailUrl,
+              views: userVideo.views,
+              likes: userVideo.likes,
+              comments: userVideo.comments,
+              shares: userVideo.shares,
+              saves: userVideo.saves,
+              socialPlatform: "tiktok",
+            });
+
+            matchedCount++;
+
+            // Fetch and store comments if available
+            if (storedVideo.videoId && userVideo.comments > 0) {
+              try {
+                const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                  videoId: userVideo.videoId,
+                });
+
+                if (commentsData.comments && commentsData.comments.length > 0) {
+                  await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                    campaignId: campaign._id,
+                    userId: campaign.userId,
+                    videoId: storedVideo.videoId,
+                    socialPlatform: "tiktok",
+                    comments: commentsData.comments,
+                  });
+                }
+              } catch (commentError) {
+                console.error(`    ✗ Failed to fetch/store comments for video ${userVideo.videoId}:`, commentError);
+              }
+            }
+          } catch (error) {
+            console.error(`  ✗ Failed to store video ${userVideo.videoId}:`, error);
+          }
+        }
+      }
+
+      // Report any videos not found
+      const foundVideoIds = new Set(
+        allUserVideos.filter(v => videoIdSet.has(v.videoId)).map(v => v.videoId)
+      );
+      const notFound = videosToFind.filter(v => !foundVideoIds.has(v.tiktokVideoId));
+
+      if (notFound.length > 0) {
+        console.log(`  ✗ ${notFound.length} videos not found: ${notFound.map(v => v.tiktokVideoId).join(', ')}`);
+      }
+
     }
   },
 });
