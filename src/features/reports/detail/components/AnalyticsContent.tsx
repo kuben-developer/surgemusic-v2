@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 import { KpiMetricsGrid } from "@/components/analytics/KpiMetricsGrid";
-import { CommentsSection } from "@/components/analytics/CommentsSection";
+import { CommentsSection } from "@/features/analytics/components/CommentsSection";
+import { useComments } from "@/features/analytics/hooks/useComments";
 import { AnalyticsChartsSection } from "./AnalyticsChartsSection";
 import { fadeInUp, metricInfo } from "../constants/analytics.constants";
 import type { 
@@ -40,13 +41,13 @@ export function AnalyticsContent({
 }: AnalyticsContentProps) {
     const { totals, avgEngagementRate, lastUpdatedAt } = analyticsData;
     const { viewsGrowth, likesGrowth, commentsGrowth, sharesGrowth, engagementGrowth } = growthData;
-    const { 
-        dateRange, 
-        activeMetric, 
-        currentPage, 
-        selectedCampaigns, 
-        itemsPerPage, 
-        isRefreshing 
+    const {
+        dateRange,
+        activeMetric,
+        currentPage,
+        selectedCampaigns,
+        itemsPerPage,
+        isRefreshing
     } = state;
     const {
         onDateRangeChange,
@@ -63,6 +64,11 @@ export function AnalyticsContent({
         transformedCampaigns,
         campaignIds,
     } = processedData;
+
+    // Fetch comments from database
+    const comments = useComments({
+        campaignIds,
+    });
 
     return (
         <>
@@ -101,7 +107,16 @@ export function AnalyticsContent({
             />
 
             <motion.div variants={fadeInUp}>
-                <CommentsSection campaignIds={campaignIds} />
+                <CommentsSection
+                    comments={comments.data}
+                    groupedComments={comments.groupedComments}
+                    isLoading={comments.isLoading}
+                    page={comments.page}
+                    onPageChange={comments.setPage}
+                    totalPages={comments.totalPages}
+                    totalComments={comments.totalComments}
+                    onRefresh={comments.refresh}
+                />
             </motion.div>
         </>
     );
