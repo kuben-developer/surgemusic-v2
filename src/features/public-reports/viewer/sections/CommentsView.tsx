@@ -2,21 +2,17 @@
 
 import { motion } from "framer-motion";
 import { CommentsSection } from '@/features/analytics/components/CommentsSection';
-import { useComments } from '@/features/analytics/hooks/useComments';
+import { usePublicComments } from '../hooks/usePublicComments';
 
 interface CommentsViewProps {
-  campaignIds: string[] | undefined;
+  shareId: string;
 }
 
-export function CommentsView({ campaignIds }: CommentsViewProps) {
-  // Fetch comments from database
-  const comments = useComments({
-    campaignIds: campaignIds || [],
+export function CommentsView({ shareId }: CommentsViewProps) {
+  // Fetch comments from database using public API
+  const comments = usePublicComments({
+    shareId,
   });
-
-  if (!campaignIds || campaignIds.length === 0) {
-    return null;
-  }
 
   return (
     <motion.div
@@ -28,6 +24,7 @@ export function CommentsView({ campaignIds }: CommentsViewProps) {
         comments={comments.data}
         groupedComments={comments.groupedComments}
         isLoading={comments.isLoading}
+        error={comments.error}
         page={comments.page}
         onPageChange={comments.setPage}
         totalPages={comments.totalPages}

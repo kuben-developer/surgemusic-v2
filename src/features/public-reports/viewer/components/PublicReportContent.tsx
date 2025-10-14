@@ -111,8 +111,8 @@ export function PublicReportContent({ shareId }: PublicReportContentProps) {
       />
 
       {/* Comments Section */}
-      <CommentsView 
-        campaignIds={data.campaigns?.map((c) => c.id)}
+      <CommentsView
+        shareId={shareId}
       />
 
       {/* Report Footer */}

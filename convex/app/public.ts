@@ -243,3 +243,133 @@ export const getPublicReportAnalytics = internalAction({
     return result;
   },
 })
+
+// Type definition for public comments response
+interface PublicCommentsResponse {
+  comments: Array<{
+    id: string;
+    videoId: string;
+    campaignId: string;
+    campaignName: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+    platform: "tiktok" | "instagram" | "youtube";
+    comment: {
+      commentId: string;
+      text: string;
+      authorUsername: string;
+      authorNickname: string;
+      authorProfilePicUrl: string;
+      createdAt: number;
+    };
+  }>;
+  metadata: {
+    totalComments: number;
+    lastUpdatedAt: number;
+  };
+}
+
+export const getPublicComments = action({
+  args: {
+    shareId: v.string(),
+    limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<PublicCommentsResponse> => {
+    try {
+      // Find the report by its public share ID
+      const report = await ctx.runQuery(internal.app.public.getReportByShareId, {
+        shareId: args.shareId,
+      });
+
+      if (!report) {
+        throw new Error("Shared report not found.");
+      }
+
+      const campaignIds = report.campaignIds;
+
+      if (!campaignIds || campaignIds.length === 0) {
+        return {
+          comments: [],
+          metadata: {
+            totalComments: 0,
+            lastUpdatedAt: Date.now(),
+          },
+        };
+      }
+
+      // Fetch comments from Convex (no auth required for public access)
+      const result = await ctx.runQuery(internal.app.public.fetchPublicCommentsFromConvex, {
+        campaignIds: campaignIds,
+        userId: report.userId,
+        limit: args.limit || 100,
+        offset: args.offset || 0,
+      });
+
+      return result;
+    } catch (error) {
+      console.error(`Error fetching public comments:`, error);
+      throw new Error("An error occurred while fetching comments.");
+    }
+  },
+});
+
+export const fetchPublicCommentsFromConvex = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+    userId: v.id("users"),
+    limit: v.number(),
+    offset: v.number(),
+  },
+  handler: async (ctx, args): Promise<PublicCommentsResponse> => {
+    // Reuse the same logic as the authenticated version
+    const allComments = [];
+
+    for (const campaignId of args.campaignIds) {
+      // Get comments for this campaign
+      const comments = await ctx.db
+        .query("comments")
+        .withIndex("by_campaignId", q => q.eq("campaignId", campaignId))
+        .collect();
+
+      // Get video information for each comment
+      for (const comment of comments) {
+        const video = await ctx.db.get(comment.videoId);
+        if (video) {
+          const campaign = await ctx.db.get(campaignId);
+          allComments.push({
+            id: comment._id,
+            videoId: comment.videoId,
+            campaignId: comment.campaignId,
+            campaignName: campaign?.campaignName || '',
+            videoUrl: video.videoUrl,
+            thumbnailUrl: video.thumbnailUrl,
+            platform: comment.socialPlatform,
+            comment: {
+              commentId: comment.commentId,
+              text: comment.text,
+              authorUsername: comment.authorUsername,
+              authorNickname: comment.authorNickname,
+              authorProfilePicUrl: comment.authorProfilePicUrl,
+              createdAt: comment.createdAt,
+            },
+          });
+        }
+      }
+    }
+
+    // Sort by createdAt descending
+    allComments.sort((a, b) => b.comment.createdAt - a.comment.createdAt);
+
+    // Apply pagination
+    const paginatedComments = allComments.slice(args.offset, args.offset + args.limit);
+
+    return {
+      comments: paginatedComments,
+      metadata: {
+        totalComments: allComments.length,
+        lastUpdatedAt: Date.now(),
+      },
+    };
+  },
+});

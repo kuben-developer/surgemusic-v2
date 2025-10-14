@@ -271,6 +271,7 @@ export function AnalyticsContainer({
                     comments={comments.data}
                     groupedComments={comments.groupedComments}
                     isLoading={comments.isLoading}
+                    error={comments.error}
                     page={comments.page}
                     onPageChange={comments.setPage}
                     totalPages={comments.totalPages}

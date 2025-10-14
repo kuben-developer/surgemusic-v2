@@ -14,7 +14,8 @@ import {
   ChevronRight,
   ExternalLink,
   Sparkles,
-  Video
+  Video,
+  AlertCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CommentWithVideo } from "../types/analytics.types";
@@ -44,6 +45,7 @@ interface CommentsSectionProps {
   comments: CommentWithVideo[];
   groupedComments: Map<string, CommentWithVideo[]>;
   isLoading: boolean;
+  error?: Error | null;
   page: number;
   onPageChange: (page: number) => void;
   totalPages: number;
@@ -55,6 +57,7 @@ export function CommentsSection({
   comments,
   groupedComments,
   isLoading,
+  error,
   page,
   onPageChange,
   totalPages,
@@ -113,6 +116,51 @@ export function CommentsSection({
               </div>
             </div>
           ))}
+        </div>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error && !isLoading) {
+    return (
+      <Card className="p-6 border-border/50 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border border-red-500/20">
+              <MessageSquare className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">Recent Comments</h3>
+              <p className="text-xs text-muted-foreground">Stay connected with your audience</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="h-9 w-9 p-0"
+          >
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="py-16 flex flex-col items-center justify-center text-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 blur-2xl rounded-full" />
+            <div className="relative rounded-full bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/50 dark:to-orange-950/50 p-5 border border-red-200/50 dark:border-red-800/50 mb-6">
+              <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400" />
+            </div>
+          </div>
+          <h4 className="text-base font-semibold mb-2">Failed to Load Comments</h4>
+          <p className="text-sm text-muted-foreground max-w-md mb-4">
+            {error.message || "An error occurred while loading comments. Please try again."}
+          </p>
+          <Button variant="outline" onClick={onRefresh} size="sm">
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
         </div>
       </Card>
     );
