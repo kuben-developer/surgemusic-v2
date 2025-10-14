@@ -4,19 +4,40 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MessageSquare, 
-  User, 
-  Clock, 
-  RefreshCcw, 
-  ChevronLeft, 
+import {
+  MessageSquare,
+  User,
+  Clock,
+  RefreshCcw,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Video
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import Image from "next/image";
 import type { CommentWithVideo } from "../types/analytics.types";
+
+// Generate consistent random color based on string
+const getColorFromString = (str: string): { bg: string; icon: string } => {
+  const colors = [
+    { bg: "from-blue-500/20 to-indigo-500/20", icon: "text-indigo-600 dark:text-indigo-400" },
+    { bg: "from-purple-500/20 to-pink-500/20", icon: "text-purple-600 dark:text-purple-400" },
+    { bg: "from-green-500/20 to-emerald-500/20", icon: "text-emerald-600 dark:text-emerald-400" },
+    { bg: "from-orange-500/20 to-red-500/20", icon: "text-orange-600 dark:text-orange-400" },
+    { bg: "from-cyan-500/20 to-blue-500/20", icon: "text-cyan-600 dark:text-cyan-400" },
+    { bg: "from-pink-500/20 to-rose-500/20", icon: "text-pink-600 dark:text-pink-400" },
+    { bg: "from-violet-500/20 to-purple-500/20", icon: "text-violet-600 dark:text-violet-400" },
+    { bg: "from-amber-500/20 to-yellow-500/20", icon: "text-amber-600 dark:text-amber-400" },
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length]!;
+};
 
 interface CommentsSectionProps {
   comments: CommentWithVideo[];
@@ -96,7 +117,7 @@ export function CommentsSection({
             <RefreshCcw className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <div className="py-12 flex flex-col items-center justify-center text-center">
           <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 p-4 mb-4">
             <Sparkles className="h-6 w-6 text-gray-400" />
@@ -142,28 +163,18 @@ export function CommentsSection({
           {videoGroups.map(([videoId, videoComments]) => {
             const firstComment = videoComments[0];
             if (!firstComment) return null;
-            
+
             return (
-              <div 
+              <div
                 key={videoId}
                 className="bg-muted/30 rounded-lg p-4 space-y-3"
               >
                 {/* Video Header */}
                 <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-muted">
-                    <Image
-                      src={firstComment.thumbnailUrl}
-                      alt={firstComment.campaignName}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{firstComment.campaignName}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getPlatformColor(firstComment.platform)}`}>
-                        {firstComment.platform}
-                      </span>
+                      <p className="text-sm font-medium truncate">Campaign: {firstComment.campaignName}</p>
                       <a
                         href={firstComment.videoUrl}
                         target="_blank"
@@ -184,25 +195,15 @@ export function CommentsSection({
                 <div className="space-y-2 pl-4">
                   {videoComments.slice(0, 3).map((comment) => (
                     <div key={comment.id} className="flex gap-3">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center shrink-0">
-                        {comment.comment.authorProfilePicUrl ? (
-                          <Image
-                            src={comment.comment.authorProfilePicUrl}
-                            alt={comment.comment.authorUsername}
-                            width={32}
-                            height={32}
-                            className="rounded-full"
-                          />
-                        ) : (
-                          <User className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                        )}
+                      <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${getColorFromString(comment.comment.authorUsername).bg} flex items-center justify-center shrink-0`}>
+                        <User className={`h-3.5 w-3.5 ${getColorFromString(comment.comment.authorUsername).icon}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium">@{comment.comment.authorUsername}</span>
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(comment.comment.createdAt), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(comment.comment.createdAt * 1000), { addSuffix: true })}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground break-words">
@@ -211,7 +212,7 @@ export function CommentsSection({
                       </div>
                     </div>
                   ))}
-                  
+
                   {videoComments.length > 3 && (
                     <button className="text-xs text-primary hover:text-primary/80 pl-11">
                       View {videoComments.length - 3} more {videoComments.length - 3 === 1 ? 'comment' : 'comments'}
