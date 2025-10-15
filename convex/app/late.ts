@@ -306,6 +306,202 @@ export const syncAccountsAfterOAuth = action({
   },
 });
 
+export const syncLateProfilesAndAccounts = action({
+  args: {},
+  handler: async (ctx): Promise<{
+    success: boolean;
+    syncedProfiles: number;
+    syncedAccounts: number;
+    message: string;
+  }> => {
+    try {
+      console.log("[syncLateProfilesAndAccounts] Starting sync");
+
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Not authenticated");
+      }
+
+      const user = await ctx.runQuery(internal.app.late.getUserByClerkId, {
+        clerkId: identity.subject,
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      let syncedProfilesCount = 0;
+      let syncedAccountsCount = 0;
+
+      // Fetch all profiles from Late API
+      const profilesUrl = `${LATE_API_BASE_URL}/profiles`;
+      console.log("[syncLateProfilesAndAccounts] Fetching profiles from:", profilesUrl);
+
+      const profilesResponse = await fetch(profilesUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${LATE_API_KEY}`,
+        },
+      });
+
+      if (!profilesResponse.ok) {
+        const errorText = await profilesResponse.text();
+        console.error("[syncLateProfilesAndAccounts] Late API profiles error:", errorText);
+        throw new Error(`Failed to fetch profiles from Late API: ${errorText}`);
+      }
+
+      const profilesData = await profilesResponse.json() as {
+        profiles?: Array<{
+          _id: string;
+          name: string;
+          description?: string;
+          color?: string;
+          isDefault?: boolean;
+          createdAt?: string;
+        }>
+      };
+
+      if (!profilesData.profiles || !Array.isArray(profilesData.profiles)) {
+        throw new Error("Invalid response from Late API: missing or invalid profiles array");
+      }
+
+      console.log("[syncLateProfilesAndAccounts] Received profiles:", profilesData.profiles.length);
+
+      // Sync each profile
+      for (const lateProfile of profilesData.profiles) {
+        console.log("[syncLateProfilesAndAccounts] Processing profile:", lateProfile._id, lateProfile.name);
+
+        // Check if profile exists in our database
+        const existingProfile = await ctx.runQuery(internal.app.late.getProfileByLateProfileId, {
+          lateProfileId: lateProfile._id,
+        });
+
+        if (!existingProfile) {
+          // Insert new profile
+          console.log("[syncLateProfilesAndAccounts] Creating new profile:", lateProfile._id);
+          await ctx.runMutation(internal.app.late.saveProfile, {
+            profileName: lateProfile.name,
+            lateProfileId: lateProfile._id,
+            userId: user._id,
+          });
+          syncedProfilesCount++;
+        } else {
+          // Update profile name if different
+          if (existingProfile.profileName !== lateProfile.name) {
+            console.log("[syncLateProfilesAndAccounts] Updating profile name:", existingProfile._id, "from", existingProfile.profileName, "to", lateProfile.name);
+            await ctx.runMutation(internal.app.late.updateProfileName, {
+              profileId: existingProfile._id,
+              profileName: lateProfile.name,
+            });
+          }
+          syncedProfilesCount++;
+        }
+
+        // Fetch accounts for this profile
+        const accountsUrl = `${LATE_API_BASE_URL}/accounts?profileId=${lateProfile._id}`;
+        console.log("[syncLateProfilesAndAccounts] Fetching accounts from:", accountsUrl);
+
+        const accountsResponse = await fetch(accountsUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${LATE_API_KEY}`,
+          },
+        });
+
+        if (!accountsResponse.ok) {
+          const errorText = await accountsResponse.text();
+          console.error("[syncLateProfilesAndAccounts] Late API accounts error:", errorText);
+          // Continue with next profile instead of failing completely
+          continue;
+        }
+
+        const accountsData = await accountsResponse.json() as {
+          accounts?: Array<{
+            _id: string;
+            profileId: string;
+            platform: string;
+            username: string;
+            displayName?: string;
+            profilePicture?: string;
+            profileUrl?: string;
+            isActive?: boolean;
+          }>
+        };
+
+        if (!accountsData.accounts || !Array.isArray(accountsData.accounts)) {
+          console.warn("[syncLateProfilesAndAccounts] Invalid accounts response for profile:", lateProfile._id);
+          continue;
+        }
+
+        console.log("[syncLateProfilesAndAccounts] Received accounts:", accountsData.accounts.length);
+
+        // Get the profile ID from our database (either the newly created one or the existing one)
+        const ourProfile = await ctx.runQuery(internal.app.late.getProfileByLateProfileId, {
+          lateProfileId: lateProfile._id,
+        });
+
+        if (!ourProfile) {
+          console.error("[syncLateProfilesAndAccounts] Could not find profile in our database:", lateProfile._id);
+          continue;
+        }
+
+        // Sync each account
+        for (const lateAccount of accountsData.accounts) {
+          // Only sync supported platforms
+          if (!["tiktok", "instagram", "youtube"].includes(lateAccount.platform)) {
+            console.log("[syncLateProfilesAndAccounts] Skipping unsupported platform:", lateAccount.platform);
+            continue;
+          }
+
+          console.log("[syncLateProfilesAndAccounts] Processing account:", lateAccount._id, lateAccount.platform, lateAccount.username);
+
+          // Check if account exists in our database
+          const existingAccount = await ctx.runQuery(internal.app.late.getAccountByLateId, {
+            lateAccountId: lateAccount._id,
+          });
+
+          if (!existingAccount) {
+            // Insert new account
+            console.log("[syncLateProfilesAndAccounts] Creating new account:", lateAccount._id);
+            await ctx.runMutation(internal.app.late.saveAccount, {
+              lateProfileId: ourProfile._id,
+              lateAccountId: lateAccount._id,
+              platform: lateAccount.platform as "tiktok" | "instagram" | "youtube",
+              profileUrl: lateAccount.profileUrl || "",
+              userImage: lateAccount.profilePicture || "",
+              username: lateAccount.username,
+              displayName: lateAccount.displayName || lateAccount.username,
+            });
+            syncedAccountsCount++;
+          } else {
+            // Patch account to ensure it's up to date
+            console.log("[syncLateProfilesAndAccounts] Updating account:", lateAccount._id);
+            await ctx.runMutation(internal.app.late.patchAccount, {
+              accountId: existingAccount._id,
+              profileUrl: lateAccount.profileUrl || "",
+              userImage: lateAccount.profilePicture || "",
+              username: lateAccount.username,
+              displayName: lateAccount.displayName || lateAccount.username,
+            });
+            syncedAccountsCount++;
+          }
+        }
+      }
+
+      console.log("[syncLateProfilesAndAccounts] Sync completed successfully");
+      return {
+        success: true,
+        syncedProfiles: syncedProfilesCount,
+        syncedAccounts: syncedAccountsCount,
+        message: `Synced ${syncedProfilesCount} profiles and ${syncedAccountsCount} accounts`,
+      };
+    } catch (error) {
+      console.error("[syncLateProfilesAndAccounts] Error:", error);
+      throw error;
+    }
+  },
+});
+
 export const schedulePost = action({
   args: {
     schedules: v.array(v.object({
@@ -693,6 +889,18 @@ export const saveProfile = internalMutation({
   },
 });
 
+export const updateProfileName = internalMutation({
+  args: {
+    profileId: v.id("lateProfiles"),
+    profileName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId, {
+      profileName: args.profileName,
+    });
+  },
+});
+
 export const deleteProfileAndAccounts = internalMutation({
   args: {
     profileId: v.id("lateProfiles"),
@@ -724,6 +932,19 @@ export const getAccountByLateId = internalQuery({
   },
 });
 
+export const getProfileByLateProfileId = internalQuery({
+  args: {
+    lateProfileId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("lateProfiles")
+      .withIndex("by_lateProfileId", (q) => q.eq("lateProfileId", args.lateProfileId))
+      .unique();
+    return profile;
+  },
+});
+
 export const saveAccount = internalMutation({
   args: {
     lateProfileId: v.id("lateProfiles"),
@@ -739,6 +960,24 @@ export const saveAccount = internalMutation({
       lateProfileId: args.lateProfileId,
       lateAccountId: args.lateAccountId,
       platform: args.platform,
+      profileUrl: args.profileUrl,
+      userImage: args.userImage,
+      username: args.username,
+      displayName: args.displayName,
+    });
+  },
+});
+
+export const patchAccount = internalMutation({
+  args: {
+    accountId: v.id("lateSocialAccounts"),
+    profileUrl: v.string(),
+    userImage: v.string(),
+    username: v.string(),
+    displayName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.accountId, {
       profileUrl: args.profileUrl,
       userImage: args.userImage,
       username: args.username,

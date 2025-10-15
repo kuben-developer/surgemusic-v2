@@ -17,7 +17,7 @@ interface SocialAccountCardProps {
 export function SocialAccountCard({ account, onDisconnect }: SocialAccountCardProps) {
   return (
     <div className="group relative bg-muted/30 rounded-md p-3 flex items-center gap-3">
-      {account.userImage ? (
+      {false ? (
         <Image
           src={account.userImage}
           alt={`${account.username} avatar`}
