@@ -95,9 +95,10 @@ interface AggregationResult {
   campaignsProcessed: number;
   results: Array<{
     campaignId: Id<"campaigns">;
-    action: "created" | "updated";
-    date: string;
-    metrics: {
+    action: "created" | "updated" | "skipped";
+    date?: string;
+    reason?: string;
+    metrics?: {
       posts: number;
       views: number;
       likes: number;
@@ -225,11 +226,133 @@ export const storeVideoComments = internalMutation({
   },
 });
 
-export const aggregateCampaignPerformance = internalMutation({
+// Aggregates performance for a single campaign
+export const aggregateSingleCampaignPerformance = internalMutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    dateString: v.string(),
+  },
+  handler: async (ctx, args): Promise<{
+    campaignId: Id<"campaigns">;
+    action: "created" | "updated" | "skipped";
+    date?: string;
+    reason?: string;
+    metrics?: {
+      posts: number;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    };
+  }> => {
+    // Get the campaign to get userId
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      return { campaignId: args.campaignId, action: "skipped" as const, reason: "campaign not found" };
+    }
+
+    // Get all manually posted videos for this campaign
+    const manualVideos = await ctx.db
+      .query("manuallyPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+
+    // Get all Ayrshare API posted videos for this campaign
+    const ayrshareVideos = await ctx.db
+      .query("ayrsharePostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+
+    // Get all Late API posted videos for this campaign
+    const lateVideos = await ctx.db
+      .query("latePostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+
+    // Combine all video sources
+    const allVideos = [...manualVideos, ...ayrshareVideos, ...lateVideos];
+
+    if (allVideos.length === 0) {
+      // No videos to aggregate for this campaign
+      return { campaignId: args.campaignId, action: "skipped" as const, reason: "no videos" };
+    }
+
+    // Aggregate metrics across all videos
+    const aggregatedMetrics = allVideos.reduce(
+      (acc, video) => ({
+        posts: acc.posts + 1,
+        views: acc.views + video.views,
+        likes: acc.likes + video.likes,
+        comments: acc.comments + video.comments,
+        shares: acc.shares + video.shares,
+        saves: acc.saves + video.saves,
+      }),
+      {
+        posts: 0,
+        views: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+      }
+    );
+
+    // Check if a snapshot already exists for this campaign and date
+    const existingSnapshot = await ctx.db
+      .query("campaignPerformanceSnapshots")
+      .withIndex("by_campaignId_date", (q) =>
+        q.eq("campaignId", args.campaignId).eq("date", args.dateString)
+      )
+      .unique();
+
+    if (existingSnapshot) {
+      // Update existing snapshot
+      await ctx.db.patch(existingSnapshot._id, {
+        posts: aggregatedMetrics.posts,
+        views: aggregatedMetrics.views,
+        likes: aggregatedMetrics.likes,
+        comments: aggregatedMetrics.comments,
+        shares: aggregatedMetrics.shares,
+        saves: aggregatedMetrics.saves,
+        updatedAt: Date.now(),
+      });
+      return {
+        campaignId: args.campaignId,
+        action: "updated" as const,
+        date: args.dateString,
+        metrics: aggregatedMetrics,
+      };
+    } else {
+      // Create new snapshot
+      await ctx.db.insert("campaignPerformanceSnapshots", {
+        campaignId: args.campaignId,
+        userId: campaign.userId,
+        date: args.dateString,
+        posts: aggregatedMetrics.posts,
+        views: aggregatedMetrics.views,
+        likes: aggregatedMetrics.likes,
+        comments: aggregatedMetrics.comments,
+        shares: aggregatedMetrics.shares,
+        saves: aggregatedMetrics.saves,
+        updatedAt: Date.now(),
+      });
+      return {
+        campaignId: args.campaignId,
+        action: "created" as const,
+        date: args.dateString,
+        metrics: aggregatedMetrics,
+      };
+    }
+  },
+});
+
+// Orchestrates aggregation across multiple campaigns
+export const aggregateCampaignPerformance = internalAction({
   args: {
     campaignId: v.optional(v.id("campaigns")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<AggregationResult> => {
     // Get current date in DD-MM-YYYY format
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -245,161 +368,27 @@ export const aggregateCampaignPerformance = internalMutation({
       campaignIds = [args.campaignId];
     } else {
       // Aggregate all campaigns
-      const allCampaigns = await ctx.db
-        .query("campaigns")
-        .filter((q) => q.neq(q.field("isDeleted"), true))
-        .collect();
+      const allCampaigns = await ctx.runQuery(internal.app.analytics.getAllCampaignsForAggregation, {});
       campaignIds = allCampaigns.map(c => c._id);
     }
 
-    const results = [];
-
-    for (const campaignId of campaignIds) {
-      // Get the campaign to get userId
-      const campaign = await ctx.db.get(campaignId);
-      if (!campaign) continue;
-
-      // Get all manually posted videos for this campaign
-      const manualVideos = await ctx.db
-        .query("manuallyPostedVideos")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-        .collect();
-
-      // Get all Ayrshare API posted videos for this campaign
-      const ayrshareVideos = await ctx.db
-        .query("ayrsharePostedVideos")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-        .collect();
-
-      // Get all Late API posted videos for this campaign
-      const lateVideos = await ctx.db
-        .query("latePostedVideos")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-        .collect();
-
-      // Combine all video sources
-      const allVideos = [...manualVideos, ...ayrshareVideos, ...lateVideos];
-
-      if (allVideos.length === 0) {
-        // No videos to aggregate for this campaign
-        continue;
-      }
-
-      // Aggregate metrics across all videos
-      const aggregatedMetrics = allVideos.reduce(
-        (acc, video) => ({
-          posts: acc.posts + 1,
-          views: acc.views + video.views,
-          likes: acc.likes + video.likes,
-          comments: acc.comments + video.comments,
-          shares: acc.shares + video.shares,
-          saves: acc.saves + video.saves,
-        }),
-        {
-          posts: 0,
-          views: 0,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          saves: 0,
-        }
-      );
-
-      // Check if a snapshot already exists for this campaign and date
-      const existingSnapshot = await ctx.db
-        .query("campaignPerformanceSnapshots")
-        .withIndex("by_campaignId_date", (q) =>
-          q.eq("campaignId", campaignId).eq("date", dateString)
-        )
-        .unique();
-
-      if (existingSnapshot) {
-        // Update existing snapshot
-        await ctx.db.patch(existingSnapshot._id, {
-          posts: aggregatedMetrics.posts,
-          views: aggregatedMetrics.views,
-          likes: aggregatedMetrics.likes,
-          comments: aggregatedMetrics.comments,
-          shares: aggregatedMetrics.shares,
-          saves: aggregatedMetrics.saves,
-          updatedAt: Date.now(),
-        });
-
-        results.push({
+    const results = await Promise.all(
+      campaignIds.map((campaignId) =>
+        ctx.runMutation(internal.app.analytics.aggregateSingleCampaignPerformance, {
           campaignId,
-          action: "updated" as const,
-          date: dateString,
-          metrics: aggregatedMetrics,
-        });
-      } else {
-        // Create new snapshot
-        await ctx.db.insert("campaignPerformanceSnapshots", {
-          campaignId,
-          userId: campaign.userId,
-          date: dateString,
-          posts: aggregatedMetrics.posts,
-          views: aggregatedMetrics.views,
-          likes: aggregatedMetrics.likes,
-          comments: aggregatedMetrics.comments,
-          shares: aggregatedMetrics.shares,
-          saves: aggregatedMetrics.saves,
-          updatedAt: Date.now(),
-        });
-
-        results.push({
-          campaignId,
-          action: "created" as const,
-          date: dateString,
-          metrics: aggregatedMetrics,
-        });
-      }
-    }
+          dateString,
+        })
+      )
+    );
 
     return {
       date: dateString,
-      campaignsProcessed: results.length,
+      campaignsProcessed: campaignIds.length,
       results,
     };
   },
 });
 
-export const aggregateAllCampaigns = action({
-  args: {},
-  handler: async (ctx): Promise<AggregationResult> => {
-    // This action can be called by a cron job or manually to aggregate all campaigns
-    const result = await ctx.runMutation(internal.app.analytics.aggregateCampaignPerformance, {});
-    return result;
-  },
-});
-
-export const aggregateSingleCampaign = action({
-  args: {
-    campaignId: v.id("campaigns"),
-  },
-  handler: async (ctx, args): Promise<AggregationResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // Verify the user owns this campaign
-    const campaign = await ctx.runQuery(internal.app.campaigns.getCampaignWithUser, {
-      campaignId: args.campaignId,
-      clerkId: identity.subject,
-    });
-
-    if (!campaign) {
-      throw new Error("Campaign not found or access denied");
-    }
-
-    // Aggregate the specific campaign
-    const result = await ctx.runMutation(internal.app.analytics.aggregateCampaignPerformance, {
-      campaignId: args.campaignId,
-    });
-
-    return result;
-  },
-});
 
 // ==================== NEW SIMPLIFIED ANALYTICS FUNCTIONS ====================
 
@@ -824,6 +813,16 @@ export const fetchAnalyticsFromConvex = internalAction({
 });
 
 // Internal queries for fetching data
+export const getAllCampaignsForAggregation = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("campaigns")
+      .filter((q) => q.neq(q.field("isDeleted"), true))
+      .collect();
+  },
+});
+
 export const getPerformanceSnapshots = internalQuery({
   args: {
     campaignIds: v.array(v.id("campaigns")),
