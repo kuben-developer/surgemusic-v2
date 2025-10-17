@@ -984,194 +984,214 @@ export const storeAyrsharePostedVideo = internalMutation({
 export const monitorApiPostedVideos = internalAction({
   args: {},
   handler: async (ctx) => {
-    const BATCH_SIZE = 200; // Process 25 videos concurrently
+    const CONCURRENT_LIMIT = 100; // Process up to 100 videos concurrently
 
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
 
-    // Process in batches
-    for (let i = 0; i < generatedVideos.length; i += BATCH_SIZE) {
-      const batch = generatedVideos.slice(i, i + BATCH_SIZE);
+    // Helper function to process items with concurrency limit
+    async function processConcurrently<T>(
+      items: T[],
+      processor: (item: T) => Promise<void>,
+      concurrencyLimit: number
+    ): Promise<void> {
+      const executing: Promise<void>[] = [];
 
-      await Promise.all(
-        batch.map(async (video: Doc<"generatedVideos">) => {
-          const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, {
-            campaignId: video.campaignId
-          });
+      for (const item of items) {
+        const promise = processor(item).then(() => {
+          executing.splice(executing.indexOf(promise), 1);
+        });
+        executing.push(promise);
 
-          if (!campaign) {
-            console.error(`Campaign not found for video ${video._id}`);
-            return;
-          }
+        if (executing.length >= concurrencyLimit) {
+          await Promise.race(executing);
+        }
+      }
 
-          // Process each platform
-          const platforms: Array<{
-            platform: "tiktok" | "instagram" | "youtube",
-            upload: NonNullable<typeof video.tiktokUpload | typeof video.instagramUpload | typeof video.youtubeUpload>
-          }> = [];
-
-          if (video.tiktokUpload?.status.isPosted && video.tiktokUpload.post.id) {
-            platforms.push({ platform: "tiktok", upload: video.tiktokUpload });
-          }
-          if (video.instagramUpload?.status.isPosted && video.instagramUpload.post.id) {
-            platforms.push({ platform: "instagram", upload: video.instagramUpload });
-          }
-          if (video.youtubeUpload?.status.isPosted && video.youtubeUpload.post.id) {
-            platforms.push({ platform: "youtube", upload: video.youtubeUpload });
-          }
-
-          for (const { platform, upload } of platforms) {
-            try {
-              // Get profile key
-              const profileKey = await ctx.runQuery(
-                internal.app.ayrshare.getProfileKeyFromSocialAccountId,
-                { socialAccountId: upload.socialAccountId }
-              );
-
-              if (!profileKey) {
-                await ctx.runMutation(internal.app.ayrshare.deleteSocialAccount, {
-                  socialAccountId: upload.socialAccountId,
-                });
-                continue;
-              }
-
-              // Fetch analytics from Ayrshare
-              const response = await fetch("https://api.ayrshare.com/api/analytics/post", {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
-                  "Content-Type": "application/json",
-                  "Profile-Key": profileKey,
-                },
-                body: JSON.stringify({
-                  id: upload.post.id,
-                  platforms: [platform],
-                }),
-              });
-
-              if (!response.ok) {
-                if (response.status === 429) {
-                  // Rate limited, skip and retry later
-                  console.warn(`Rate limited for post ${upload.post.id}`);
-                  continue;
-                }
-                throw new Error(`Failed to fetch analytics: ${response.statusText}`);
-              }
-
-              const data = await response.json();
-
-              // Extract analytics based on platform
-              const platformData = data[platform];
-              if (!platformData || !platformData.analytics) {
-                console.warn(`No analytics data for ${platform} post ${upload.post.id}`);
-                continue;
-              }
-
-              const analytics = platformData.analytics;
-
-              // if(analytics.videoViewRetention && analytics.videoViewRetention.length > 0) {
-              //   console.log(analytics);
-              // }
-
-              // Extract advanced analytics with proper field mapping
-              const advancedAnalytics: any = {};
-
-              // Map audienceCities: city_name → city
-              if (analytics.audienceCities && Array.isArray(analytics.audienceCities)) {
-                advancedAnalytics.audienceCities = analytics.audienceCities.map((item: any) => ({
-                  city: item.city_name,
-                  percentage: item.percentage,
-                }));
-              }
-
-              // Map audienceCountries
-              if (analytics.audienceCountries && Array.isArray(analytics.audienceCountries)) {
-                advancedAnalytics.audienceCountries = analytics.audienceCountries.map((item: any) => ({
-                  country: item.country,
-                  percentage: item.percentage,
-                }));
-              }
-
-              // Map audienceGenders
-              if (analytics.audienceGenders && Array.isArray(analytics.audienceGenders)) {
-                advancedAnalytics.audienceGenders = analytics.audienceGenders.map((item: any) => ({
-                  gender: item.gender,
-                  percentage: item.percentage,
-                }));
-              }
-
-              // Map audienceTypes
-              if (analytics.audienceTypes && Array.isArray(analytics.audienceTypes)) {
-                advancedAnalytics.audienceTypes = analytics.audienceTypes.map((item: any) => ({
-                  type: item.type,
-                  percentage: item.percentage,
-                }));
-              }
-
-              // Direct numeric fields
-              if (analytics.averageTimeWatched !== undefined) {
-                advancedAnalytics.averageTimeWatched = analytics.averageTimeWatched;
-              }
-
-              if (analytics.fullVideoWatchedRate !== undefined) {
-                advancedAnalytics.fullVideoWatchedRate = analytics.fullVideoWatchedRate;
-              }
-
-              if (analytics.newFollowers !== undefined) {
-                advancedAnalytics.newFollowers = analytics.newFollowers;
-              }
-
-              if (analytics.profileViews !== undefined) {
-                advancedAnalytics.profileViews = analytics.profileViews;
-              }
-
-              if (analytics.videoDuration !== undefined) {
-                advancedAnalytics.videoDuration = analytics.videoDuration;
-              }
-
-              // Array fields
-              if (analytics.engagementLikes && Array.isArray(analytics.engagementLikes)) {
-                advancedAnalytics.engagementLikes = analytics.engagementLikes.map((item: any) => ({
-                  second: String(item.second),
-                  percentage: item.percentage,
-                }));
-              }
-
-              if (analytics.videoViewRetention && Array.isArray(analytics.videoViewRetention)) {
-                advancedAnalytics.videoViewRetention = analytics.videoViewRetention.map((item: any) => ({
-                  second: String(item.second),
-                  percentage: item.percentage,
-                }));
-              }
-
-              // Store in database with all analytics
-              await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
-                campaignId: video.campaignId,
-                userId: campaign.userId,
-                socialPlatform: platform,
-                videoId: platformData.id || upload.post.id,
-                postedAt: analytics.created
-                  ? Math.floor(new Date(analytics.created).getTime() / 1000)
-                  : Math.floor(upload.scheduledAt / 1000),
-                videoUrl: platformData.postUrl || upload.post.url || "",
-                thumbnailUrl: analytics.thumbnailUrl || video.video.url,
-                mediaUrl: undefined,
-                views: analytics.videoViews ?? 0,
-                likes: analytics.likeCount ?? 0,
-                comments: analytics.commentsCount ?? 0,
-                shares: analytics.shareCount ?? 0,
-                saves: analytics.favorites ?? 0,
-                ...advancedAnalytics,
-              });
-
-            } catch (error) {
-              console.error(`Error processing ${platform} for video ${video._id}:`, error);
-              // Continue with next platform
-            }
-          }
-        })
-      );
+      await Promise.all(executing);
     }
+
+    // Process all videos with concurrency limit
+    await processConcurrently(
+      generatedVideos,
+      async (video: Doc<"generatedVideos">) => {
+        const campaign = await ctx.runQuery(internal.app.ayrshare.getCampaignById, {
+          campaignId: video.campaignId
+        });
+
+        if (!campaign) {
+          console.error(`Campaign not found for video ${video._id}`);
+          return;
+        }
+
+        // Process each platform
+        const platforms: Array<{
+          platform: "tiktok" | "instagram" | "youtube",
+          upload: NonNullable<typeof video.tiktokUpload | typeof video.instagramUpload | typeof video.youtubeUpload>
+        }> = [];
+
+        if (video.tiktokUpload?.status.isPosted && video.tiktokUpload.post.id) {
+          platforms.push({ platform: "tiktok", upload: video.tiktokUpload });
+        }
+        if (video.instagramUpload?.status.isPosted && video.instagramUpload.post.id) {
+          platforms.push({ platform: "instagram", upload: video.instagramUpload });
+        }
+        if (video.youtubeUpload?.status.isPosted && video.youtubeUpload.post.id) {
+          platforms.push({ platform: "youtube", upload: video.youtubeUpload });
+        }
+
+        for (const { platform, upload } of platforms) {
+          try {
+            // Get profile key
+            const profileKey = await ctx.runQuery(
+              internal.app.ayrshare.getProfileKeyFromSocialAccountId,
+              { socialAccountId: upload.socialAccountId }
+            );
+
+            if (!profileKey) {
+              await ctx.runMutation(internal.app.ayrshare.deleteSocialAccount, {
+                socialAccountId: upload.socialAccountId,
+              });
+              continue;
+            }
+
+            // Fetch analytics from Ayrshare
+            const response = await fetch("https://api.ayrshare.com/api/analytics/post", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${AYRSHARE_API_KEY}`,
+                "Content-Type": "application/json",
+                "Profile-Key": profileKey,
+              },
+              body: JSON.stringify({
+                id: upload.post.id,
+                platforms: [platform],
+              }),
+            });
+
+            if (!response.ok) {
+              if (response.status === 429) {
+                // Rate limited, skip and retry later
+                console.warn(`Rate limited for post ${upload.post.id}`);
+                continue;
+              }
+              throw new Error(`Failed to fetch analytics: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Extract analytics based on platform
+            const platformData = data[platform];
+            if (!platformData || !platformData.analytics) {
+              console.warn(`No analytics data for ${platform} post ${upload.post.id}`);
+              continue;
+            }
+
+            const analytics = platformData.analytics;
+
+            // if(analytics.videoViewRetention && analytics.videoViewRetention.length > 0) {
+            //   console.log(analytics);
+            // }
+
+            // Extract advanced analytics with proper field mapping
+            const advancedAnalytics: any = {};
+
+            // Map audienceCities: city_name → city
+            if (analytics.audienceCities && Array.isArray(analytics.audienceCities)) {
+              advancedAnalytics.audienceCities = analytics.audienceCities.map((item: any) => ({
+                city: item.city_name,
+                percentage: item.percentage,
+              }));
+            }
+
+            // Map audienceCountries
+            if (analytics.audienceCountries && Array.isArray(analytics.audienceCountries)) {
+              advancedAnalytics.audienceCountries = analytics.audienceCountries.map((item: any) => ({
+                country: item.country,
+                percentage: item.percentage,
+              }));
+            }
+
+            // Map audienceGenders
+            if (analytics.audienceGenders && Array.isArray(analytics.audienceGenders)) {
+              advancedAnalytics.audienceGenders = analytics.audienceGenders.map((item: any) => ({
+                gender: item.gender,
+                percentage: item.percentage,
+              }));
+            }
+
+            // Map audienceTypes
+            if (analytics.audienceTypes && Array.isArray(analytics.audienceTypes)) {
+              advancedAnalytics.audienceTypes = analytics.audienceTypes.map((item: any) => ({
+                type: item.type,
+                percentage: item.percentage,
+              }));
+            }
+
+            // Direct numeric fields
+            if (analytics.averageTimeWatched !== undefined) {
+              advancedAnalytics.averageTimeWatched = analytics.averageTimeWatched;
+            }
+
+            if (analytics.fullVideoWatchedRate !== undefined) {
+              advancedAnalytics.fullVideoWatchedRate = analytics.fullVideoWatchedRate;
+            }
+
+            if (analytics.newFollowers !== undefined) {
+              advancedAnalytics.newFollowers = analytics.newFollowers;
+            }
+
+            if (analytics.profileViews !== undefined) {
+              advancedAnalytics.profileViews = analytics.profileViews;
+            }
+
+            if (analytics.videoDuration !== undefined) {
+              advancedAnalytics.videoDuration = analytics.videoDuration;
+            }
+
+            // Array fields
+            if (analytics.engagementLikes && Array.isArray(analytics.engagementLikes)) {
+              advancedAnalytics.engagementLikes = analytics.engagementLikes.map((item: any) => ({
+                second: String(item.second),
+                percentage: item.percentage,
+              }));
+            }
+
+            if (analytics.videoViewRetention && Array.isArray(analytics.videoViewRetention)) {
+              advancedAnalytics.videoViewRetention = analytics.videoViewRetention.map((item: any) => ({
+                second: String(item.second),
+                percentage: item.percentage,
+              }));
+            }
+
+            // Store in database with all analytics
+            await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
+              campaignId: video.campaignId,
+              userId: campaign.userId,
+              socialPlatform: platform,
+              videoId: platformData.id || upload.post.id,
+              postedAt: analytics.created
+                ? Math.floor(new Date(analytics.created).getTime() / 1000)
+                : Math.floor(upload.scheduledAt / 1000),
+              videoUrl: platformData.postUrl || upload.post.url || "",
+              thumbnailUrl: analytics.thumbnailUrl || video.video.url,
+              mediaUrl: undefined,
+              views: analytics.videoViews ?? 0,
+              likes: analytics.likeCount ?? 0,
+              comments: analytics.commentsCount ?? 0,
+              shares: analytics.shareCount ?? 0,
+              saves: analytics.favorites ?? 0,
+              ...advancedAnalytics,
+            });
+
+          } catch (error) {
+            console.error(`Error processing ${platform} for video ${video._id}:`, error);
+            // Continue with next platform
+          }
+        }
+      },
+      CONCURRENT_LIMIT
+    );
   },
 });
 
@@ -1192,7 +1212,8 @@ export const getPostedGeneratedVideos = internalQuery({
           (v.tiktokUpload?.status.isPosted && v.tiktokUpload.post.id) ||
           (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
           (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
-      );
+      )
+      .slice(0, 2500)
   },
 });
 
