@@ -636,7 +636,7 @@ export const fetchAnalyticsFromConvex = internalAction({
     });
 
     // Normalize postedAt for API videos (convert seconds to milliseconds)
-    const normalizedAyrshareVideos = ayrshareVideos.map((video: Doc<"ayrsharePostedVideos">) => ({
+    const normalizedAyrshareVideos = ayrshareVideos.map((video) => ({
       ...video,
       postedAt: video.postedAt * 1000 // Convert seconds to milliseconds
     }));
@@ -878,14 +878,16 @@ export const getAyrsharePostedVideos = internalAction({
   args: {
     campaignIds: v.array(v.id("campaigns")),
   },
-  handler: async (ctx, args): Promise<Doc<"ayrsharePostedVideos">[]> => {
-    const videos = [];
+  handler: async (ctx, args) => {
+    const videos: any[] = [];
 
     for (const campaignId of args.campaignIds) {
       const campaignVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideo, {
         campaignId: campaignId as Id<"campaigns">,
       });
-      videos.push(...campaignVideos);
+      if (campaignVideos) {
+        videos.push(campaignVideos);
+      }
     }
 
     return videos;
@@ -896,11 +898,32 @@ export const getAyrsharePostedVideo = internalQuery({
   args: {
     campaignId: v.id("campaigns"),
   },
-  handler: async (ctx, args): Promise<Doc<"ayrsharePostedVideos">[]> => {
-    return await ctx.db
+  handler: async (ctx, args) => {
+    const video = await ctx.db
       .query("ayrsharePostedVideos")
       .withIndex("by_campaignId_views", q => q.eq("campaignId", args.campaignId))
-      .collect();
+      .first()
+
+    if (video) {
+
+      const {
+        audienceCities,
+        audienceCountries,
+        audienceGenders,
+        audienceTypes,
+        averageTimeWatched,
+        engagementLikes,
+        fullVideoWatchedRate,
+        newFollowers,
+        profileViews,
+        videoDuration,
+        videoViewRetention,
+        ...data
+      } = video
+
+      return data
+    }
+    return null
   },
 });
 
