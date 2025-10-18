@@ -382,7 +382,10 @@ export default defineSchema({
     })),
 
   })
-    .index("by_campaignId", ["campaignId"]),
+    .index("by_campaignId", ["campaignId"])
+    .index("by_tiktok_post_id", ["tiktokUpload.post.id"])
+    .index("by_instagram_post_id", ["instagramUpload.post.id"])
+    .index("by_youtube_post_id", ["youtubeUpload.post.id"]),
 
   reports: defineTable({
     name: v.string(),

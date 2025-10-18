@@ -205,15 +205,35 @@ export const deleteSocialAccounts = internalMutation({
 export const getVideoByPostId = internalQuery({
   args: { postId: v.string() },
   handler: async (ctx, args) => {
-    const allVideos = await ctx.db
+    // Try TikTok index first
+    let video = await ctx.db
       .query("generatedVideos")
-      .collect();
-    
-    return allVideos.find(video => 
-      video.tiktokUpload?.post?.id === args.postId ||
-      video.instagramUpload?.post?.id === args.postId ||
-      video.youtubeUpload?.post?.id === args.postId
-    );
+      .withIndex("by_tiktok_post_id", (q) =>
+        q.eq("tiktokUpload.post.id", args.postId)
+      )
+      .first();
+
+    if (video) return video;
+
+    // Try Instagram index
+    video = await ctx.db
+      .query("generatedVideos")
+      .withIndex("by_instagram_post_id", (q) =>
+        q.eq("instagramUpload.post.id", args.postId)
+      )
+      .first();
+
+    if (video) return video;
+
+    // Try YouTube index
+    video = await ctx.db
+      .query("generatedVideos")
+      .withIndex("by_youtube_post_id", (q) =>
+        q.eq("youtubeUpload.post.id", args.postId)
+      )
+      .first();
+
+    return video;
   },
 });
 
