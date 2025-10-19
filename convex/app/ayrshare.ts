@@ -1173,7 +1173,7 @@ export const monitorApiPostedVideos = internalAction({
             }
 
             // Store in database with all analytics
-            await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
+            const storedVideoId = await ctx.runMutation(internal.app.ayrshare.storeAyrsharePostedVideo, {
               campaignId: video.campaignId,
               userId: campaign.userId,
               socialPlatform: platform,
@@ -1191,6 +1191,29 @@ export const monitorApiPostedVideos = internalAction({
               saves: analytics.favorites ?? 0,
               ...advancedAnalytics,
             });
+
+            // Fetch and store comments for TikTok videos
+            if (platform === "tiktok" && storedVideoId && (analytics.commentsCount ?? 0) > 0) {
+              try {
+                const tiktokVideoId = platformData.id || upload.post.id;
+                const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                  videoId: tiktokVideoId,
+                });
+
+                if (commentsData.comments && commentsData.comments.length > 0) {
+                  await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                    campaignId: video.campaignId,
+                    userId: campaign.userId,
+                    videoId: storedVideoId,
+                    socialPlatform: platform,
+                    comments: commentsData.comments,
+                  });
+                  console.log(`Stored ${commentsData.comments.length} comments for TikTok video ${tiktokVideoId}`);
+                }
+              } catch (commentError) {
+                console.error(`Failed to fetch/store comments for TikTok video ${platformData.id || upload.post.id}:`, commentError);
+              }
+            }
 
           } catch (error) {
             console.error(`Error processing ${platform} for video ${video._id}:`, error);

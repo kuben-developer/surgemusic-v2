@@ -175,7 +175,7 @@ export const storeVideoComments = internalMutation({
   args: {
     campaignId: v.id("campaigns"),
     userId: v.id("users"),
-    videoId: v.id("manuallyPostedVideos"),
+    videoId: v.union(v.id("manuallyPostedVideos"), v.id("ayrsharePostedVideos"), v.id("latePostedVideos")),
     socialPlatform: v.union(v.literal("tiktok"), v.literal("instagram"), v.literal("youtube")),
     comments: v.array(v.object({
       commentId: v.string(),
