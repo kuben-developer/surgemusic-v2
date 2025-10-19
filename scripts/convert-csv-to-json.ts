@@ -7,6 +7,9 @@ interface OutputRecord {
 }
 
 function extractCampaignId(campaignUrl: string): string {
+  if (/^\d+$/.test(campaignUrl)) {
+    return campaignUrl;
+  }
   const match = campaignUrl.match(/\/campaign\/([a-z0-9]+)/i);
   return match?.[1] || '';
 }

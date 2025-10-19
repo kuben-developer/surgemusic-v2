@@ -223,20 +223,20 @@ export const getTikTokUserVideos = internalAction({
           },
           signal: AbortSignal.timeout(30000), // 30 second timeout per request
         });
-        
+
         if (!response.ok) {
           console.error(`HTTP error for @${args.username}: ${response.status}`);
           // Wait before retry with exponential backoff
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
           continue;
         }
-        
+
         data = await response.json();
         if (!data.error) {
           success = true;
           break;
         }
-        
+
         // Wait before retry with exponential backoff
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
       } catch (err) {
@@ -390,7 +390,7 @@ export const scrapeManuallyPostedVideos = internalAction({
     let currentMaxCursor: number | null = null;
     let pagesProcessed = 0;
     const MAX_PAGES = 10; // Limit pages to prevent infinite loops
-    
+
     while (pagesProcessed < MAX_PAGES) {
       pagesProcessed++;
 
@@ -411,7 +411,7 @@ export const scrapeManuallyPostedVideos = internalAction({
           description: string;
         }>;
       } = { maxCursor: null, hasMore: false, videos: [] }; // Initialize with default values
-      
+
       try {
         result = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
           username: args.username,
@@ -478,7 +478,7 @@ export const scrapeManuallyPostedVideos = internalAction({
       if (!hasMore || !maxCursor) break;
       currentMaxCursor = maxCursor;
     }
-    
+
     if (pagesProcessed >= MAX_PAGES) {
     }
   },
@@ -524,9 +524,18 @@ export const scrapeManuallyPostedVideosFromJson = internalAction({
       const campaignCache = new Map<string, { _id: Id<"campaigns">; userId: Id<"users"> } | null>();
       for (const video of videosToFind) {
         if (!campaignCache.has(video.campaignId)) {
-          const campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
-            campaignId: video.campaignId as Id<"campaigns">
-          });
+          const isReferenceId = /^\d+$/.test(video.campaignId);
+          
+          let campaign
+          if (isReferenceId) {
+            campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+              referenceId: video.campaignId
+            });
+          } else {
+            campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
+              campaignId: video.campaignId as Id<"campaigns">
+            });
+          }
           campaignCache.set(video.campaignId, campaign);
         }
       }

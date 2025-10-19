@@ -543,7 +543,7 @@ export const getScheduledVideos = query({
         const lateYoutubeScheduled = video.lateYoutubeUpload?.scheduledAt && !video.lateYoutubeUpload?.status?.isPosted;
 
         return tiktokScheduled || instagramScheduled || youtubeScheduled ||
-               lateTiktokScheduled || lateInstagramScheduled || lateYoutubeScheduled;
+          lateTiktokScheduled || lateInstagramScheduled || lateYoutubeScheduled;
       })
       .map(video => {
         // Get the earliest scheduled time and post info
@@ -860,6 +860,19 @@ export const getInternal = internalQuery({
   },
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign || campaign.isDeleted === true) {
+      return null;
+    }
+    return campaign;
+  },
+})
+
+export const getByReferenceId = internalQuery({
+  args: {
+    referenceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.query("campaigns").withIndex("by_referenceId", (q) => q.eq("referenceId", args.referenceId)).unique();
     if (!campaign || campaign.isDeleted === true) {
       return null;
     }
