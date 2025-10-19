@@ -44,42 +44,52 @@ export function AnalyticsContainer({
     initialDateRange: 30
   });
 
+  // Memoize campaign IDs to prevent unnecessary re-renders
+  const campaignIds = useMemo(() => {
+    if (type === 'campaign' && entityId) {
+      return [entityId];
+    }
+    return analytics.data?.campaigns.map(c => c.id) || [];
+  }, [type, entityId, analytics.data?.campaigns]);
+
   // Fetch comments if needed
   const comments = useComments({
-    campaignIds: type === 'campaign' && entityId ? [entityId] :
-      analytics.data?.campaigns.map(c => c.id) || []
+    campaignIds
   });
 
   // Transform video metrics to match the original format - compute even if data not ready yet
   const transformedVideoMetrics = useMemo(() => {
     if (!analytics.data) return [];
-    return analytics.data.videoMetrics.map((video, index) => ({
-      id: video.videoId,
-      views: video.metrics.views,
-      likes: video.metrics.likes,
-      comments: video.metrics.comments,
-      shares: video.metrics.shares,
-      engagement: video.metrics.likes + video.metrics.comments + video.metrics.shares,
-      engagementRate: video.metrics.views > 0
-        ? ((video.metrics.likes + video.metrics.comments + video.metrics.shares) / video.metrics.views * 100).toFixed(2)
-        : "0.00",
-      videoInfo: {
+    return analytics.data.videoMetrics.map((video, index) => {
+      const videoIdString = String(video.videoId || '');
+      return {
         id: video.videoId,
-        postId: null,
-        videoUrl: video.videoUrl,
-        thumbnailUrl: video.thumbnailUrl, // Add thumbnail URL
-        videoName: `Video ${video.videoId.slice(-6)}`,
-        videoType: "video/mp4",
-        createdAt: video.postedAt < 10000000000
-          ? new Date(video.postedAt * 1000)  // Convert seconds to milliseconds
-          : new Date(video.postedAt),
-        tiktokUrl: video.platform === "tiktok" ? video.videoUrl : "",
-        campaign: {
-          id: index, // Use index as a number ID since the original expects a number
-          campaignName: video.campaignName,
+        views: video.metrics.views,
+        likes: video.metrics.likes,
+        comments: video.metrics.comments,
+        shares: video.metrics.shares,
+        engagement: video.metrics.likes + video.metrics.comments + video.metrics.shares,
+        engagementRate: video.metrics.views > 0
+          ? ((video.metrics.likes + video.metrics.comments + video.metrics.shares) / video.metrics.views * 100).toFixed(2)
+          : "0.00",
+        videoInfo: {
+          id: video.videoId,
+          postId: null,
+          videoUrl: video.videoUrl,
+          thumbnailUrl: video.thumbnailUrl, // Add thumbnail URL
+          videoName: `Video ${videoIdString.slice(-6) || 'N/A'}`,
+          videoType: "video/mp4",
+          createdAt: video.postedAt < 10000000000
+            ? new Date(video.postedAt * 1000)  // Convert seconds to milliseconds
+            : new Date(video.postedAt),
+          tiktokUrl: video.platform === "tiktok" ? video.videoUrl : "",
+          campaign: {
+            id: index, // Use index as a number ID since the original expects a number
+            campaignName: video.campaignName,
+          },
         },
-      },
-    }));
+      };
+    });
   }, [analytics.data]);
 
   // Prepare metric info for the chart

@@ -885,8 +885,8 @@ export const getAyrsharePostedVideos = internalAction({
       const campaignVideos = await ctx.runQuery(internal.app.analytics.getAyrsharePostedVideo, {
         campaignId: campaignId as Id<"campaigns">,
       });
-      if (campaignVideos) {
-        videos.push(campaignVideos);
+      if (campaignVideos && campaignVideos.length > 0) {
+        videos.push(...campaignVideos);
       }
     }
 
@@ -899,13 +899,12 @@ export const getAyrsharePostedVideo = internalQuery({
     campaignId: v.id("campaigns"),
   },
   handler: async (ctx, args) => {
-    const video = await ctx.db
+    const videos = await ctx.db
       .query("ayrsharePostedVideos")
       .withIndex("by_campaignId_views", q => q.eq("campaignId", args.campaignId))
-      .first()
+      .collect()
 
-    if (video) {
-
+    return videos.map(video => {
       const {
         audienceCities,
         audienceCountries,
@@ -922,8 +921,7 @@ export const getAyrsharePostedVideo = internalQuery({
       } = video
 
       return data
-    }
-    return null
+    })
   },
 });
 

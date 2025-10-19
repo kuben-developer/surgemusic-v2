@@ -77,7 +77,8 @@ export function useComments(options: UseCommentsOptions): UseCommentsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [options.campaignIds, page, pageSize, getComments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.campaignIds, page, pageSize]);
 
   // Refresh function
   const refresh = useCallback(async () => {
