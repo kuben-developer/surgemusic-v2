@@ -989,6 +989,8 @@ export const monitorApiPostedVideos = internalAction({
     // Get all generated videos with at least one posted platform
     const generatedVideos = await ctx.runQuery(internal.app.ayrshare.getPostedGeneratedVideos);
 
+    console.log(`Found ${generatedVideos.length} generated videos to process`);
+
     // Helper function to process items with concurrency limit
     async function processConcurrently<T>(
       items: T[],
@@ -997,11 +999,17 @@ export const monitorApiPostedVideos = internalAction({
     ): Promise<void> {
       const executing: Promise<void>[] = [];
 
+      let processedCount = 0;
       for (const item of items) {
         const promise = processor(item).then(() => {
           executing.splice(executing.indexOf(promise), 1);
         });
         executing.push(promise);
+
+        processedCount++;
+        if (processedCount % 100 === 0) {
+          console.log(`Processed ${processedCount} items out of ${items.length}`);
+        }
 
         if (executing.length >= concurrencyLimit) {
           await Promise.race(executing);
@@ -1200,8 +1208,13 @@ export const getPostedGeneratedVideos = internalQuery({
   args: {},
   handler: async (ctx) => {
     // Get all videos that have at least one posted platform
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const videos = await ctx.db
       .query("generatedVideos")
+      .withIndex("by_tiktok_scheduled_at", (q) =>
+        q.gte("tiktokUpload.scheduledAt", sevenDaysAgo).lte("tiktokUpload.scheduledAt", now)
+      )
       .collect();
 
     // First sort all videos by latest _creationTime (descending), then filter for those that have at least one platform posted
@@ -1213,7 +1226,6 @@ export const getPostedGeneratedVideos = internalQuery({
           (v.instagramUpload?.status.isPosted && v.instagramUpload.post.id) ||
           (v.youtubeUpload?.status.isPosted && v.youtubeUpload.post.id)
       )
-      .slice(0, 2500)
   },
 });
 
