@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { internalAction } from "../_generated/server";
+import { internalAction, internalQuery } from "../_generated/server";
 
 const encodeCaption = (caption: string): string => {
   let hex = '';
@@ -304,6 +304,85 @@ export const getTikTokUserVideos = internalAction({
 });
 
 
+export const getTikTokVideoById = internalAction({
+  args: {
+    videoId: v.string(),
+  },
+  handler: async (_, args): Promise<{
+    success: boolean;
+    video?: {
+      videoId: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    };
+    error?: string;
+  }> => {
+    try {
+      const requestUrl = `http://api.tokapi.online/v1/post/${args.videoId}`;
+
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: {
+          'accept': 'application/json',
+          'x-project-name': 'tokapi',
+          'x-api-key': TOKAPI_KEY
+        },
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to fetch video ${args.videoId}: HTTP ${response.status}`);
+        return {
+          success: false,
+          error: `HTTP ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+
+      // Check for errors in response
+      if (data.status_code !== 0 || !data.aweme_detail) {
+        return {
+          success: false,
+          error: data.status_msg || 'Video not found'
+        };
+      }
+
+      const aweme = data.aweme_detail;
+      const stats = aweme.statistics;
+
+      if (!stats) {
+        return {
+          success: false,
+          error: 'No statistics found'
+        };
+      }
+
+      return {
+        success: true,
+        video: {
+          videoId: args.videoId,
+          views: stats.play_count || 0,
+          likes: stats.digg_count || 0,
+          comments: stats.comment_count || 0,
+          shares: stats.share_count || 0,
+          saves: stats.collect_count || 0,
+        }
+      };
+    } catch (error) {
+      console.error(`Error fetching video ${args.videoId}:`, error);
+      return {
+        success: false,
+        error: String(error)
+      };
+    }
+  },
+});
+
+
 export const getTikTokVideoComments = internalAction({
   args: {
     videoId: v.string(),
@@ -494,18 +573,34 @@ export const scrapeManuallyPostedVideosFromJson = internalAction({
     })),
   },
   handler: async (ctx, args) => {
+    // Early check: Filter out videos that already exist in database
+    const existenceChecks = await Promise.all(
+      args.videos
+        .filter(v => v.tiktokVideoId && v.tiktokVideoId.trim() !== '')
+        .map(async (video) => ({
+          ...video,
+          exists: await ctx.runQuery(internal.app.analytics.checkVideoExistsInManuallyPosted, {
+            videoId: video.tiktokVideoId,
+            socialPlatform: "tiktok",
+          }),
+        }))
+    );
+
+    // Filter to only process videos that don't exist yet
+    const videosToProcess = existenceChecks.filter(v => !v.exists);
+    const skippedCount = existenceChecks.length - videosToProcess.length;
+
+    if (skippedCount > 0) {
+      console.log(`⊙ Skipped ${skippedCount} videos that already exist in database`);
+    }
+
     // Step 1: Group videos by username for efficient batch processing
     const videosByUsername = new Map<string, Array<{
       campaignId: string;
       tiktokVideoId: string;
     }>>();
 
-    for (const entry of args.videos) {
-      // Skip if tiktokVideoId is empty
-      if (!entry.tiktokVideoId || entry.tiktokVideoId.trim() === '') {
-        continue;
-      }
-
+    for (const entry of videosToProcess) {
       if (!videosByUsername.has(entry.username)) {
         videosByUsername.set(entry.username, []);
       }
@@ -671,6 +766,240 @@ export const scrapeManuallyPostedVideosFromJson = internalAction({
       }
 
     }
+  },
+});
+
+
+export const getTikTokVideosForCampaigns = internalQuery({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+  },
+  handler: async (ctx, args) => {
+    const allVideos: Array<{
+      _id: Id<"manuallyPostedVideos"> | Id<"ayrsharePostedVideos"> | Id<"latePostedVideos">;
+      campaignId: Id<"campaigns">;
+      userId: Id<"users">;
+      videoId: string;
+      videoUrl: string;
+      socialPlatform: "tiktok" | "instagram" | "youtube";
+    }> = [];
+
+    for (const campaignId of args.campaignIds) {
+      // Get manually posted TikTok videos
+      const manualVideos = await ctx.db
+        .query("manuallyPostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .filter((q) => q.eq(q.field("socialPlatform"), "tiktok"))
+        .collect();
+
+      // Get Ayrshare posted TikTok videos
+      const ayrshareVideos = await ctx.db
+        .query("ayrsharePostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .filter((q) => q.eq(q.field("socialPlatform"), "tiktok"))
+        .collect();
+
+      // Get Late API posted TikTok videos
+      const lateVideos = await ctx.db
+        .query("latePostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .filter((q) => q.eq(q.field("socialPlatform"), "tiktok"))
+        .collect();
+
+      // Add to combined list with videoUrl included
+      allVideos.push(
+        ...manualVideos.map(v => ({
+          _id: v._id,
+          campaignId: v.campaignId,
+          userId: v.userId,
+          videoId: v.videoId,
+          videoUrl: v.videoUrl,
+          socialPlatform: v.socialPlatform,
+        })),
+        ...ayrshareVideos.map(v => ({
+          _id: v._id,
+          campaignId: v.campaignId,
+          userId: v.userId,
+          videoId: v.videoId,
+          videoUrl: v.videoUrl,
+          socialPlatform: v.socialPlatform,
+        })),
+        ...lateVideos.map(v => ({
+          _id: v._id,
+          campaignId: v.campaignId,
+          userId: v.userId,
+          videoId: v.videoId,
+          videoUrl: v.videoUrl,
+          socialPlatform: v.socialPlatform,
+        }))
+      );
+    }
+
+    return allVideos;
+  },
+});
+
+
+export const refreshCampaignVideoAnalytics = internalAction({
+  args: {
+    campaignIds: v.array(v.id("campaigns")),
+  },
+  handler: async (ctx, args): Promise<{
+    campaignsProcessed: number;
+    videosToRefresh: number;
+    videosRefreshed: number;
+    videosFailed: number;
+    errors: string[];
+  }> => {
+    console.log(`🔄 Starting analytics refresh for ${args.campaignIds.length} campaign(s)`);
+
+    // Get all existing TikTok videos for these campaigns
+    const existingVideos: Array<{
+      _id: Id<"manuallyPostedVideos"> | Id<"ayrsharePostedVideos"> | Id<"latePostedVideos">;
+      campaignId: Id<"campaigns">;
+      userId: Id<"users">;
+      videoId: string;
+      videoUrl: string;
+      socialPlatform: "tiktok" | "instagram" | "youtube";
+    }> = await ctx.runQuery(internal.app.tiktok.getTikTokVideosForCampaigns, {
+      campaignIds: args.campaignIds,
+    });
+
+    if (existingVideos.length === 0) {
+      console.log("⚠️  No TikTok videos found for the specified campaigns");
+      return {
+        campaignsProcessed: args.campaignIds.length,
+        videosToRefresh: 0,
+        videosRefreshed: 0,
+        videosFailed: 0,
+        errors: [],
+      };
+    }
+
+    console.log(`📊 Found ${existingVideos.length} TikTok video(s) to refresh`);
+
+    let videosRefreshed = 0;
+    let videosFailed = 0;
+    const errors: string[] = [];
+    const CONCURRENT_THREADS = 5;
+    const DELAY_BETWEEN_BATCHES_MS = 500; // Delay between batches to avoid rate limiting
+
+    // Process videos in batches of 5 concurrently
+    for (let i = 0; i < existingVideos.length; i += CONCURRENT_THREADS) {
+      const batch = existingVideos.slice(i, i + CONCURRENT_THREADS);
+      const batchNumber = Math.floor(i / CONCURRENT_THREADS) + 1;
+      const totalBatches = Math.ceil(existingVideos.length / CONCURRENT_THREADS);
+
+      console.log(`\n📦 Batch ${batchNumber}/${totalBatches} - Processing ${batch.length} video(s) in parallel...`);
+
+      // Process all videos in this batch concurrently
+      const batchResults = await Promise.all(
+        batch.map(async (video, batchIndex) => {
+          const videoNumber = i + batchIndex + 1;
+          console.log(`🔍 [${videoNumber}/${existingVideos.length}] Fetching stats for video ${video.videoId}`);
+
+          try {
+            // Fetch fresh stats directly by video ID
+            const result = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+              videoId: video.videoId,
+            });
+
+            if (!result.success || !result.video) {
+              const errorMsg = `Video ${video.videoId}: ${result.error || 'Unknown error'}`;
+              console.error(`  ✗ [${videoNumber}/${existingVideos.length}] ${errorMsg}`);
+              return { success: false, error: errorMsg };
+            }
+
+            const freshStats = result.video;
+
+            // Update video analytics in database
+            const storedVideo = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+              campaignId: video.campaignId,
+              userId: video.userId,
+              videoId: video.videoId,
+              postedAt: Date.now(), // Keep existing postedAt (this gets overwritten in mutation if exists)
+              videoUrl: video.videoUrl,
+              mediaUrl: undefined, // Keep existing
+              thumbnailUrl: video.videoUrl, // Keep existing (this gets overwritten if exists)
+              views: freshStats.views,
+              likes: freshStats.likes,
+              comments: freshStats.comments,
+              shares: freshStats.shares,
+              saves: freshStats.saves,
+              socialPlatform: "tiktok",
+            });
+
+            console.log(`  ✓ [${videoNumber}/${existingVideos.length}] Updated: ${freshStats.views.toLocaleString()} views, ${freshStats.likes.toLocaleString()} likes, ${freshStats.comments.toLocaleString()} comments`);
+
+            // Refresh comments if available
+            if (storedVideo.videoId && freshStats.comments > 0) {
+              try {
+                const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                  videoId: video.videoId,
+                });
+
+                if (commentsData.comments && commentsData.comments.length > 0) {
+                  await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                    campaignId: video.campaignId,
+                    userId: video.userId,
+                    videoId: storedVideo.videoId,
+                    socialPlatform: "tiktok",
+                    comments: commentsData.comments,
+                  });
+                  console.log(`    ✓ [${videoNumber}/${existingVideos.length}] Refreshed ${commentsData.comments.length} comment(s)`);
+                }
+              } catch (commentError) {
+                console.error(`    ⚠️  [${videoNumber}/${existingVideos.length}] Failed to refresh comments:`, commentError);
+                // Don't count comment failures as video failures
+              }
+            }
+
+            return { success: true };
+          } catch (error) {
+            const errorMsg = `Failed to process video ${video.videoId}: ${error}`;
+            console.error(`  ✗ [${videoNumber}/${existingVideos.length}] ${errorMsg}`);
+            return { success: false, error: errorMsg };
+          }
+        })
+      );
+
+      // Count successes and failures for this batch
+      for (const result of batchResults) {
+        if (result.success) {
+          videosRefreshed++;
+        } else {
+          videosFailed++;
+          if (result.error) {
+            errors.push(result.error);
+          }
+        }
+      }
+
+      console.log(`✅ Batch ${batchNumber}/${totalBatches} complete - Success: ${batchResults.filter(r => r.success).length}/${batch.length}`);
+
+      // Small delay between batches to avoid overwhelming the API
+      if (i + CONCURRENT_THREADS < existingVideos.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+      }
+    }
+
+    const summary: {
+      campaignsProcessed: number;
+      videosToRefresh: number;
+      videosRefreshed: number;
+      videosFailed: number;
+      errors: string[];
+    } = {
+      campaignsProcessed: args.campaignIds.length,
+      videosToRefresh: existingVideos.length,
+      videosRefreshed,
+      videosFailed,
+      errors: errors.slice(0, 20), // Show more errors since they're more relevant now
+    };
+
+    console.log(`✅ Refresh complete: ${videosRefreshed} succeeded, ${videosFailed} failed out of ${existingVideos.length} videos`);
+
+    return summary;
   },
 });
 

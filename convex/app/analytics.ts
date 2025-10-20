@@ -109,6 +109,23 @@ interface AggregationResult {
   }>;
 }
 
+export const checkVideoExistsInManuallyPosted = internalQuery({
+  args: {
+    videoId: v.string(),
+    socialPlatform: v.union(v.literal("tiktok"), v.literal("instagram"), v.literal("youtube")),
+  },
+  handler: async (ctx, args) => {
+    const existingVideo = await ctx.db
+      .query("manuallyPostedVideos")
+      .withIndex("by_videoId_socialPlatform", (q) =>
+        q.eq("videoId", args.videoId).eq("socialPlatform", args.socialPlatform)
+      )
+      .first();
+
+    return existingVideo !== null;
+  },
+});
+
 export const storeManuallyPostedVideo = internalMutation({
   args: {
     campaignId: v.id("campaigns"),
