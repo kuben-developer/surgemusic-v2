@@ -1203,7 +1203,7 @@ export const refreshCampaignVideoAnalytics = internalAction({
               socialPlatform: "tiktok",
             });
 
-            console.log(`  ✓ [${videoNumber}/${existingVideos.length}] Updated: ${freshStats.views.toLocaleString()} views, ${freshStats.likes.toLocaleString()} likes, ${freshStats.comments.toLocaleString()} comments`);
+            console.log(`  ✓ [${videoNumber}/${existingVideos.length}] Updated: ${freshStats.views.toLocaleString()} views, ${freshStats.likes.toLocaleString()} likes, ${freshStats.comments.toLocaleString()} comments, ${storedVideo.videoId}`);
 
             // Refresh comments if available
             if (storedVideo.videoId && freshStats.comments > 0) {
