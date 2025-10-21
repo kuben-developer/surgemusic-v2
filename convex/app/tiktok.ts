@@ -11,6 +11,27 @@ const encodeCaption = (caption: string): string => {
   return hex;
 };
 
+const normalizeCaption = (caption: string): string => {
+  return caption
+    .trim()
+    // Remove spaces after newlines
+    .replace(/\n\s+/g, '\n')
+    // Remove spaces before newlines
+    .replace(/\s+\n/g, '\n')
+    // Normalize multiple spaces to single space
+    .replace(/[^\S\n]+/g, ' ')
+    // Normalize multiple newlines
+    .replace(/\n{3,}/g, '\n\n');
+};
+
+const extractCoreCaption = (caption: string): string => {
+  // Extract only letters (a-z), convert to lowercase
+  const lettersOnly = caption.toLowerCase().replace(/[^a-z]/g, '');
+
+  // Return first 10 letters
+  return lettersOnly.substring(0, 10);
+};
+
 const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2"
 const TIKTOK_ACCOUNTS = [
   "MelodyVibes238",
@@ -504,8 +525,9 @@ export const scrapeManuallyPostedVideos = internalAction({
       // console.log(`Fetched ${videos.length} videos for account https://www.tiktok.com/@${args.username}`);
 
       for (const video of videos) {
-        // Encode the video description to match the encoded keys in the map
-        const encodedDescription = encodeCaption(video.description.trim());
+        // Normalize and encode the video description to match the encoded keys in the map
+        const normalizedDescription = normalizeCaption(video.description);
+        const encodedDescription = encodeCaption(normalizedDescription);
         const campaignData = args.captionToCampaignMap[encodedDescription];
         if (campaignData) {
           try {
@@ -620,7 +642,7 @@ export const scrapeManuallyPostedVideosFromJson = internalAction({
       for (const video of videosToFind) {
         if (!campaignCache.has(video.campaignId)) {
           const isReferenceId = /^\d+$/.test(video.campaignId);
-          
+
           let campaign
           if (isReferenceId) {
             campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
@@ -766,6 +788,258 @@ export const scrapeManuallyPostedVideosFromJson = internalAction({
       }
 
     }
+  },
+});
+
+
+export const scrapeVideosFromCaptionsJson = internalAction({
+  args: {
+    videos: v.array(v.object({
+      campaignId: v.string(),
+      username: v.string(),
+      postCaption: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    console.log(`🔍 Starting caption-based video scraping for ${args.videos.length} entries`);
+
+    // Step 1: Group videos by username for efficient batch processing
+    const videosByUsername = new Map<string, Array<{
+      campaignId: string;
+      postCaption: string;
+    }>>();
+
+    for (const entry of args.videos) {
+      if (!videosByUsername.has(entry.username)) {
+        videosByUsername.set(entry.username, []);
+      }
+
+      videosByUsername.get(entry.username)!.push({
+        campaignId: entry.campaignId,
+        postCaption: entry.postCaption,
+      });
+    }
+
+    console.log(`📊 Processing ${videosByUsername.size} unique username(s)`);
+
+    let totalMatched = 0;
+    let totalNotMatched = 0;
+
+    // Step 2: Process each username
+    for (const [username, captionsToFind] of videosByUsername) {
+      console.log(`\n👤 Processing @${username} (${captionsToFind.length} caption(s) to match)`);
+
+      // Fetch campaign data for all videos from this username
+      const campaignCache = new Map<string, { _id: Id<"campaigns">; userId: Id<"users"> } | null>();
+      for (const video of captionsToFind) {
+        if (!campaignCache.has(video.campaignId)) {
+          const isReferenceId = /^\d+$/.test(video.campaignId);
+
+          let campaign
+          if (isReferenceId) {
+            campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+              referenceId: video.campaignId
+            });
+          } else {
+            campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
+              campaignId: video.campaignId as Id<"campaigns">
+            });
+          }
+          campaignCache.set(video.campaignId, campaign);
+        }
+      }
+
+      // Fetch all videos from this user (with pagination)
+      const allUserVideos: Array<{
+        videoId: string;
+        postedAt: number;
+        videoUrl: string;
+        mediaUrl?: string;
+        thumbnailUrl: string;
+        views: number;
+        likes: number;
+        comments: number;
+        shares: number;
+        saves: number;
+        description: string;
+      }> = [];
+
+      let currentMaxCursor: number | null = null;
+      let pagesProcessed = 0;
+      const MAX_PAGES = 5; // Fetch up to 5 pages (100 videos) to find matches
+
+      while (pagesProcessed < MAX_PAGES) {
+        pagesProcessed++;
+
+        let result: {
+          maxCursor: number | null;
+          hasMore: boolean;
+          videos: Array<{
+            videoId: string;
+            postedAt: number;
+            videoUrl: string;
+            mediaUrl?: string;
+            thumbnailUrl: string;
+            views: number;
+            likes: number;
+            comments: number;
+            shares: number;
+            saves: number;
+            description: string;
+          }>;
+        } = { maxCursor: null, hasMore: false, videos: [] };
+
+        try {
+          result = await ctx.runAction(internal.app.tiktok.getTikTokUserVideos, {
+            username: username,
+            maxCursor: currentMaxCursor
+          });
+        } catch (error) {
+          console.error(`  ✗ Error fetching videos for @${username}:`, error);
+          break;
+        }
+
+        const { maxCursor, hasMore, videos } = result;
+        allUserVideos.push(...videos);
+        console.log(`  📥 Fetched page ${pagesProcessed}: ${videos.length} video(s)`);
+
+        // Continue to next page if more available
+        if (!hasMore || !maxCursor) break;
+        currentMaxCursor = maxCursor;
+      }
+
+      console.log(`  📊 Total videos fetched: ${allUserVideos.length}`);
+
+      // Step 3: Match videos by caption
+      let matchedCount = 0;
+      const notFoundCaptions: string[] = [];
+
+      for (const captionEntry of captionsToFind) {
+        const campaign = campaignCache.get(captionEntry.campaignId);
+
+        if (!campaign) {
+          console.error(`  ✗ Campaign not found or deleted: ${captionEntry.campaignId}`);
+          notFoundCaptions.push(captionEntry.postCaption.substring(0, 50) + '...');
+          totalNotMatched++;
+          continue;
+        }
+
+        // Extract core caption (first 10 letters)
+        const coreCaption = extractCoreCaption(captionEntry.postCaption);
+        const encodedCoreCaption = encodeCaption(coreCaption);
+
+        // Check if caption contains "moliy" (case insensitive)
+        const hasMoliy = captionEntry.postCaption.toLowerCase().includes('moliy');
+
+        console.log(`\n  🔍 Looking for caption:`);
+        console.log(`     Original: "${captionEntry.postCaption}"`);
+        console.log(`     Core (first 10 letters): "${coreCaption}"`);
+        console.log(`     Contains "moliy": ${hasMoliy ? 'YES' : 'NO'}`);
+        console.log(`  📝 Checking ${allUserVideos.length} video(s)...\n`);
+
+        // Find matching videos using core caption comparison OR "moliy" keyword
+        const matchingVideos = allUserVideos.filter((video, index) => {
+          const coreDescription = extractCoreCaption(video.description);
+          const encodedCoreDescription = encodeCaption(coreDescription);
+
+          // Match if: first 10 letters match OR both contain "moliy"
+          const firstTenMatch = encodedCoreDescription === encodedCoreCaption;
+          const videoHasMoliy = video.description.toLowerCase().includes('moliy');
+          const moliyMatch = hasMoliy && videoHasMoliy;
+          const isMatch = firstTenMatch || moliyMatch;
+
+          // Debug logging for each video
+          console.log(`  Video ${index + 1}/${allUserVideos.length}:`);
+          console.log(`    Original: "${video.description}"`);
+          console.log(`    Core: "${coreDescription}"`);
+          console.log(`    Has "moliy": ${videoHasMoliy ? 'YES' : 'NO'}`);
+          console.log(`    Match: ${isMatch ? '✅ YES' : '❌ NO'}${moliyMatch ? ' (moliy keyword)' : firstTenMatch ? ' (first 10 letters)' : ''}`);
+
+          return isMatch;
+        });
+
+        if (matchingVideos.length === 0) {
+          console.log(`  ⊙ No match found for caption: "${captionEntry.postCaption}"`);
+          notFoundCaptions.push(captionEntry.postCaption.substring(0, 50) + '...');
+          totalNotMatched++;
+          continue;
+        }
+
+        // Store all matching videos (there might be multiple with the same caption)
+        for (const matchedVideo of matchingVideos) {
+          // Check if video already exists
+          const videoExists = await ctx.runQuery(internal.app.analytics.checkVideoExistsInManuallyPosted, {
+            videoId: matchedVideo.videoId,
+            socialPlatform: "tiktok",
+          });
+
+          if (videoExists) {
+            console.log(`  ⊙ Video ${matchedVideo.videoId} already exists, skipping`);
+            continue;
+          }
+
+          try {
+            // Store the video
+            const storedVideo = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+              campaignId: campaign._id,
+              userId: campaign.userId,
+              videoId: matchedVideo.videoId,
+              postedAt: matchedVideo.postedAt,
+              videoUrl: matchedVideo.videoUrl,
+              mediaUrl: matchedVideo.mediaUrl,
+              thumbnailUrl: matchedVideo.thumbnailUrl,
+              views: matchedVideo.views,
+              likes: matchedVideo.likes,
+              comments: matchedVideo.comments,
+              shares: matchedVideo.shares,
+              saves: matchedVideo.saves,
+              socialPlatform: "tiktok",
+            });
+
+            matchedCount++;
+            totalMatched++;
+            console.log(`  ✓ Matched and stored video ${matchedVideo.videoId} (${matchedVideo.views.toLocaleString()} views)`);
+
+            // Fetch and store comments if available
+            if (storedVideo.videoId && matchedVideo.comments > 0) {
+              try {
+                const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                  videoId: matchedVideo.videoId,
+                });
+
+                if (commentsData.comments && commentsData.comments.length > 0) {
+                  await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                    campaignId: campaign._id,
+                    userId: campaign.userId,
+                    videoId: storedVideo.videoId,
+                    socialPlatform: "tiktok",
+                    comments: commentsData.comments,
+                  });
+                  console.log(`    ✓ Stored ${commentsData.comments.length} comment(s)`);
+                }
+              } catch (commentError) {
+                console.error(`    ✗ Failed to fetch/store comments for video ${matchedVideo.videoId}:`, commentError);
+              }
+            }
+          } catch (error) {
+            console.error(`  ✗ Failed to store video ${matchedVideo.videoId}:`, error);
+          }
+        }
+      }
+
+      console.log(`  ✅ @${username}: ${matchedCount} video(s) matched and stored`);
+      if (notFoundCaptions.length > 0) {
+        console.log(`  ⚠️  ${notFoundCaptions.length} caption(s) not found`);
+      }
+    }
+
+    console.log(`\n🎉 Scraping complete: ${totalMatched} video(s) matched, ${totalNotMatched} not found`);
+
+    return {
+      totalProcessed: args.videos.length,
+      totalMatched,
+      totalNotMatched,
+    };
   },
 });
 
@@ -1011,8 +1285,9 @@ export const monitorManuallyPostedVideos = internalAction({
 
     for (const campaign of campaigns) {
       if (campaign.caption) {
-        // Use encoded caption as key to avoid issues with special characters
-        const encodedCaption = encodeCaption(campaign.caption);
+        // Normalize and encode caption as key to avoid issues with special characters and whitespace
+        const normalizedCaption = normalizeCaption(campaign.caption);
+        const encodedCaption = encodeCaption(normalizedCaption);
         captionToCampaignMap.set(encodedCaption, {
           campaignId: campaign._id,
           userId: campaign.userId
