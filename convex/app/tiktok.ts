@@ -1451,7 +1451,18 @@ export const refreshCampaignVideoAnalytics = internalAction({
     videosFailed: number;
     errors: string[];
   }> => {
-    console.log(`🔄 Starting analytics refresh for ${args.campaignIds.length} campaign(s)`);
+    // If campaignIds is empty, get all campaigns from the past 4 weeks
+    let campaignIds = args.campaignIds;
+    if (campaignIds.length === 0) {
+      console.log(`📅 No campaign IDs provided, fetching campaigns from the past 4 weeks...`);
+      const recentCampaigns = await ctx.runQuery(internal.app.campaigns.getRecentCampaigns, {
+        weeksAgo: 2,
+      });
+      campaignIds = recentCampaigns.map(c => c._id);
+      console.log(`📊 Found ${campaignIds.length} campaign(s) from the past 4 weeks`);
+    }
+
+    console.log(`🔄 Starting analytics refresh for ${campaignIds.length} campaign(s)`);
 
     // Get all existing TikTok videos for these campaigns
     const existingVideos: Array<{
@@ -1462,13 +1473,13 @@ export const refreshCampaignVideoAnalytics = internalAction({
       videoUrl: string;
       socialPlatform: "tiktok" | "instagram" | "youtube";
     }> = await ctx.runQuery(internal.app.tiktok.getTikTokVideosForCampaigns, {
-      campaignIds: args.campaignIds,
+      campaignIds: campaignIds,
     });
 
     if (existingVideos.length === 0) {
       console.log("⚠️  No TikTok videos found for the specified campaigns");
       return {
-        campaignsProcessed: args.campaignIds.length,
+        campaignsProcessed: campaignIds.length,
         videosToRefresh: 0,
         videosRefreshed: 0,
         videosFailed: 0,
@@ -1590,7 +1601,7 @@ export const refreshCampaignVideoAnalytics = internalAction({
       videosFailed: number;
       errors: string[];
     } = {
-      campaignsProcessed: args.campaignIds.length,
+      campaignsProcessed: campaignIds.length,
       videosToRefresh: existingVideos.length,
       videosRefreshed,
       videosFailed,

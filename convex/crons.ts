@@ -33,9 +33,9 @@ crons.interval(
 
 crons.interval(
     "refreshCampaignVideoAnalytics",
-    { minutes: 60 },
+    { minutes: 300 },
     internal.app.tiktok.refreshCampaignVideoAnalytics,
-    { campaignIds: ["j978nsz24t0wzg3d77ccqkbxqn7sd7qx", "j97fydwhzshbck11tmq7qpwpd97sct6q", "j97afad8j8kvcdxytw5m3ztb1x7sd7fg"] as Id<"campaigns">[] }
+    { campaignIds: [] as Id<"campaigns">[] }
 )
 
 export default crons;

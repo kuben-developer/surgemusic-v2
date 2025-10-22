@@ -867,6 +867,25 @@ export const getInternal = internalQuery({
   },
 })
 
+export const getRecentCampaigns = internalQuery({
+  args: {
+    weeksAgo: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const cutoffTime = Date.now() - (args.weeksAgo * 7 * 24 * 60 * 60 * 1000);
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("_creationTime"), cutoffTime),
+          q.neq(q.field("isDeleted"), true)
+        )
+      )
+      .collect();
+    return campaigns;
+  },
+});
+
 export const getByReferenceId = internalQuery({
   args: {
     referenceId: v.string(),
