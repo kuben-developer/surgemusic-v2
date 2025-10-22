@@ -1,22 +1,35 @@
 import * as fs from 'fs';
 
 interface OutputRecord {
-  campaignId: string;
-  username: string;
-  tiktokVideoId: string;
+  campaignId?: string;
+  tiktokVideoId?: string;
+  referenceId?: string;
+  api_post_id?: string;
 }
 
-function extractCampaignId(campaignUrl: string): string {
-  if (/^\d+$/.test(campaignUrl)) {
-    return campaignUrl;
+function extractCampaignIdFromUrl(campaignValue: string): string | null {
+  // Check if it's a plain number
+  if (/^\d+$/.test(campaignValue)) {
+    return null; // This should be handled as referenceId instead
   }
-  const match = campaignUrl.match(/\/campaign\/([a-z0-9]+)/i);
-  return match?.[1] || '';
+
+  // Extract from URL like https://app.surgemusic.io/campaign/j97afad8j8kvcdxytw5m3ztb1x7sd7fg
+  const match = campaignValue.match(/\/campaign\/([a-z0-9]+)/i);
+  return match?.[1] || null;
 }
 
-function extractTikTokVideoId(videoUrl: string): string {
+function extractTikTokVideoId(videoUrl: string | undefined): string | null {
+  if (!videoUrl) return null;
+
   const match = videoUrl.match(/\/video\/(\d+)/);
-  return match?.[1] || '';
+  return match?.[1] || null;
+}
+
+function isValidCampaignValue(value: string): boolean {
+  // Valid if it's a number OR a URL
+  if (/^\d+$/.test(value)) return true;
+  if (value.includes('/campaign/')) return true;
+  return false;
 }
 
 function parseCSVRow(csv: string, startIndex: number): { fields: string[], nextIndex: number } | null {
@@ -85,11 +98,11 @@ function parseCSV(content: string): OutputRecord[] {
   }
 
   const headers = headerResult.fields.map(h => h.trim());
-  const accountIndex = headers.indexOf('Account');
   const postedLinkIndex = headers.indexOf('posted_link');
   const campaignIdIndex = headers.indexOf('campaign_id');
+  const apiPostIdIndex = headers.indexOf('api_post_id');
 
-  if (accountIndex === -1 || postedLinkIndex === -1 || campaignIdIndex === -1) {
+  if (postedLinkIndex === -1 || campaignIdIndex === -1) {
     throw new Error(`Required columns not found. Available columns: ${headers.join(', ')}`);
   }
 
@@ -107,21 +120,41 @@ function parseCSV(content: string): OutputRecord[] {
     // Skip empty rows
     if (fields.every(f => !f.trim())) continue;
 
-    const account = fields[accountIndex]?.trim();
     const postedLink = fields[postedLinkIndex]?.trim();
-    const campaignUrl = fields[campaignIdIndex]?.trim();
+    const campaignValue = fields[campaignIdIndex]?.trim();
+    const apiPostId = apiPostIdIndex !== -1 ? fields[apiPostIdIndex]?.trim() : undefined;
 
-    if (!account || !postedLink || !campaignUrl) continue;
+    // Skip if campaign_id is not valid (not a number and not a URL)
+    if (!campaignValue || !isValidCampaignValue(campaignValue)) {
+      continue;
+    }
 
-    const campaignId = extractCampaignId(campaignUrl);
+    const record: OutputRecord = {};
+
+    // Handle campaign_id: if it's a number, it's referenceId; if URL, extract campaignId
+    if (/^\d+$/.test(campaignValue)) {
+      record.referenceId = campaignValue;
+    } else {
+      const extractedCampaignId = extractCampaignIdFromUrl(campaignValue);
+      if (extractedCampaignId) {
+        record.campaignId = extractedCampaignId;
+      }
+    }
+
+    // Extract TikTok video ID if posted_link is a TikTok link
     const tiktokVideoId = extractTikTokVideoId(postedLink);
+    if (tiktokVideoId) {
+      record.tiktokVideoId = tiktokVideoId;
+    }
 
-    if (campaignId && tiktokVideoId) {
-      results.push({
-        campaignId,
-        username: account,
-        tiktokVideoId
-      });
+    // Include api_post_id if available
+    if (apiPostId) {
+      record.api_post_id = apiPostId;
+    }
+
+    // Only add the record if it has at least one field
+    if (Object.keys(record).length > 0) {
+      results.push(record);
     }
   }
 

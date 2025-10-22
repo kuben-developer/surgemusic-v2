@@ -33,6 +33,9 @@ const extractCoreCaption = (caption: string): string => {
 };
 
 const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2"
+const LATE_API_KEY = process.env.LATE_API_KEY || "";
+const LATE_API_BASE_URL = "https://getlate.dev/api/v1";
+
 const TIKTOK_ACCOUNTS = [
   "MelodyVibes238",
   "melodywhisperer",
@@ -1039,6 +1042,338 @@ export const scrapeVideosFromCaptionsJson = internalAction({
       totalProcessed: args.videos.length,
       totalMatched,
       totalNotMatched,
+    };
+  },
+});
+
+export const storeVideosFromJson = internalAction({
+  args: {
+    videos: v.array(v.object({
+      campaignId: v.optional(v.string()),
+      tiktokVideoId: v.optional(v.string()),
+      referenceId: v.optional(v.string()),
+      api_post_id: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    console.log(`🔍 Starting video storage from JSON for ${args.videos.length} entries`);
+
+    let totalProcessed = 0;
+    let totalStored = 0;
+    let totalFailed = 0;
+
+    // Separate entries into two groups
+    const entriesWithVideoId = args.videos.filter(e => e.tiktokVideoId && e.tiktokVideoId.trim() !== '');
+    const entriesWithApiPostId = args.videos.filter(e => !e.tiktokVideoId && e.api_post_id);
+
+    console.log(`📊 ${entriesWithVideoId.length} entries with tiktokVideoId, ${entriesWithApiPostId.length} entries with api_post_id`);
+
+    // ============ PART 1: Process entries with tiktokVideoId (batched) ============
+    if (entriesWithVideoId.length > 0) {
+      console.log(`\n🔍 Processing ${entriesWithVideoId.length} entries with tiktokVideoId (batched)...`);
+
+      // Step 1: Resolve campaigns and validate entries
+      const entriesWithCampaigns = await Promise.all(
+        entriesWithVideoId.map(async (entry) => {
+          let campaign: { _id: Id<"campaigns">; userId: Id<"users"> } | null = null;
+
+          if (entry.campaignId) {
+            const isReferenceId = /^\d+$/.test(entry.campaignId);
+            if (isReferenceId) {
+              campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+                referenceId: entry.campaignId
+              });
+            } else {
+              campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
+                campaignId: entry.campaignId as Id<"campaigns">
+              });
+            }
+          } else if (entry.referenceId) {
+            campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+              referenceId: entry.referenceId
+            });
+          }
+
+          return {
+            entry,
+            campaign,
+            tiktokVideoId: entry.tiktokVideoId!,
+          };
+        })
+      );
+
+      // Filter out entries without campaigns
+      const validEntries = entriesWithCampaigns.filter(e => e.campaign !== null);
+      const failedCount = entriesWithCampaigns.length - validEntries.length;
+      totalFailed += failedCount;
+      totalProcessed += failedCount;
+
+      if (failedCount > 0) {
+        console.log(`  ⚠️  ${failedCount} entries skipped due to missing campaigns`);
+      }
+
+      // Step 2: Batch check existence
+      console.log(`  🔍 Checking existence for ${validEntries.length} videos...`);
+      const existenceChecks = await Promise.all(
+        validEntries.map(async (item) => ({
+          ...item,
+          exists: await ctx.runQuery(internal.app.analytics.checkVideoExistsInManuallyPosted, {
+            videoId: item.tiktokVideoId,
+            socialPlatform: "tiktok",
+          }),
+        }))
+      );
+
+      const newVideos = existenceChecks.filter(e => !e.exists);
+      const existingCount = existenceChecks.length - newVideos.length;
+      totalProcessed += existingCount;
+
+      if (existingCount > 0) {
+        console.log(`  ⊙ ${existingCount} videos already exist, skipping`);
+      }
+
+      // Step 3: Process new videos
+      console.log(`  💾 Processing ${newVideos.length} new videos...`);
+      for (const item of newVideos) {
+        totalProcessed++;
+        console.log(`\n  [${totalProcessed}/${args.videos.length}] Processing video: ${item.tiktokVideoId}`);
+
+        try {
+          // Fetch video data from TikTok
+          const result = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+            videoId: item.tiktokVideoId,
+          });
+
+          if (!result.success || !result.video) {
+            console.error(`    ✗ Failed to fetch from TikTok: ${result.error || 'Unknown error'}`);
+            totalFailed++;
+            continue;
+          }
+
+          const videoData = result.video;
+          const videoUrl = `https://www.tiktok.com/@/video/${item.tiktokVideoId}`;
+
+          // Store the video
+          const storedVideo = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+            campaignId: item.campaign!._id,
+            userId: item.campaign!.userId,
+            videoId: item.tiktokVideoId,
+            postedAt: Date.now(),
+            videoUrl: videoUrl,
+            mediaUrl: undefined,
+            thumbnailUrl: videoUrl,
+            views: videoData.views,
+            likes: videoData.likes,
+            comments: videoData.comments,
+            shares: videoData.shares,
+            saves: videoData.saves,
+            socialPlatform: "tiktok",
+          });
+
+          totalStored++;
+          console.log(`    ✓ Stored: ${videoData.views.toLocaleString()} views, ${videoData.likes.toLocaleString()} likes, ${videoData.comments.toLocaleString()} comments`);
+
+          // Fetch and store comments if available
+          if (storedVideo.videoId && videoData.comments > 0) {
+            try {
+              const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                videoId: item.tiktokVideoId,
+              });
+
+              if (commentsData.comments && commentsData.comments.length > 0) {
+                await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                  campaignId: item.campaign!._id,
+                  userId: item.campaign!.userId,
+                  videoId: storedVideo.videoId,
+                  socialPlatform: "tiktok",
+                  comments: commentsData.comments,
+                });
+                console.log(`    ✓ Stored ${commentsData.comments.length} comment(s)`);
+              }
+            } catch (commentError) {
+              console.error(`    ✗ Failed to fetch/store comments:`, commentError);
+            }
+          }
+        } catch (error) {
+          console.error(`    ✗ Error processing video:`, error);
+          totalFailed++;
+        }
+      }
+    }
+
+    // ============ PART 2: Process entries with api_post_id (sequential) ============
+    if (entriesWithApiPostId.length > 0) {
+      console.log(`\n🔍 Processing ${entriesWithApiPostId.length} entries with api_post_id (sequential)...`);
+
+      for (const entry of entriesWithApiPostId) {
+        totalProcessed++;
+        console.log(`\n[${totalProcessed}/${args.videos.length}] Processing entry with api_post_id: ${entry.api_post_id}`);
+
+        // Step 1: Find the campaign
+        let campaign: { _id: Id<"campaigns">; userId: Id<"users"> } | null = null;
+
+        if (entry.campaignId) {
+          const isReferenceId = /^\d+$/.test(entry.campaignId);
+          if (isReferenceId) {
+            campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+              referenceId: entry.campaignId
+            });
+          } else {
+            campaign = await ctx.runQuery(internal.app.campaigns.getInternal, {
+              campaignId: entry.campaignId as Id<"campaigns">
+            });
+          }
+        } else if (entry.referenceId) {
+          campaign = await ctx.runQuery(internal.app.campaigns.getByReferenceId, {
+            referenceId: entry.referenceId
+          });
+        } else {
+          console.error(`  ✗ No campaignId or referenceId provided, skipping`);
+          totalFailed++;
+          continue;
+        }
+
+        if (!campaign) {
+          console.error(`  ✗ Campaign not found for ${entry.campaignId || entry.referenceId}, skipping`);
+          totalFailed++;
+          continue;
+        }
+
+        console.log(`  ✓ Found campaign: ${campaign._id}`);
+
+        // Step 2: Fetch video ID from Late API
+        let tiktokVideoId: string | null = null;
+        console.log(`  🔍 Fetching video ID from Late API for post: ${entry.api_post_id}`);
+
+        try {
+          const response = await fetch(`${LATE_API_BASE_URL}/posts/${entry.api_post_id}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${LATE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            console.error(`  ✗ Failed to fetch from Late API: HTTP ${response.status}`);
+            totalFailed++;
+            continue;
+          }
+
+          const data = await response.json();
+          const platformPostUrl = data.post.platforms?.[0]?.platformPostUrl || "";
+
+          if (!platformPostUrl) {
+            console.error(`  ✗ No platformPostUrl found in Late API response`);
+            totalFailed++;
+            continue;
+          }
+
+          // Extract TikTok video ID from URL
+          const match = platformPostUrl.match(/\/video\/(\d+)/);
+          if (!match) {
+            console.error(`  ✗ Could not extract video ID from URL: ${platformPostUrl}`);
+            totalFailed++;
+            continue;
+          }
+
+          tiktokVideoId = match[1];
+          console.log(`  ✓ Extracted TikTok video ID: ${tiktokVideoId}`);
+        } catch (error) {
+          console.error(`  ✗ Error fetching from Late API:`, error);
+          totalFailed++;
+          continue;
+        }
+
+        if (!tiktokVideoId) {
+          console.error(`  ✗ Failed to get TikTok video ID`);
+          totalFailed++;
+          continue;
+        }
+
+        // Step 3: Check if video already exists
+        const videoExists = await ctx.runQuery(internal.app.analytics.checkVideoExistsInManuallyPosted, {
+          videoId: tiktokVideoId,
+          socialPlatform: "tiktok",
+        });
+
+        if (videoExists) {
+          console.log(`  ⊙ Video ${tiktokVideoId} already exists, skipping`);
+          continue;
+        }
+
+        // Step 4: Fetch video data from TikTok
+        console.log(`  🔍 Fetching video data from TikTok for: ${tiktokVideoId}`);
+        try {
+          const result = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+            videoId: tiktokVideoId,
+          });
+
+          if (!result.success || !result.video) {
+            console.error(`  ✗ Failed to fetch video from TikTok: ${result.error || 'Unknown error'}`);
+            totalFailed++;
+            continue;
+          }
+
+          const videoData = result.video;
+          const videoUrl = `https://www.tiktok.com/@/video/${tiktokVideoId}`;
+
+          // Step 5: Store the video
+          console.log(`  💾 Storing video: ${tiktokVideoId}`);
+          const storedVideo = await ctx.runMutation(internal.app.analytics.storeManuallyPostedVideo, {
+            campaignId: campaign._id,
+            userId: campaign.userId,
+            videoId: tiktokVideoId,
+            postedAt: Date.now(),
+            videoUrl: videoUrl,
+            mediaUrl: undefined,
+            thumbnailUrl: videoUrl,
+            views: videoData.views,
+            likes: videoData.likes,
+            comments: videoData.comments,
+            shares: videoData.shares,
+            saves: videoData.saves,
+            socialPlatform: "tiktok",
+          });
+
+          totalStored++;
+          console.log(`  ✓ Stored video: ${videoData.views.toLocaleString()} views, ${videoData.likes.toLocaleString()} likes, ${videoData.comments.toLocaleString()} comments`);
+
+          // Step 6: Fetch and store comments if available
+          if (storedVideo.videoId && videoData.comments > 0) {
+            try {
+              console.log(`  🔍 Fetching ${videoData.comments} comment(s)...`);
+              const commentsData = await ctx.runAction(internal.app.tiktok.getTikTokVideoComments, {
+                videoId: tiktokVideoId,
+              });
+
+              if (commentsData.comments && commentsData.comments.length > 0) {
+                await ctx.runMutation(internal.app.analytics.storeVideoComments, {
+                  campaignId: campaign._id,
+                  userId: campaign.userId,
+                  videoId: storedVideo.videoId,
+                  socialPlatform: "tiktok",
+                  comments: commentsData.comments,
+                });
+                console.log(`    ✓ Stored ${commentsData.comments.length} comment(s)`);
+              }
+            } catch (commentError) {
+              console.error(`    ✗ Failed to fetch/store comments:`, commentError);
+            }
+          }
+        } catch (error) {
+          console.error(`  ✗ Error processing video ${tiktokVideoId}:`, error);
+          totalFailed++;
+        }
+      }
+    }
+
+    console.log(`\n🎉 Storage complete: ${totalStored} stored, ${totalFailed} failed out of ${totalProcessed} total`);
+
+    return {
+      totalProcessed,
+      totalStored,
+      totalFailed,
     };
   },
 });
