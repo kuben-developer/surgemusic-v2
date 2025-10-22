@@ -1261,24 +1261,15 @@ export const storeVideosFromJson = internalAction({
           }
 
           const data = await response.json();
-          const platformPostUrl = data.post.platforms?.[0]?.platformPostUrl || "";
+          tiktokVideoId = data.post.platforms?.[0]?.platformPostId || "";
 
-          if (!platformPostUrl) {
-            console.error(`  ✗ No platformPostUrl found in Late API response`);
+          if (!tiktokVideoId) {
+            console.error(`  ✗ No platformPostId found in Late API response`);
             totalFailed++;
             continue;
           }
 
-          // Extract TikTok video ID from URL
-          const match = platformPostUrl.match(/\/video\/(\d+)/);
-          if (!match) {
-            console.error(`  ✗ Could not extract video ID from URL: ${platformPostUrl}`);
-            totalFailed++;
-            continue;
-          }
-
-          tiktokVideoId = match[1];
-          console.log(`  ✓ Extracted TikTok video ID: ${tiktokVideoId}`);
+          console.log(`  ✓ Got TikTok video ID: ${tiktokVideoId}`);
         } catch (error) {
           console.error(`  ✗ Error fetching from Late API:`, error);
           totalFailed++;
