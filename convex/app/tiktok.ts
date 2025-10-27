@@ -1443,6 +1443,7 @@ export const getTikTokVideosForCampaigns = internalQuery({
 export const refreshCampaignVideoAnalytics = internalAction({
   args: {
     campaignIds: v.array(v.id("campaigns")),
+    weeksAgo: v.number(),
   },
   handler: async (ctx, args): Promise<{
     campaignsProcessed: number;
@@ -1456,10 +1457,10 @@ export const refreshCampaignVideoAnalytics = internalAction({
     if (campaignIds.length === 0) {
       console.log(`📅 No campaign IDs provided, fetching campaigns from the past 4 weeks...`);
       const recentCampaigns = await ctx.runQuery(internal.app.campaigns.getRecentCampaigns, {
-        weeksAgo: 2,
+        weeksAgo: args.weeksAgo,
       });
       campaignIds = recentCampaigns.map(c => c._id);
-      console.log(`📊 Found ${campaignIds.length} campaign(s) from the past 4 weeks`);
+      console.log(`📊 Found ${campaignIds.length} campaign(s) from the past ${args.weeksAgo} weeks`);
     }
 
     console.log(`🔄 Starting analytics refresh for ${campaignIds.length} campaign(s)`);
