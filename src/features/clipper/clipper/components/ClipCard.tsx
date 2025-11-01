@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ClipperClip } from "../../shared/types/common.types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ClipCardProps {
   clip: ClipperClip;
@@ -21,19 +21,73 @@ export function ClipCard({
   autoplay,
 }: ClipCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
 
+  // Lazy load videos using Intersection Observer
   useEffect(() => {
-    if (!videoRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    if (autoplay) {
-      videoRef.current.play().catch(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            // Once shouldLoad is true, never set it back to false
+            // This prevents video reloading when sorting changes DOM positions
+            setShouldLoad(true);
+          } else {
+            setIsInView(false);
+            // Don't set shouldLoad to false - keep video loaded
+          }
+        });
+      },
+      {
+        rootMargin: "200px", // Start loading 200px before video enters viewport
+        threshold: 0,
+      }
+    );
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Load first frame when video metadata is loaded
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !shouldLoad) return;
+
+    const handleLoadedData = () => {
+      // Video has loaded enough to show first frame
+      if (!autoplay) {
+        video.currentTime = 0;
+      }
+    };
+
+    video.addEventListener('loadeddata', handleLoadedData);
+    return () => {
+      video.removeEventListener('loadeddata', handleLoadedData);
+    };
+  }, [shouldLoad, autoplay]);
+
+  // Handle autoplay based on visibility and autoplay setting
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !shouldLoad) return;
+
+    if (autoplay && isInView) {
+      video.play().catch(() => {
         // Ignore autoplay errors
       });
     } else {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0; // Reset to first frame
+      video.pause();
     }
-  }, [autoplay]);
+  }, [autoplay, isInView, shouldLoad]);
   const getQualityLabel = (value: number, type: 'clarity' | 'brightness') => {
     if (type === 'clarity') {
       if (value >= 400) return { label: 'Excellent', color: 'text-green-600' };
@@ -71,18 +125,26 @@ export function ClipCard({
         </div>
 
         {/* Video Player - Vertical TikTok Style */}
-        <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2">
+        <div
+          ref={containerRef}
+          className="aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2"
+        >
           {clip.presignedUrl ? (
-            <video
-              ref={videoRef}
-              src={clip.presignedUrl}
-              className="w-full h-full object-contain"
-              preload="metadata"
-              loop
-              autoPlay={autoplay}
-              muted
-              playsInline
-            />
+            shouldLoad ? (
+              <video
+                ref={videoRef}
+                src={clip.presignedUrl}
+                className="w-full h-full object-contain"
+                preload="auto"
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted">
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              </div>
+            )
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted">
               <p className="text-sm text-muted-foreground">Loading...</p>
