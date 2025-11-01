@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ClipperClip } from "../../shared/types/common.types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 
 interface ClipCardProps {
   clip: ClipperClip;
@@ -14,7 +14,7 @@ interface ClipCardProps {
   autoplay: boolean;
 }
 
-export function ClipCard({
+export const ClipCard = memo(function ClipCard({
   clip,
   isSelected,
   onToggleSelection,
@@ -24,6 +24,14 @@ export function ClipCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);
   const [shouldLoad, setShouldLoad] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+
+  // Reset video ready state when URL changes or shouldLoad changes
+  useEffect(() => {
+    if (!clip.presignedUrl || !shouldLoad) {
+      setIsVideoReady(false);
+    }
+  }, [clip.presignedUrl, shouldLoad]);
 
   // Lazy load videos using Intersection Observer
   useEffect(() => {
@@ -57,28 +65,35 @@ export function ClipCard({
     };
   }, []);
 
-  // Load first frame when video metadata is loaded
+  // Force first frame to load and show when video is ready
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !shouldLoad) return;
 
     const handleLoadedData = () => {
-      // Video has loaded enough to show first frame
-      if (!autoplay) {
-        video.currentTime = 0;
-      }
+      // Video has loaded enough data - force first frame display
+      video.currentTime = 0.01; // Small seek to force frame decode
+      setIsVideoReady(true);
+    };
+
+    const handleError = () => {
+      console.error('Video failed to load:', clip.key);
+      setIsVideoReady(false);
     };
 
     video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('error', handleError);
+
     return () => {
       video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('error', handleError);
     };
-  }, [shouldLoad, autoplay]);
+  }, [shouldLoad, clip.key]);
 
-  // Handle autoplay based on visibility and autoplay setting
+  // Handle autoplay based on visibility, autoplay setting, and video readiness
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !shouldLoad) return;
+    if (!video || !shouldLoad || !isVideoReady) return;
 
     if (autoplay && isInView) {
       video.play().catch(() => {
@@ -87,7 +102,7 @@ export function ClipCard({
     } else {
       video.pause();
     }
-  }, [autoplay, isInView, shouldLoad]);
+  }, [autoplay, isInView, shouldLoad, isVideoReady]);
   const getQualityLabel = (value: number, type: 'clarity' | 'brightness') => {
     if (type === 'clarity') {
       if (value >= 400) return { label: 'Excellent', color: 'text-green-600' };
@@ -127,24 +142,32 @@ export function ClipCard({
         {/* Video Player - Vertical TikTok Style */}
         <div
           ref={containerRef}
-          className="aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2"
+          className="aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2 relative"
         >
-          {clip.presignedUrl ? (
-            shouldLoad ? (
+          {clip.presignedUrl && shouldLoad ? (
+            <>
+              {/* Loading spinner overlay */}
+              {!isVideoReady && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted z-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="size-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-muted-foreground">Loading...</p>
+                  </div>
+                </div>
+              )}
               <video
                 ref={videoRef}
                 src={clip.presignedUrl}
-                className="w-full h-full object-contain"
+                className={cn(
+                  "w-full h-full object-contain transition-opacity duration-200",
+                  isVideoReady ? "opacity-100" : "opacity-0"
+                )}
                 preload="auto"
                 loop
                 muted
                 playsInline
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              </div>
-            )
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted">
               <p className="text-sm text-muted-foreground">Loading...</p>
@@ -176,4 +199,4 @@ export function ClipCard({
       </CardContent>
     </Card>
   );
-}
+});
