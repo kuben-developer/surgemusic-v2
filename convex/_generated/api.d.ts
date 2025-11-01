@@ -18,6 +18,7 @@ import type * as app_advanced_analytics from "../app/advanced_analytics.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_ayrshare from "../app/ayrshare.js";
 import type * as app_campaigns from "../app/campaigns.js";
+import type * as app_clipper from "../app/clipper.js";
 import type * as app_files from "../app/files.js";
 import type * as app_folders from "../app/folders.js";
 import type * as app_late from "../app/late.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "app/analytics": typeof app_analytics;
   "app/ayrshare": typeof app_ayrshare;
   "app/campaigns": typeof app_campaigns;
+  "app/clipper": typeof app_clipper;
   "app/files": typeof app_files;
   "app/folders": typeof app_folders;
   "app/late": typeof app_late;

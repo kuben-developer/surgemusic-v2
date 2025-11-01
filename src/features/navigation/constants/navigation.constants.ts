@@ -5,7 +5,8 @@ import {
   Home,
   LayoutGrid,
   Link2,
-  CreditCard
+  CreditCard,
+  Scissors
 } from "lucide-react"
 import type { NavSection } from "../types/navigation.types"
 
@@ -58,6 +59,11 @@ export const navigationData: { navMain: NavSection[] } = {
           title: "My Campaigns",
           url: "/campaign",
           icon: LayoutGrid,
+        },
+        {
+          title: "Clipper & Montager",
+          url: "/clipper",
+          icon: Scissors,
         },
         {
           title: "Pricing",
