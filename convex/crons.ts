@@ -31,11 +31,11 @@ crons.interval(
     {}
 );
 
-crons.interval(
-    "refreshCampaignVideoAnalytics",
-    { minutes: 300 },
-    internal.app.tiktok.refreshCampaignVideoAnalytics,
-    { campaignIds: [] as Id<"campaigns">[], weeksAgo: 1 }
-)
+// crons.interval(
+//     "refreshCampaignVideoAnalytics",
+//     { minutes: 300 },
+//     internal.app.tiktok.refreshCampaignVideoAnalytics,
+//     { campaignIds: [] as Id<"campaigns">[], weeksAgo: 1 }
+// )
 
 export default crons;
