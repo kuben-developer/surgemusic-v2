@@ -220,8 +220,6 @@ export const listClips = action({
     folderName: v.string(),
   },
   handler: async (_ctx, args): Promise<ClipperClip[]> => {
-    const s3Client = getS3Client();
-
     try {
       const command = new ListObjectsV2Command({
         Bucket: BUCKET_NAME,
@@ -239,7 +237,7 @@ export const listClips = action({
 
       // Filter out folders, non-video files, and map to ClipperClip objects
       const clips: ClipperClip[] = response.Contents
-        .filter((obj): obj is NonNullable<typeof obj> & { Key: string } => {
+        .filter((obj): obj is NonNullable<typeof obj> & { Key: string; Size: number; LastModified: Date } => {
           if (!obj.Key || obj.Key.endsWith('/')) return false;
 
           const filename = obj.Key.toLowerCase();
@@ -276,7 +274,6 @@ export const getClipUrl = action({
     key: v.string(),
   },
   handler: async (_ctx, args): Promise<string> => {
-
     try {
       const command = new GetObjectCommand({
         Bucket: BUCKET_NAME,
@@ -360,6 +357,44 @@ export const checkFileExists = action({
       return true;
     } catch (error) {
       return false;
+    }
+  },
+});
+
+/**
+ * Get presigned URLs for multiple clips (batch operation)
+ * This is more efficient than calling getClipUrl multiple times
+ */
+export const getPresignedUrls = action({
+  args: {
+    keys: v.array(v.string()),
+  },
+  handler: async (_ctx, args): Promise<Array<{ key: string; presignedUrl: string }>> => {
+    if (args.keys.length === 0) {
+      return [];
+    }
+
+    try {
+      // Generate presigned URLs for all clips in parallel
+      const urlPromises = args.keys.map(async (key) => {
+        const command = new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+        });
+
+        const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+
+        return {
+          key,
+          presignedUrl,
+        };
+      });
+
+      const results = await Promise.all(urlPromises);
+      return results;
+    } catch (error) {
+      console.error("Error generating presigned URLs:", error);
+      throw new Error(`Failed to generate presigned URLs: ${error}`);
     }
   },
 });

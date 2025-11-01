@@ -33,10 +33,15 @@ export function useClipperClips(folderName: string | null) {
     fetchClips();
   }, [fetchClips]);
 
+  const removeClips = useCallback((keysToRemove: string[]) => {
+    setClips((prev) => prev.filter((clip) => !keysToRemove.includes(clip.key)));
+  }, []);
+
   return {
     clips,
     isLoading,
     error,
     refetch: fetchClips,
+    removeClips,
   };
 }

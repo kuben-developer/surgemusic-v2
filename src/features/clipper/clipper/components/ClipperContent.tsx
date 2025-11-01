@@ -4,8 +4,7 @@ import { useState } from "react";
 import { ClipperHeader } from "../../shared/components/ClipperHeader";
 import { FolderCards } from "./FolderCards";
 import { CreateFolderCard } from "./CreateFolderCard";
-import { VideoUploader } from "./VideoUploader";
-import { UploadProgress } from "./UploadProgress";
+import { UploadDialog } from "./UploadDialog";
 import { ClipsToolbar } from "./ClipsToolbar";
 import { ClipsGrid } from "./ClipsGrid";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
@@ -14,18 +13,22 @@ import { useClipperClips } from "../hooks/useClipperClips";
 import { useVideoUpload } from "../hooks/useVideoUpload";
 import { useClipSelection } from "../hooks/useClipSelection";
 import { useClipsSorting } from "../hooks/useClipsSorting";
+import { usePresignedUrls } from "../hooks/usePresignedUrls";
 import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import type { SortField } from "../../shared/types/common.types";
 
 export function ClipperContent() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [autoplay, setAutoplay] = useState(true);
 
   const { folders, isLoading: foldersLoading, refetch: refetchFolders } = useClipperFolders();
-  const { clips, isLoading: clipsLoading, refetch: refetchClips } = useClipperClips(selectedFolder);
+  const { clips, isLoading: clipsLoading, refetch: refetchClips, removeClips } = useClipperClips(selectedFolder);
   const { uploads, uploadFiles, isUploading, clearUploads } = useVideoUpload(selectedFolder, {
     onUploadComplete: refetchFolders,
   });
@@ -37,6 +40,10 @@ export function ClipperContent() {
     clearSelection,
   } = useClipSelection();
   const { sortedClips, sortOptions, setSortField } = useClipsSorting(clips);
+
+  // Fetch presigned URLs for all clips (loads one by one)
+  const { clips: clipsWithUrls, loadedCount, totalCount, progress } = usePresignedUrls(sortedClips);
+
   const deleteClipsAction = useAction(api.app.clipper.deleteClips);
 
   const handleFolderSelect = (folderName: string) => {
@@ -50,9 +57,8 @@ export function ClipperContent() {
     refetchFolders();
   };
 
-  const handleSortChange = (value: string) => {
-    const [field] = value.split("-");
-    setSortField(field as "clarity" | "brightness" | "date" | "name");
+  const handleSortChange = (field: SortField) => {
+    setSortField(field);
   };
 
   const handleDeleteClick = () => {
@@ -69,8 +75,9 @@ export function ClipperContent() {
       const result = await deleteClipsAction({ keys: selectedKeys });
       if (result.success) {
         toast.success(result.message);
+        // Remove clips from local state without refetching
+        removeClips(selectedKeys);
         clearSelection();
-        refetchClips();
         setIsDeleteDialogOpen(false);
       } else {
         toast.error(result.message);
@@ -119,22 +126,16 @@ export function ClipperContent() {
           <ClipsToolbar
             onBack={handleBackToFolders}
             selectedCount={selectedCount}
+            totalCount={totalCount}
             onDelete={handleDeleteClick}
             sortOptions={sortOptions}
             onSortChange={handleSortChange}
+            onUpload={() => setIsUploadDialogOpen(true)}
+            onRefresh={refetchClips}
+            autoplay={autoplay}
+            onToggleAutoplay={() => setAutoplay(!autoplay)}
             folderName={selectedFolder}
           />
-
-          {/* Upload Section */}
-          <div className="space-y-4">
-            <VideoUploader
-              onFilesSelected={handleFilesSelected}
-              disabled={isUploading}
-            />
-            {uploads.length > 0 && (
-              <UploadProgress uploads={uploads} onClear={clearUploads} />
-            )}
-          </div>
 
           {/* Clips Grid */}
           {clipsLoading ? (
@@ -143,15 +144,29 @@ export function ClipperContent() {
             </div>
           ) : (
             <ClipsGrid
-              clips={sortedClips}
+              clips={clipsWithUrls}
               selectedKeys={selectedKeys}
               onToggleSelection={toggleSelection}
-              onSelectAll={() => selectAll(clips.map((c) => c.key))}
+              onSelectAll={() => selectAll(clipsWithUrls.map((c) => c.key))}
               onClearSelection={clearSelection}
+              loadedCount={loadedCount}
+              totalCount={totalCount}
+              progress={progress}
+              autoplay={autoplay}
             />
           )}
         </div>
       )}
+
+      {/* Upload Dialog */}
+      <UploadDialog
+        open={isUploadDialogOpen}
+        onOpenChange={setIsUploadDialogOpen}
+        onFilesSelected={handleFilesSelected}
+        uploads={uploads}
+        isUploading={isUploading}
+        onClearUploads={clearUploads}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog

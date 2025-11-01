@@ -3,8 +3,7 @@
 import { Film } from "lucide-react";
 import { ClipCard } from "./ClipCard";
 import type { ClipperClip } from "../../shared/types/common.types";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 
 interface ClipsGridProps {
   clips: ClipperClip[];
@@ -12,6 +11,10 @@ interface ClipsGridProps {
   onToggleSelection: (key: string) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
+  loadedCount: number;
+  totalCount: number;
+  progress: number;
+  autoplay: boolean;
 }
 
 export function ClipsGrid({
@@ -20,6 +23,10 @@ export function ClipsGrid({
   onToggleSelection,
   onSelectAll,
   onClearSelection,
+  loadedCount,
+  totalCount,
+  progress,
+  autoplay,
 }: ClipsGridProps) {
   if (clips.length === 0) {
     return (
@@ -34,40 +41,30 @@ export function ClipsGrid({
     );
   }
 
-  const allSelected = selectedKeys.length === clips.length;
-  const someSelected = selectedKeys.length > 0 && !allSelected;
-
   return (
-    <div className="space-y-4">
-      {/* Selection Bar */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-        <div className="flex items-center gap-4">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={allSelected ? onClearSelection : onSelectAll}
-            className={someSelected && !allSelected ? "data-[state=checked]:bg-primary/50" : ""}
-          />
-          <p className="text-sm font-medium">
-            {selectedKeys.length > 0
-              ? `${selectedKeys.length} of ${clips.length} selected`
-              : `${clips.length} ${clips.length === 1 ? "clip" : "clips"} total`}
-          </p>
+    <div className="space-y-6">
+      {/* Progress Bar */}
+      {loadedCount < totalCount && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">Loading videos...</span>
+            <span className="text-muted-foreground">
+              {loadedCount} / {totalCount}
+            </span>
+          </div>
+          <Progress value={progress} className="h-2" />
         </div>
-        {someSelected && (
-          <Button variant="ghost" size="sm" onClick={onClearSelection}>
-            Clear Selection
-          </Button>
-        )}
-      </div>
+      )}
 
-      {/* Clips Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Clips Grid - 5 columns */}
+      <div className="grid grid-cols-5 gap-4">
         {clips.map((clip) => (
           <ClipCard
             key={clip.key}
             clip={clip}
             isSelected={selectedKeys.includes(clip.key)}
             onToggleSelection={() => onToggleSelection(clip.key)}
+            autoplay={autoplay && !!clip.presignedUrl}
           />
         ))}
       </div>
