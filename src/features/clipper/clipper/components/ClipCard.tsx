@@ -76,15 +76,15 @@ export function ClipCard({
   };
   const getQualityLabel = (value: number, type: 'clarity' | 'brightness') => {
     if (type === 'clarity') {
-      if (value >= 400) return { label: 'Excellent', color: 'text-green-600' };
-      if (value >= 300) return { label: 'Good', color: 'text-blue-600' };
-      if (value >= 200) return { label: 'Fair', color: 'text-yellow-600' };
-      return { label: 'Poor', color: 'text-red-600' };
+      if (value >= 100) return { label: `Excellent ${value}`, color: 'text-green-600' };
+      if (value >= 4) return { label: `Good ${value}`, color: 'text-blue-600' };
+      if (value >= 1) return { label: `Fair ${value}`, color: 'text-yellow-600' };
+      return { label: `Poor ${value}`, color: 'text-red-600' };
     } else {
-      if (value >= 180) return { label: 'Bright', color: 'text-green-600' };
-      if (value >= 120) return { label: 'Good', color: 'text-blue-600' };
-      if (value >= 80) return { label: 'Dim', color: 'text-yellow-600' };
-      return { label: 'Dark', color: 'text-red-600' };
+      if (value >= 60) return { label: `Bright ${value}`, color: 'text-green-600' };
+      if (value >= 40) return { label: `Good ${value}`, color: 'text-blue-600' };
+      if (value >= 30) return { label: `Dim ${value}`, color: 'text-yellow-600' };
+      return { label: `Dark ${value}`, color: 'text-red-600' };
     }
   };
 

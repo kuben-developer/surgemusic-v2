@@ -106,9 +106,12 @@ export const listFolders = action({
           })),
         ]);
 
-        // Count files (exclude folder placeholders)
+        // Count files (exclude folder placeholders and thumbnails)
         const videoCount = Math.max(0, (inputsResponse.Contents?.length || 0) - 1);
-        const clipCount = Math.max(0, (outputsResponse.Contents?.length || 0) - 1);
+        // Exclude thumbnails from clip count (only count actual video files)
+        const clipCount = Math.max(0, (outputsResponse.Contents?.filter(obj =>
+          obj.Key && !obj.Key.includes('/thumbnails/')
+        ).length || 0) - 1);
 
         // Get last modified time (use the most recent file)
         const allContents = [
