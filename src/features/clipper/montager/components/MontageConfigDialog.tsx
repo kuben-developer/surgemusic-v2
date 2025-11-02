@@ -15,9 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useClipperFolders } from "../../clipper/hooks/useClipperFolders";
-import { useClipperClips } from "../../clipper/hooks/useClipperClips";
 import { useMontageCreation } from "../hooks/useMontageCreation";
-import { calculateMaxMontages } from "../utils/clip-distribution.utils";
 import { Loader2, Film, FolderOpen } from "lucide-react";
 
 interface MontageConfigDialogProps {
@@ -39,7 +37,6 @@ export function MontageConfigDialog({
   const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
   const [numberOfMontages, setNumberOfMontages] = useState("1");
   const [configName, setConfigName] = useState("");
-  const [totalClips, setTotalClips] = useState(0);
 
   const { folders, isLoading: foldersLoading } = useClipperFolders();
   const { createMontageConfig, isCreating } = useMontageCreation();
@@ -51,32 +48,8 @@ export function MontageConfigDialog({
       setSelectedFolders([]);
       setNumberOfMontages("1");
       setConfigName("");
-      setTotalClips(0);
     }
   }, [open]);
-
-  // Fetch clips count when folders are selected
-  useEffect(() => {
-    const fetchClipsCount = async () => {
-      if (selectedFolders.length === 0) {
-        setTotalClips(0);
-        return;
-      }
-
-      try {
-        const { api } = await import("../../../../../convex/_generated/api");
-        const { useAction } = await import("convex/react");
-
-        // This is a workaround - we'll need to call the action directly
-        // For now, let's estimate or fetch in the next step
-        setTotalClips(0); // Will be calculated in step 2
-      } catch (error) {
-        console.error("Error fetching clips:", error);
-      }
-    };
-
-    fetchClipsCount();
-  }, [selectedFolders]);
 
   const handleToggleFolder = (folderName: string) => {
     setSelectedFolders((prev) =>
@@ -125,7 +98,7 @@ export function MontageConfigDialog({
       });
 
       toast.success(
-        `Successfully created configuration for ${result.montagesCreated} montages using ${result.totalClipsUsed} clips`
+        `Successfully created configuration for ${result.montagesCreated} ${result.montagesCreated === 1 ? 'montage' : 'montages'}`
       );
       onOpenChange(false);
       onSuccess?.();
