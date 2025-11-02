@@ -1,16 +1,18 @@
 "use client";
 
-import { Folder, Film, Video } from "lucide-react";
+import { Folder, Film, Video, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import type { ClipperFolder } from "../../shared/types/common.types";
 
 interface FolderCardsProps {
   folders: ClipperFolder[];
   onSelectFolder: (folderName: string) => void;
+  onDeleteFolder: (folderName: string) => void;
 }
 
-export function FolderCards({ folders, onSelectFolder }: FolderCardsProps) {
+export function FolderCards({ folders, onSelectFolder, onDeleteFolder }: FolderCardsProps) {
   if (folders.length === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground col-span-full">
@@ -26,10 +28,23 @@ export function FolderCards({ folders, onSelectFolder }: FolderCardsProps) {
       {folders.map((folder) => (
         <Card
           key={folder.name}
-          className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 hover:bg-muted/50"
+          className="group relative cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 hover:bg-muted/50"
           onClick={() => onSelectFolder(folder.name)}
         >
           <CardContent className="p-6">
+            {/* Delete button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 size-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteFolder(folder.name);
+              }}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+
             <div className="flex items-start gap-3 mb-4">
               <div className="rounded-lg bg-primary/10 p-2">
                 <Folder className="size-5 text-primary" />

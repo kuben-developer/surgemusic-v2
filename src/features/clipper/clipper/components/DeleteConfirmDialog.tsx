@@ -17,6 +17,8 @@ interface DeleteConfirmDialogProps {
   onConfirm: () => void;
   count: number;
   isDeleting: boolean;
+  title?: string;
+  description?: string;
 }
 
 export function DeleteConfirmDialog({
@@ -25,16 +27,21 @@ export function DeleteConfirmDialog({
   onConfirm,
   count,
   isDeleting,
+  title,
+  description,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {count} Clips?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {title || `Delete ${count} Clips?`}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete{" "}
-            {count === 1 ? "this clip" : `these ${count} clips`} from the S3
-            bucket.
+            {description ||
+              `This action cannot be undone. This will permanently delete ${
+                count === 1 ? "this clip" : `these ${count} clips`
+              } from the S3 bucket.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

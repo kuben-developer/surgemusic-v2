@@ -26,6 +26,9 @@ export function ClipperContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [autoplay, setAutoplay] = useState(true);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [isDeleteFolderDialogOpen, setIsDeleteFolderDialogOpen] = useState(false);
+  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
 
   const { folders, isLoading: foldersLoading, refetch: refetchFolders } = useClipperFolders();
   const { clips, isLoading: clipsLoading, refetch: refetchClips, removeClips } = useClipperClips(selectedFolder);
@@ -45,6 +48,7 @@ export function ClipperContent() {
   const { clips: clipsWithUrls, loadedCount, totalCount, progress } = usePresignedUrls(sortedClips);
 
   const deleteClipsAction = useAction(api.app.clipper.deleteClips);
+  const deleteFolderAction = useAction(api.app.clipper.deleteFolder);
 
   const handleFolderSelect = (folderName: string) => {
     setSelectedFolder(folderName);
@@ -95,6 +99,34 @@ export function ClipperContent() {
     await uploadFiles(files);
   };
 
+  const handleDeleteFolderClick = (folderName: string) => {
+    setFolderToDelete(folderName);
+    setIsDeleteFolderDialogOpen(true);
+  };
+
+  const handleDeleteFolderConfirm = async () => {
+    if (!folderToDelete) return;
+
+    setIsDeletingFolder(true);
+    try {
+      const result = await deleteFolderAction({ folderName: folderToDelete });
+      if (result.success) {
+        toast.success(result.message);
+        setIsDeleteFolderDialogOpen(false);
+        setFolderToDelete(null);
+        refetchFolders();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete folder"
+      );
+    } finally {
+      setIsDeletingFolder(false);
+    }
+  };
+
   if (foldersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -117,6 +149,7 @@ export function ClipperContent() {
             <FolderCards
               folders={folders}
               onSelectFolder={handleFolderSelect}
+              onDeleteFolder={handleDeleteFolderClick}
             />
           </div>
         </div>
@@ -168,13 +201,24 @@ export function ClipperContent() {
         onClearUploads={clearUploads}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Clips Confirmation Dialog */}
       <DeleteConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         count={selectedCount}
         isDeleting={isDeleting}
+      />
+
+      {/* Delete Folder Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={isDeleteFolderDialogOpen}
+        onOpenChange={setIsDeleteFolderDialogOpen}
+        onConfirm={handleDeleteFolderConfirm}
+        count={1}
+        isDeleting={isDeletingFolder}
+        title="Delete Folder"
+        description={`Are you sure you want to delete "${folderToDelete}"? This will permanently delete all videos and clips in this folder. This action cannot be undone.`}
       />
     </div>
   );

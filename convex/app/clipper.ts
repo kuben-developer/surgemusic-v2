@@ -151,11 +151,38 @@ export const createFolder = action({
 
     // Validate folder name (no special characters)
     if (!/^[a-zA-Z0-9_-]+$/.test(args.folderName)) {
-      throw new Error("Folder name can only contain letters, numbers, hyphens, and underscores");
+      return {
+        success: false,
+        message: "Folder name can only contain letters, numbers, hyphens, and underscores",
+      };
     }
 
+    // Check if folder already exists
     try {
-      // Create inputs and outputs folders by uploading empty objects
+      const checkCommand = new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: `clips/${args.folderName}/`,
+        MaxKeys: 1,
+      });
+
+      const existingFolder = await s3Client.send(checkCommand);
+
+      if (existingFolder.Contents && existingFolder.Contents.length > 0) {
+        return {
+          success: false,
+          message: "Folder name already exists",
+        };
+      }
+    } catch (error) {
+      console.error("Error checking folder existence:", error);
+      return {
+        success: false,
+        message: "Failed to check folder existence",
+      };
+    }
+
+    // Create inputs and outputs folders by uploading empty objects
+    try {
       const inputsKey = `clips/${args.folderName}/inputs/.keep`;
       const outputsKey = `clips/${args.folderName}/outputs/.keep`;
 
@@ -177,7 +204,69 @@ export const createFolder = action({
       };
     } catch (error) {
       console.error("Error creating folder:", error);
-      throw new Error(`Failed to create folder: ${error}`);
+      return {
+        success: false,
+        message: "Failed to create folder",
+      };
+    }
+  },
+});
+
+/**
+ * Delete a folder and all its contents
+ */
+export const deleteFolder = action({
+  args: {
+    folderName: v.string(),
+  },
+  handler: async (_ctx, args): Promise<{ success: boolean; message: string; deletedCount: number }> => {
+    try {
+      // List all objects in the folder
+      const command = new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: `clips/${args.folderName}/`,
+      });
+
+      const response = await s3Client.send(command);
+
+      if (!response.Contents || response.Contents.length === 0) {
+        return {
+          success: true,
+          message: `Folder "${args.folderName}" not found or already empty`,
+          deletedCount: 0,
+        };
+      }
+
+      // Delete all objects in the folder
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: BUCKET_NAME,
+        Delete: {
+          Objects: response.Contents.map(obj => ({ Key: obj.Key! })),
+          Quiet: false,
+        },
+      });
+
+      const deleteResponse = await s3Client.send(deleteCommand);
+      const deletedCount = deleteResponse.Deleted?.length || 0;
+      const errors = deleteResponse.Errors || [];
+
+      if (errors.length > 0) {
+        console.error("Some files failed to delete:", errors);
+        return {
+          success: false,
+          message: `Deleted ${deletedCount} files, but ${errors.length} failed`,
+          deletedCount,
+        };
+      }
+
+      return {
+        success: true,
+        message: `Successfully deleted folder "${args.folderName}" and ${deletedCount} files`,
+        deletedCount,
+      };
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      throw new Error(`Failed to delete folder: ${error}`);
     }
   },
 });

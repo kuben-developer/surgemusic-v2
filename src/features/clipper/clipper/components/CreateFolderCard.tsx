@@ -34,21 +34,18 @@ export function CreateFolderCard({ onFolderCreated }: CreateFolderCardProps) {
       return;
     }
 
-    // Validate folder name
-    if (!/^[a-zA-Z0-9_-]+$/.test(folderName)) {
-      toast.error(
-        "Folder name can only contain letters, numbers, hyphens, and underscores"
-      );
-      return;
-    }
-
     setIsCreating(true);
     try {
-      await createFolderAction({ folderName: folderName.trim() });
-      toast.success(`Folder "${folderName}" created successfully`);
-      setFolderName("");
-      setIsDialogOpen(false);
-      onFolderCreated();
+      const result = await createFolderAction({ folderName: folderName.trim() });
+
+      if (result.success) {
+        toast.success(result.message);
+        setFolderName("");
+        setIsDialogOpen(false);
+        onFolderCreated();
+      } else {
+        toast.error(result.message);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error
