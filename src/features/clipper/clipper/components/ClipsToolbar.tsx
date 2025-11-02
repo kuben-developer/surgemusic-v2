@@ -93,7 +93,7 @@ export function ClipsToolbar({
 
         <div className="flex items-center gap-2">
           <SortToggleButtons
-            activeField={sortOptions.field === "clarity" || sortOptions.field === "brightness" ? sortOptions.field : null}
+            activeField={sortOptions.field === "chronological" || sortOptions.field === "clarity" || sortOptions.field === "brightness" ? sortOptions.field : null}
             activeOrder={sortOptions.order}
             onSortChange={handleSortToggle}
           />

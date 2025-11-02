@@ -6,14 +6,14 @@ import { useEffect, useState, useRef } from "react";
 import type { ClipperClip } from "../../shared/types/common.types";
 
 export function usePresignedUrls(clips: ClipperClip[]) {
-  const getPresignedUrlsAction = useAction(api.app.clipper.getPresignedUrls);
+  const getThumbnailUrlsAction = useAction(api.app.clipper.getThumbnailUrls);
   const [clipsWithUrls, setClipsWithUrls] = useState<ClipperClip[]>(clips);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [loadedCount, setLoadedCount] = useState(0);
 
-  // Keep a cache of URLs we've already fetched
-  const urlCacheRef = useRef<Map<string, string>>(new Map());
+  // Keep a cache of thumbnail URLs we've already fetched
+  const thumbnailCacheRef = useRef<Map<string, string>>(new Map());
 
   // Track loading state to prevent race conditions
   const loadingRef = useRef(false);
@@ -40,52 +40,66 @@ export function usePresignedUrls(clips: ClipperClip[]) {
       try {
         setError(null);
 
-        // Create a Set of current clip keys for quick lookup
-        const currentClipKeys = new Set(clips.map(c => c.key));
+        // Create a Set of current clip thumbnail keys for quick lookup
+        const currentThumbnailKeys = new Set(
+          clips.filter(c => c.thumbnailKey).map(c => c.thumbnailKey!)
+        );
 
-        // Remove cached URLs for clips that no longer exist
-        for (const key of urlCacheRef.current.keys()) {
-          if (!currentClipKeys.has(key)) {
-            urlCacheRef.current.delete(key);
+        // Remove cached URLs for thumbnails that no longer exist
+        for (const key of thumbnailCacheRef.current.keys()) {
+          if (!currentThumbnailKeys.has(key)) {
+            thumbnailCacheRef.current.delete(key);
           }
         }
 
-        // Initialize clips with cached URLs where available
+        // Initialize clips with cached thumbnail URLs where available
         const initialClips = clips.map(clip => ({
           ...clip,
-          presignedUrl: urlCacheRef.current.get(clip.key),
+          thumbnailUrl: clip.thumbnailKey ? thumbnailCacheRef.current.get(clip.thumbnailKey) : undefined,
         }));
 
         setClipsWithUrls(initialClips);
         setIsLoading(false);
 
-        // Count how many already have URLs
-        const alreadyLoaded = clips.filter(c => urlCacheRef.current.has(c.key)).length;
+        // Count how many already have thumbnail URLs
+        const alreadyLoaded = clips.filter(c =>
+          c.thumbnailKey && thumbnailCacheRef.current.has(c.thumbnailKey)
+        ).length;
         setLoadedCount(alreadyLoaded);
 
-        // Only fetch URLs for clips that don't have them yet
-        const clipsNeedingUrls = clips.filter(c => !urlCacheRef.current.has(c.key));
+        // Only fetch URLs for clips that have thumbnails but don't have URLs yet
+        const clipsNeedingUrls = clips.filter(c =>
+          c.thumbnailKey && !thumbnailCacheRef.current.has(c.thumbnailKey)
+        );
 
         if (clipsNeedingUrls.length === 0) {
           loadingRef.current = false;
-          return; // All clips already have URLs
+          return; // All clips already have thumbnail URLs
         }
 
         loadingRef.current = true;
 
-        // Process each clip one by one from top to bottom
-        for (let i = 0; i < clipsNeedingUrls.length; i++) {
+        // Process thumbnails in batches of 25 for faster loading
+        const BATCH_SIZE = 25;
+        let processedCount = 0;
+
+        for (let i = 0; i < clipsNeedingUrls.length; i += BATCH_SIZE) {
           // Check if we've been aborted
           if (controller.signal.aborted) {
             loadingRef.current = false;
             return;
           }
 
-          const clip = clipsNeedingUrls[i];
-          if (!clip) continue;
+          // Get the next batch of clips
+          const batch = clipsNeedingUrls.slice(i, i + BATCH_SIZE);
+          const batchKeys = batch
+            .filter(clip => clip.thumbnailKey)
+            .map(clip => clip.thumbnailKey!);
 
-          // Fetch presigned URL for this single clip
-          const urls = await getPresignedUrlsAction({ keys: [clip.key] });
+          if (batchKeys.length === 0) continue;
+
+          // Fetch presigned URLs for the entire batch in parallel
+          const urls = await getThumbnailUrlsAction({ keys: batchKeys });
 
           // Check again after async operation
           if (controller.signal.aborted) {
@@ -93,23 +107,24 @@ export function usePresignedUrls(clips: ClipperClip[]) {
             return;
           }
 
-          if (urls.length > 0 && urls[0]) {
-            const presignedUrl = urls[0].presignedUrl;
-
-            // Cache the URL
-            urlCacheRef.current.set(clip.key, presignedUrl);
-
-            // Update state with this clip's URL using the cache
-            setClipsWithUrls((prev) =>
-              prev.map((c) => ({
-                ...c,
-                presignedUrl: c.presignedUrl || urlCacheRef.current.get(c.key),
-              }))
-            );
+          // Cache all URLs from this batch
+          for (const urlResult of urls) {
+            thumbnailCacheRef.current.set(urlResult.key, urlResult.thumbnailUrl);
           }
 
+          // Update state with all thumbnail URLs from this batch
+          setClipsWithUrls((prev) =>
+            prev.map((c) => ({
+              ...c,
+              thumbnailUrl: c.thumbnailKey && !c.thumbnailUrl
+                ? thumbnailCacheRef.current.get(c.thumbnailKey)
+                : c.thumbnailUrl,
+            }))
+          );
+
           // Update progress
-          setLoadedCount(alreadyLoaded + i + 1);
+          processedCount += batch.length;
+          setLoadedCount(alreadyLoaded + processedCount);
         }
 
         loadingRef.current = false;
@@ -119,9 +134,9 @@ export function usePresignedUrls(clips: ClipperClip[]) {
         }
 
         setError(
-          err instanceof Error ? err : new Error("Failed to fetch presigned URLs")
+          err instanceof Error ? err : new Error("Failed to fetch thumbnail URLs")
         );
-        // On error, return clips without URLs
+        // On error, return clips without thumbnail URLs
         setClipsWithUrls(clips);
         loadingRef.current = false;
       }
@@ -132,7 +147,7 @@ export function usePresignedUrls(clips: ClipperClip[]) {
     return () => {
       controller.abort();
     };
-  }, [clips, getPresignedUrlsAction]);
+  }, [clips, getThumbnailUrlsAction]);
 
   return {
     clips: clipsWithUrls,

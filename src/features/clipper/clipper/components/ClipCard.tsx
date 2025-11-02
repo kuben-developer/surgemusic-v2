@@ -1,11 +1,12 @@
 "use client";
 
-import { Sparkles, Sun } from "lucide-react";
+import { Sparkles, Sun, Play, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ClipperClip } from "../../shared/types/common.types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLazyVideoUrl } from "../hooks/useLazyVideoUrl";
 
 interface ClipCardProps {
   clip: ClipperClip;
@@ -21,19 +22,58 @@ export function ClipCard({
   autoplay,
 }: ClipCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const { fetchVideoUrl, isLoading, getCachedUrl } = useLazyVideoUrl();
+
+  // Check if we have a cached video URL on mount
+  useEffect(() => {
+    const cached = getCachedUrl(clip.key);
+    if (cached) {
+      setVideoUrl(cached);
+    }
+  }, [clip.key, getCachedUrl]);
 
   useEffect(() => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !videoUrl) return;
 
-    if (autoplay) {
+    if (autoplay && isPlaying) {
       videoRef.current.play().catch(() => {
         // Ignore autoplay errors
       });
-    } else {
+    } else if (!autoplay) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0; // Reset to first frame
     }
-  }, [autoplay]);
+  }, [autoplay, isPlaying, videoUrl]);
+
+  const handlePlayClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // If already playing, toggle pause
+    if (isPlaying && videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    // If video URL not loaded yet, fetch it
+    if (!videoUrl) {
+      const url = await fetchVideoUrl(clip.key);
+      if (url) {
+        setVideoUrl(url);
+        setIsPlaying(true);
+      }
+    } else {
+      // Resume playing
+      setIsPlaying(true);
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {
+          // Ignore play errors
+        });
+      }
+    }
+  };
   const getQualityLabel = (value: number, type: 'clarity' | 'brightness') => {
     if (type === 'clarity') {
       if (value >= 400) return { label: 'Excellent', color: 'text-green-600' };
@@ -70,12 +110,18 @@ export function ClipCard({
           />
         </div>
 
-        {/* Video Player - Vertical TikTok Style */}
-        <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2">
-          {clip.presignedUrl ? (
+        {/* Thumbnail/Video Player - Vertical TikTok Style */}
+        <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2">
+          {/* Clip timestamp badge */}
+          <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded">
+            {clip.clipNumber}s
+          </div>
+
+          {isPlaying && videoUrl ? (
+            // Show video when playing
             <video
               ref={videoRef}
-              src={clip.presignedUrl}
+              src={videoUrl}
               className="w-full h-full object-contain"
               preload="metadata"
               loop
@@ -83,7 +129,30 @@ export function ClipCard({
               muted
               playsInline
             />
+          ) : clip.thumbnailUrl ? (
+            // Show thumbnail image by default
+            <>
+              <img
+                src={clip.thumbnailUrl}
+                alt={clip.filename}
+                className="w-full h-full object-contain"
+              />
+              {/* Play button overlay */}
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handlePlayClick}
+              >
+                {isLoading(clip.key) ? (
+                  <Loader2 className="size-12 text-white animate-spin" />
+                ) : (
+                  <div className="bg-white/90 rounded-full p-3 hover:bg-white transition-colors">
+                    <Play className="size-8 text-black fill-black" />
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
+            // Loading state
             <div className="w-full h-full flex items-center justify-center bg-muted">
               <p className="text-sm text-muted-foreground">Loading...</p>
             </div>

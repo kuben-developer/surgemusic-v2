@@ -20,6 +20,21 @@ export function SortToggleButtons({
   return (
     <div className="flex items-center gap-2">
       <Button
+        variant={isActive("chronological") ? "default" : "outline"}
+        size="sm"
+        onClick={() => onSortChange("chronological")}
+        className="gap-1.5"
+      >
+        Chronological
+        {isActive("chronological") &&
+          (activeOrder === "desc" ? (
+            <ArrowDown className="size-3.5" />
+          ) : (
+            <ArrowUp className="size-3.5" />
+          ))}
+      </Button>
+
+      <Button
         variant={isActive("clarity") ? "default" : "outline"}
         size="sm"
         onClick={() => onSortChange("clarity")}

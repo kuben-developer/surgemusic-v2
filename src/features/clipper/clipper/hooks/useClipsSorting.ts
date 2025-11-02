@@ -10,8 +10,8 @@ import type {
 
 export function useClipsSorting(clips: ClipperClip[]) {
   const [sortOptions, setSortOptions] = useState<SortOptions>({
-    field: "date",
-    order: "desc",
+    field: "chronological",
+    order: "asc",
   });
 
   const sortedClips = useMemo(() => {
@@ -21,6 +21,9 @@ export function useClipsSorting(clips: ClipperClip[]) {
       let comparison = 0;
 
       switch (sortOptions.field) {
+        case "chronological":
+          comparison = a.clipNumber - b.clipNumber;
+          break;
         case "clarity":
           comparison = a.clarity - b.clarity;
           break;

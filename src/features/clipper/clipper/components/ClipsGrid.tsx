@@ -47,7 +47,7 @@ export function ClipsGrid({
       {loadedCount < totalCount && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">Loading videos...</span>
+            <span className="font-medium">Loading thumbnails...</span>
             <span className="text-muted-foreground">
               {loadedCount} / {totalCount}
             </span>
@@ -64,7 +64,7 @@ export function ClipsGrid({
             clip={clip}
             isSelected={selectedKeys.includes(clip.key)}
             onToggleSelection={() => onToggleSelection(clip.key)}
-            autoplay={autoplay && !!clip.presignedUrl}
+            autoplay={autoplay}
           />
         ))}
       </div>

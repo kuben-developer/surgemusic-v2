@@ -12,10 +12,13 @@ export interface ClipperClip {
   lastModified: number;
   clarity: number;
   brightness: number;
-  presignedUrl?: string;
+  clipNumber: number;
+  thumbnailKey?: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
 }
 
-export type SortField = "clarity" | "brightness" | "date" | "name";
+export type SortField = "chronological" | "clarity" | "brightness" | "date" | "name";
 export type SortOrder = "asc" | "desc";
 
 export interface SortOptions {

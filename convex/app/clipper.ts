@@ -34,7 +34,10 @@ export interface ClipperClip {
   lastModified: number;
   clarity: number;
   brightness: number;
-  presignedUrl?: string;
+  clipNumber: number;
+  thumbnailKey?: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
 }
 
 // Helper function to parse quality metrics from filename
@@ -47,6 +50,16 @@ function parseMetricsFromFilename(filename: string): { clarity: number; brightne
     };
   }
   return { clarity: 0, brightness: 0 };
+}
+
+// Helper function to parse clip number from filename
+function parseClipNumberFromFilename(filename: string): number {
+  // Match pattern like: _clip_0002_ or _clip_123_
+  const match = filename.match(/_clip_(\d+)_/);
+  if (match && match[1]) {
+    return parseInt(match[1], 10);
+  }
+  return 0;
 }
 
 /**
@@ -213,7 +226,7 @@ export const generateUploadUrl = action({
 });
 
 /**
- * List all clips from a folder's outputs directory
+ * List all clips from a folder's outputs directory with thumbnails
  */
 export const listClips = action({
   args: {
@@ -221,24 +234,45 @@ export const listClips = action({
   },
   handler: async (_ctx, args): Promise<ClipperClip[]> => {
     try {
-      const command = new ListObjectsV2Command({
-        Bucket: BUCKET_NAME,
-        Prefix: `clips/${args.folderName}/outputs/`,
-      });
+      // Fetch both outputs and thumbnails in parallel
+      const [outputsResponse, thumbnailsResponse] = await Promise.all([
+        s3Client.send(new ListObjectsV2Command({
+          Bucket: BUCKET_NAME,
+          Prefix: `clips/${args.folderName}/outputs/`,
+        })),
+        s3Client.send(new ListObjectsV2Command({
+          Bucket: BUCKET_NAME,
+          Prefix: `clips/${args.folderName}/outputs/thumbnails/`,
+        })),
+      ]);
 
-      const response = await s3Client.send(command);
-
-      if (!response.Contents) {
+      if (!outputsResponse.Contents) {
         return [];
       }
 
       // Video file extensions to include
       const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.mkv', '.avi', '.webm'];
 
-      // Filter out folders, non-video files, and map to ClipperClip objects
-      const clips: ClipperClip[] = response.Contents
+      // Create a map of thumbnails by filename (without extension)
+      const thumbnailMap = new Map<string, string>();
+      if (thumbnailsResponse.Contents) {
+        thumbnailsResponse.Contents.forEach((obj) => {
+          if (obj.Key && !obj.Key.endsWith('/') && obj.Key.toLowerCase().endsWith('.jpg')) {
+            const filename = obj.Key.split('/').pop()!;
+            // Remove .jpg extension to get base filename
+            const baseFilename = filename.replace(/\.jpg$/i, '');
+            thumbnailMap.set(baseFilename, obj.Key);
+          }
+        });
+      }
+
+      // Filter out folders, non-video files, thumbnails subfolder, and map to ClipperClip objects
+      const clips: ClipperClip[] = outputsResponse.Contents
         .filter((obj): obj is NonNullable<typeof obj> & { Key: string; Size: number; LastModified: Date } => {
           if (!obj.Key || obj.Key.endsWith('/')) return false;
+
+          // Exclude files in the thumbnails subfolder
+          if (obj.Key.includes('/thumbnails/')) return false;
 
           const filename = obj.Key.toLowerCase();
           // Check if file has a video extension
@@ -247,6 +281,11 @@ export const listClips = action({
         .map((obj): ClipperClip => {
           const filename = obj.Key.split('/').pop()!;
           const metrics = parseMetricsFromFilename(filename);
+          const clipNumber = parseClipNumberFromFilename(filename);
+
+          // Get base filename without extension for thumbnail lookup
+          const baseFilename = filename.replace(/\.(mp4|mov|mkv|avi|webm)$/i, '');
+          const thumbnailKey = thumbnailMap.get(baseFilename);
 
           return {
             key: obj.Key,
@@ -255,6 +294,8 @@ export const listClips = action({
             lastModified: obj.LastModified?.getTime() || 0,
             clarity: metrics.clarity,
             brightness: metrics.brightness,
+            clipNumber,
+            thumbnailKey,
           };
         });
 
@@ -285,6 +326,29 @@ export const getClipUrl = action({
     } catch (error) {
       console.error("Error generating clip URL:", error);
       throw new Error(`Failed to generate clip URL: ${error}`);
+    }
+  },
+});
+
+/**
+ * Generate presigned URL for a video (on-demand)
+ */
+export const getVideoUrl = action({
+  args: {
+    key: v.string(),
+  },
+  handler: async (_ctx, args): Promise<string> => {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: args.key,
+      });
+
+      const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+      return url;
+    } catch (error) {
+      console.error("Error generating video URL:", error);
+      throw new Error(`Failed to generate video URL: ${error}`);
     }
   },
 });
@@ -364,6 +428,7 @@ export const checkFileExists = action({
 /**
  * Get presigned URLs for multiple clips (batch operation)
  * This is more efficient than calling getClipUrl multiple times
+ * @deprecated Use getThumbnailUrls for thumbnails instead
  */
 export const getPresignedUrls = action({
   args: {
@@ -395,6 +460,44 @@ export const getPresignedUrls = action({
     } catch (error) {
       console.error("Error generating presigned URLs:", error);
       throw new Error(`Failed to generate presigned URLs: ${error}`);
+    }
+  },
+});
+
+/**
+ * Get presigned URLs for multiple thumbnails (batch operation)
+ * This is used to load thumbnail images for the clips grid
+ */
+export const getThumbnailUrls = action({
+  args: {
+    keys: v.array(v.string()),
+  },
+  handler: async (_ctx, args): Promise<Array<{ key: string; thumbnailUrl: string }>> => {
+    if (args.keys.length === 0) {
+      return [];
+    }
+
+    try {
+      // Generate presigned URLs for all thumbnails in parallel
+      const urlPromises = args.keys.map(async (key) => {
+        const command = new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+        });
+
+        const thumbnailUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+
+        return {
+          key,
+          thumbnailUrl,
+        };
+      });
+
+      const results = await Promise.all(urlPromises);
+      return results;
+    } catch (error) {
+      console.error("Error generating thumbnail URLs:", error);
+      throw new Error(`Failed to generate thumbnail URLs: ${error}`);
     }
   },
 });
