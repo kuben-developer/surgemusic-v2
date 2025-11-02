@@ -5,6 +5,7 @@ import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Play, Film } from "lucide-react";
+import { CLIPS_PER_MONTAGE } from "../constants/montager.constants";
 import type { Montage } from "../../shared/types/common.types";
 import {
   Dialog,
@@ -81,7 +82,7 @@ export function MontageCard({ montage }: MontageCardProps) {
               {montage.filename}
             </p>
             <p className="text-xs text-muted-foreground">
-              {formatFileSize(montage.size)}
+              {formatFileSize(montage.size)} • {CLIPS_PER_MONTAGE} seconds
             </p>
           </div>
         </CardContent>

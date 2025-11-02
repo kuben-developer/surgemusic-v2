@@ -1,14 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw, Plus } from "lucide-react";
+import { ArrowLeft, RefreshCw, Plus, Download } from "lucide-react";
 
 interface MontagesToolbarProps {
   folderName: string;
   onBack: () => void;
   onRefresh: () => void;
   onCreateConfig: () => void;
+  onDownloadAll: () => void;
   totalCount: number;
+  isDownloading?: boolean;
+  downloadProgress?: { current: number; total: number };
 }
 
 export function MontagesToolbar({
@@ -16,7 +19,10 @@ export function MontagesToolbar({
   onBack,
   onRefresh,
   onCreateConfig,
+  onDownloadAll,
   totalCount,
+  isDownloading = false,
+  downloadProgress = { current: 0, total: 0 },
 }: MontagesToolbarProps) {
   return (
     <div className="space-y-4 pb-6 border-b">
@@ -46,14 +52,33 @@ export function MontagesToolbar({
             size="sm"
             onClick={onRefresh}
             className="gap-2"
+            disabled={isDownloading}
           >
             <RefreshCw className="size-4" />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={onDownloadAll}
+            className="gap-2"
+            disabled={totalCount === 0 || isDownloading}
+          >
+            <Download className="size-4" />
+            <span className="hidden sm:inline">
+              {isDownloading
+                ? `Downloading ${downloadProgress.current}/${downloadProgress.total}`
+                : "Download All"}
+            </span>
+            <span className="sm:hidden">
+              {isDownloading ? `${downloadProgress.current}/${downloadProgress.total}` : "Download"}
+            </span>
+          </Button>
+          <Button
             size="sm"
             onClick={onCreateConfig}
             className="gap-2"
+            disabled={isDownloading}
           >
             <Plus className="size-4" />
             <span className="hidden sm:inline">Create Config</span>

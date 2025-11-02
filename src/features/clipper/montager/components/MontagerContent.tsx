@@ -12,6 +12,7 @@ import { MontageConfigDialog } from "./MontageConfigDialog";
 import { useMontagerFolders } from "../hooks/useMontagerFolders";
 import { useMontages } from "../hooks/useMontages";
 import { useMontageUrls } from "../hooks/useMontageUrls";
+import { useDownloadAllMontages } from "../hooks/useDownloadAllMontages";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ export function MontagerContent() {
   const { folders, isLoading: foldersLoading, refetch: refetchFolders } = useMontagerFolders();
   const { montages, isLoading: montagesLoading, refetch: refetchMontages } = useMontages(selectedFolder);
   const { montages: montagesWithUrls, loadedCount, totalCount, progress } = useMontageUrls(montages);
+  const { downloadAll, isDownloading, progress: downloadProgress } = useDownloadAllMontages();
 
   const deleteFolderAction = useAction(api.app.montager.deleteMontagerFolder);
 
@@ -76,6 +78,19 @@ export function MontagerContent() {
     refetchMontages();
   };
 
+  const handleDownloadAll = async () => {
+    if (!selectedFolder || montagesWithUrls.length === 0) return;
+
+    try {
+      await downloadAll(montagesWithUrls, selectedFolder);
+      toast.success(`Successfully downloaded ${montagesWithUrls.length} montages`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download montages"
+      );
+    }
+  };
+
   if (foldersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -110,7 +125,10 @@ export function MontagerContent() {
             onBack={handleBackToFolders}
             onRefresh={refetchMontages}
             onCreateConfig={() => setIsConfigDialogOpen(true)}
+            onDownloadAll={handleDownloadAll}
             totalCount={totalCount}
+            isDownloading={isDownloading}
+            downloadProgress={downloadProgress}
           />
 
           {/* Montages Grid */}

@@ -1,20 +1,5 @@
 import type { ClipperClip, MontageData } from "../../shared/types/common.types";
-
-const CLIPS_PER_MONTAGE = 14;
-
-/**
- * Shuffle array using Fisher-Yates algorithm
- */
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = shuffled[i];
-    shuffled[i] = shuffled[j]!;
-    shuffled[j] = temp!;
-  }
-  return shuffled;
-}
+import { CLIPS_PER_MONTAGE } from "../constants/montager.constants";
 
 /**
  * Generate unique montage names

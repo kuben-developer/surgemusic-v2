@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useClipperFolders } from "../../clipper/hooks/useClipperFolders";
 import { useMontageCreation } from "../hooks/useMontageCreation";
+import { CLIPS_PER_MONTAGE, MAX_MONTAGES_PER_REQUEST } from "../constants/montager.constants";
 import { Loader2, Film, FolderOpen } from "lucide-react";
 
 interface MontageConfigDialogProps {
@@ -72,6 +73,10 @@ export function MontageConfigDialog({
         toast.error("Please enter a valid number of montages");
         return;
       }
+      if (count > MAX_MONTAGES_PER_REQUEST) {
+        toast.error(`Maximum ${MAX_MONTAGES_PER_REQUEST} montages per request`);
+        return;
+      }
       // Auto-generate config name with timestamp
       setConfigName(`config_${Date.now()}`);
       setStep("confirm");
@@ -98,7 +103,7 @@ export function MontageConfigDialog({
       });
 
       toast.success(
-        `Successfully created configuration for ${result.montagesCreated} ${result.montagesCreated === 1 ? 'montage' : 'montages'}`
+        `Successfully created configuration for ${result.montagesCreated} ${result.montagesCreated === 1 ? 'montage' : 'montages'}. Processing will complete in a few minutes.`
       );
       onOpenChange(false);
       onSuccess?.();
@@ -175,12 +180,13 @@ export function MontageConfigDialog({
             <div className="space-y-2">
               <Label htmlFor="montage-count">Number of Montages</Label>
               <p className="text-sm text-muted-foreground">
-                Each montage will randomly select 14 clips from your pool. Clips can be reused.
+                Each montage will randomly select {CLIPS_PER_MONTAGE} clips from your pool. Clips can be reused.
               </p>
               <Input
                 id="montage-count"
                 type="number"
                 min="1"
+                max={MAX_MONTAGES_PER_REQUEST}
                 value={numberOfMontages}
                 onChange={(e) => setNumberOfMontages(e.target.value)}
                 placeholder="Enter number of montages"
@@ -202,7 +208,7 @@ export function MontageConfigDialog({
                 </p>
                 <p>
                   Clips per montage:{" "}
-                  <span className="font-medium">14 (randomly selected with reuse)</span>
+                  <span className="font-medium">{CLIPS_PER_MONTAGE} (randomly selected with reuse)</span>
                 </p>
               </div>
             </div>
@@ -229,7 +235,7 @@ export function MontageConfigDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Clips per montage:</span>
-                  <span className="font-medium">14 (random with reuse)</span>
+                  <span className="font-medium">{CLIPS_PER_MONTAGE} (random with reuse)</span>
                 </div>
               </div>
             </div>
@@ -277,7 +283,12 @@ export function MontageConfigDialog({
             </Button>
           )}
           {step !== "confirm" ? (
-            <Button onClick={handleNext}>Next</Button>
+            <Button
+              onClick={handleNext}
+              disabled={foldersLoading && step === "select-folders"}
+            >
+              Next
+            </Button>
           ) : (
             <Button onClick={handleCreate} disabled={isCreating}>
               {isCreating ? (
