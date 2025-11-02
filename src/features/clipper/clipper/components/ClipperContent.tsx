@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ClipperHeader } from "../../shared/components/ClipperHeader";
-import { FolderCards } from "./FolderCards";
-import { CreateFolderCard } from "./CreateFolderCard";
+import { FolderTable } from "./FolderTable";
+import { CreateFolderButton } from "./CreateFolderButton";
 import { UploadDialog } from "./UploadDialog";
 import { ClipsToolbar } from "./ClipsToolbar";
 import { ClipsGrid } from "./ClipsGrid";
@@ -140,18 +140,18 @@ export function ClipperContent() {
       {!selectedFolder ? (
         // Folder View
         <div className="space-y-6">
-          <ClipperHeader
-            title="Clipper"
-            description="Upload videos and they'll be automatically split into 1-second clips with quality metrics"
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <CreateFolderCard onFolderCreated={refetchFolders} />
-            <FolderCards
-              folders={folders}
-              onSelectFolder={handleFolderSelect}
-              onDeleteFolder={handleDeleteFolderClick}
+          <div className="flex items-start justify-between gap-4">
+            <ClipperHeader
+              title="Clipper"
+              description="Upload videos and they'll be automatically split into 1-second clips with quality metrics"
             />
+            <CreateFolderButton onFolderCreated={refetchFolders} />
           </div>
+          <FolderTable
+            folders={folders}
+            onSelectFolder={handleFolderSelect}
+            onDeleteFolder={handleDeleteFolderClick}
+          />
         </div>
       ) : (
         // Clips View
