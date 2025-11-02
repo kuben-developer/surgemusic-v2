@@ -7,6 +7,7 @@ import { CreateFolderButton } from "./CreateFolderButton";
 import { UploadDialog } from "./UploadDialog";
 import { ClipsToolbar } from "./ClipsToolbar";
 import { ClipsGrid } from "./ClipsGrid";
+import { ClipsVideoTabs } from "./ClipsVideoTabs";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { useClipperFolders } from "../hooks/useClipperFolders";
 import { useClipperClips } from "../hooks/useClipperClips";
@@ -14,6 +15,7 @@ import { useVideoUpload } from "../hooks/useVideoUpload";
 import { useClipSelection } from "../hooks/useClipSelection";
 import { useClipsSorting } from "../hooks/useClipsSorting";
 import { usePresignedUrls } from "../hooks/usePresignedUrls";
+import { useClipsOrganization } from "../hooks/useClipsOrganization";
 import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
@@ -44,8 +46,17 @@ export function ClipperContent() {
   } = useClipSelection();
   const { sortedClips, sortOptions, setSortField } = useClipsSorting(clips);
 
-  // Fetch presigned URLs for all clips (loads one by one)
-  const { clips: clipsWithUrls, loadedCount, totalCount, progress } = usePresignedUrls(sortedClips);
+  // Fetch presigned URLs for ALL clips once (loads one by one)
+  const { clips: allClipsWithUrls, loadedCount, totalCount, progress } = usePresignedUrls(sortedClips);
+
+  // Organize clips by video name (using clips with URLs)
+  const {
+    selectedVideo,
+    setSelectedVideo,
+    videoGroups,
+    videoNames,
+    filteredClips: clipsWithUrls,
+  } = useClipsOrganization(allClipsWithUrls);
 
   const deleteClipsAction = useAction(api.app.clipper.deleteClips);
   const deleteFolderAction = useAction(api.app.clipper.deleteFolder);
@@ -63,6 +74,11 @@ export function ClipperContent() {
 
   const handleSortChange = (field: SortField) => {
     setSortField(field);
+  };
+
+  const handleVideoTabChange = (video: string) => {
+    setSelectedVideo(video);
+    clearSelection();
   };
 
   const handleDeleteClick = () => {
@@ -168,6 +184,14 @@ export function ClipperContent() {
             autoplay={autoplay}
             onToggleAutoplay={() => setAutoplay(!autoplay)}
             folderName={selectedFolder}
+          />
+
+          {/* Video Organization Tabs */}
+          <ClipsVideoTabs
+            videoNames={videoNames}
+            videoGroups={videoGroups}
+            selectedVideo={selectedVideo}
+            onVideoChange={handleVideoTabChange}
           />
 
           {/* Clips Grid */}
