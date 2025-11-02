@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipperContent } from "./clipper";
-import { MontagerPlaceholder } from "./montager";
+import { MontagerContent } from "./montager";
 
 export default function ClipperPage() {
   return (
@@ -18,7 +18,7 @@ export default function ClipperPage() {
         </TabsContent>
 
         <TabsContent value="montager" className="mt-0">
-          <MontagerPlaceholder />
+          <MontagerContent />
         </TabsContent>
       </Tabs>
     </div>
