@@ -9,26 +9,26 @@ const crons = cronJobs();
 //     internal.app.tiktok.monitorManuallyPostedVideos,
 // );
 
-crons.interval(
-    "aggregateCampaignPerformance",
-    { minutes: 30 },
-    internal.app.analytics.aggregateCampaignPerformance,
-    {}
-);
+// crons.interval(
+//     "aggregateCampaignPerformance",
+//     { minutes: 30 },
+//     internal.app.analytics.aggregateCampaignPerformance,
+//     {}
+// );
 
-crons.interval(
-    "monitorApiPostedVideos",
-    { minutes: 60 },
-    internal.app.ayrshare.monitorApiPostedVideos,
-    {}
-);
+// crons.interval(
+//     "monitorApiPostedVideos",
+//     { minutes: 60 },
+//     internal.app.ayrshare.monitorApiPostedVideos,
+//     {}
+// );
 
-crons.interval(
-    "monitorLatePostedVideos",
-    { minutes: 60 },
-    internal.app.late.monitorLatePostedVideos,
-    {}
-);
+// crons.interval(
+//     "monitorLatePostedVideos",
+//     { minutes: 60 },
+//     internal.app.late.monitorLatePostedVideos,
+//     {}
+// );
 
 crons.interval(
     "syncBundleSocialPosts",
@@ -39,14 +39,14 @@ crons.interval(
 
 crons.interval(
     "refreshBundleSocialPosts",
-    { minutes: 360 },
+    { minutes: 120 },
     internal.app.bundleSocial.refreshBundleSocialPosts,
     {}
 );
 
 crons.interval(
     "aggregateBundleSocialCampaignPerformance",
-    { minutes: 360 },
+    { minutes: 30 },
     internal.app.bundleSocial.aggregateCampaignPerformance,
     {}
 );

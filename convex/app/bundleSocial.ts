@@ -51,13 +51,41 @@ async function fetchBundleSocialPost(postId: string): Promise<BundleSocialPost |
     );
 
     if (!response.ok) {
-      console.error(`Bundle Social API error for post ${postId}: ${response.status}`);
+      // Don't log 400 errors - they're expected for scheduled posts
+      if (response.status !== 400) {
+        console.error(`Bundle Social API error for post ${postId}: ${response.status}`);
+      }
       return null;
     }
 
     return await response.json();
   } catch (error) {
     console.error(`Error fetching Bundle Social post ${postId}:`, error);
+    return null;
+  }
+}
+
+// Fetch Bundle Social post status (works for both scheduled and posted content)
+async function fetchBundleSocialPostStatus(postId: string): Promise<{ status: string; errors?: Record<string, string> } | null> {
+  try {
+    const response = await fetch(
+      `https://api.bundle.social/api/v1/post/${postId}`,
+      {
+        headers: {
+          'x-api-key': BUNDLE_SOCIAL_API_KEY,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Bundle Social API error for post status ${postId}: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return { status: data.status, errors: data.errors };
+  } catch (error) {
+    console.error(`Error fetching Bundle Social post status ${postId}:`, error);
     return null;
   }
 }
@@ -125,8 +153,12 @@ export const syncBundleSocialPostsByCampaign = internalAction({
   handler: async (ctx, { campaignRecordId, campaignIdField }) => {
     try {
       let processedCount = 0;
-      let skippedCount = 0;
+      let noApiPostIdCount = 0;
+      let noVideoUrlCount = 0;
+      let alreadyExistsCount = 0;
+      let scheduledCount = 0;
       let errorCount = 0;
+      const errorMessages: string[] = [];
 
       // Fetch content for this campaign using the campaign_id field
       const contentRecords = await fetchAirtableContent(campaignIdField);
@@ -143,32 +175,58 @@ export const syncBundleSocialPostsByCampaign = internalAction({
           apiPostId = apiPostIdRaw;
         }
 
-        // Skip if no api_post_id or no video_url
-        if (!apiPostId || !videoUrl) {
-          skippedCount++;
+        // Skip if no api_post_id
+        if (!apiPostId) {
+          noApiPostIdCount++;
+          continue;
+        }
+
+        // Skip if no video_url
+        if (!videoUrl) {
+          noVideoUrlCount++;
           continue;
         }
 
         // Check if already exists
         const exists = await ctx.runQuery(internal.app.bundleSocialQueries.checkPostExists, { postId: apiPostId });
         if (exists) {
-          skippedCount++;
+          alreadyExistsCount++;
           continue;
         }
 
         // Fetch data from Bundle Social
         const bundleData = await fetchBundleSocialPost(apiPostId);
         if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
+          // Check if post is scheduled (not yet posted)
+          const postStatus = await fetchBundleSocialPostStatus(apiPostId);
+
+          if (postStatus && postStatus.status === 'SCHEDULED') {
+            scheduledCount++;
+            continue;
+          }
+
+          // Log actual error with details if available
+          if (postStatus && postStatus.status === 'ERROR' && postStatus.errors) {
+            const errorMsg = Object.values(postStatus.errors).join(', ');
+            console.error(`Post ${apiPostId} has errors: ${errorMsg}`);
+            errorMessages.push(errorMsg);
+          } else {
+            const errorMsg = `No data from Bundle Social for post ${apiPostId}`;
+            console.error(errorMsg);
+            errorMessages.push(errorMsg);
+          }
+
           errorCount++;
-          console.error(`No data from Bundle Social for post ${apiPostId}`);
           continue;
         }
 
         // Extract data
         const stats = bundleData.items[0];
         if (!stats) {
+          const errorMsg = `No stats data for post ${apiPostId}`;
+          console.error(errorMsg);
+          errorMessages.push(errorMsg);
           errorCount++;
-          console.error(`No stats data for post ${apiPostId}`);
           continue;
         }
 
@@ -193,7 +251,17 @@ export const syncBundleSocialPostsByCampaign = internalAction({
         processedCount++;
       }
 
-      console.log(`Sync campaign ${campaignRecordId}: ${processedCount} new posts, ${skippedCount} skipped, ${errorCount} errors`);
+      // Save sync statistics to database
+      await ctx.runMutation(internal.app.bundleSocialQueries.upsertAirtableCampaignStats, {
+        campaignId: campaignRecordId,
+        posted: processedCount + alreadyExistsCount,
+        noPostId: noApiPostIdCount,
+        noVideoUrl: noVideoUrlCount,
+        scheduled: scheduledCount,
+        errors: errorMessages,
+      });
+
+      console.log(`Sync campaign ${campaignRecordId}: ${processedCount} new posts, ${alreadyExistsCount} already exist, ${noApiPostIdCount} no api_post_id, ${noVideoUrlCount} no video_url, ${scheduledCount} scheduled, ${errorCount} errors`);
     } catch (error) {
       console.error(`Error syncing campaign ${campaignRecordId}:`, error);
       throw error;
@@ -220,6 +288,8 @@ export const syncBundleSocialPosts = internalAction({
         // Get the campaign_id field to fetch content from Airtable
         const campaignIdField = campaign.fields['campaign_id'] as string;
         if (!campaignIdField) continue;
+
+        console.log(campaignRecordId, campaignIdField);
 
         // Schedule background job for this campaign
         await ctx.scheduler.runAfter(0, internal.app.bundleSocial.syncBundleSocialPostsByCampaign, {

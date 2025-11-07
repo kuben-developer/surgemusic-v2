@@ -259,6 +259,18 @@ export default defineSchema({
     .index("by_campaignId", ["campaignId"])
     .index("by_campaignId_date", ["campaignId", "date"]),
 
+  airtableCampaigns: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    metadata: v.object({
+      posted: v.number(),
+      noPostId: v.number(),
+      noVideoUrl: v.number(),
+      scheduled: v.number(),
+      errors: v.array(v.string())
+    }),
+  })
+    .index("by_campaignId", ["campaignId"]),
+
 
   comments: defineTable({
     commentId: v.string(),

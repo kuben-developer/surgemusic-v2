@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "../_generated/server";
+import { internalMutation, internalQuery, query } from "../_generated/server";
 
 // Check if post exists
 export const checkPostExists = internalQuery({
@@ -336,5 +336,56 @@ export const getCampaignAnalytics = internalQuery({
       videoMetrics,
       lastUpdatedAt,
     };
+  },
+});
+
+// Upsert airtable campaign sync statistics
+export const upsertAirtableCampaignStats = internalMutation({
+  args: {
+    campaignId: v.string(),
+    posted: v.number(),
+    noPostId: v.number(),
+    noVideoUrl: v.number(),
+    scheduled: v.number(),
+    errors: v.array(v.string()),
+  },
+  handler: async (ctx, { campaignId, posted, noPostId, noVideoUrl, scheduled, errors }) => {
+    // Check if campaign record exists
+    const existing = await ctx.db
+      .query("airtableCampaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    const metadata = {
+      posted,
+      noPostId,
+      noVideoUrl,
+      scheduled,
+      errors,
+    };
+
+    if (existing) {
+      // Update existing record
+      await ctx.db.patch(existing._id, { metadata });
+    } else {
+      // Insert new record
+      await ctx.db.insert("airtableCampaigns", {
+        campaignId,
+        metadata,
+      });
+    }
+  },
+});
+
+// Get airtable campaign sync metadata
+export const getAirtableCampaignMetadata = query({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const campaign = await ctx.db
+      .query("airtableCampaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    return campaign?.metadata || null;
   },
 });

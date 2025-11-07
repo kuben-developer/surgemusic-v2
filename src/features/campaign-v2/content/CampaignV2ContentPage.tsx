@@ -5,10 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
+import { useCampaignMetadata } from "./hooks/useCampaignMetadata";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
+import { CampaignSyncStats } from "./components/CampaignSyncStats";
 import { useState, useMemo } from "react";
 import {
   calculateCategoryStats,
@@ -22,6 +24,7 @@ export function CampaignV2ContentPage() {
   const router = useRouter();
   const campaignRecordId = params.id as string;
   const { data, isLoading, error } = useCampaignContent(campaignRecordId);
+  const { metadata } = useCampaignMetadata(campaignRecordId);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<string>("all");
@@ -122,14 +125,11 @@ export function CampaignV2ContentPage() {
                 View Analytics
               </Button>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Campaign Content</h1>
-              <p className="text-muted-foreground mt-2">
-                Campaign ID: <span className="font-mono">{data.campaign_id}</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Total items: {data.content.length}
-              </p>
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl font-bold">Campaign Content</h1>
+              </div>
+              <CampaignSyncStats metadata={metadata} />
             </div>
           </div>
         )}
