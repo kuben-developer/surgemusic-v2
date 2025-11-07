@@ -4,6 +4,7 @@ import { stripeWebhook } from "./webhooks/stripe";
 import { makeWebhook } from "./webhooks/make";
 import { ayrshareWebhook } from "./webhooks/ayrshare";
 import { testWebhook } from "./webhooks/test";
+import { exportAyrshareVideosEndpoint } from "./webhooks/exportAyrshareVideos";
 
 const http = httpRouter();
 
@@ -45,6 +46,13 @@ http.route({
   path: "/webhook/ayrshare",
   method: "POST",
   handler: ayrshareWebhook,
+});
+
+// Export endpoints
+http.route({
+  path: "/export/ayrshare-videos",
+  method: "GET",
+  handler: exportAyrshareVideosEndpoint,
 });
 
 export default http;
