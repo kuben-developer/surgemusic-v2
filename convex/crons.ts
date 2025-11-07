@@ -1,6 +1,5 @@
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
 
 const crons = cronJobs();
 
@@ -28,6 +27,27 @@ crons.interval(
     "monitorLatePostedVideos",
     { minutes: 60 },
     internal.app.late.monitorLatePostedVideos,
+    {}
+);
+
+crons.interval(
+    "syncBundleSocialPosts",
+    { minutes: 30 },
+    internal.app.bundleSocial.syncBundleSocialPosts,
+    {}
+);
+
+crons.interval(
+    "refreshBundleSocialPosts",
+    { minutes: 360 },
+    internal.app.bundleSocial.refreshBundleSocialPosts,
+    {}
+);
+
+crons.interval(
+    "aggregateBundleSocialCampaignPerformance",
+    { minutes: 360 },
+    internal.app.bundleSocial.aggregateCampaignPerformance,
     {}
 );
 

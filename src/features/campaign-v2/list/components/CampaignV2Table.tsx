@@ -1,6 +1,8 @@
 "use client";
 
-import { Music, Mic2 } from "lucide-react";
+import { Music, Mic2, BarChart3 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import type { AirtableCampaign } from "../../shared/types/campaign-v2.types";
 import {
   Table,
@@ -17,6 +19,8 @@ interface CampaignV2TableProps {
 }
 
 export function CampaignV2Table({ campaigns, onSelectCampaign }: CampaignV2TableProps) {
+  const router = useRouter();
+
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground border rounded-lg">
@@ -32,9 +36,10 @@ export function CampaignV2Table({ campaigns, onSelectCampaign }: CampaignV2Table
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[35%]">Campaign ID</TableHead>
-            <TableHead className="w-[35%]">Artist</TableHead>
-            <TableHead className="w-[30%]">Song</TableHead>
+            <TableHead className="w-[30%]">Campaign ID</TableHead>
+            <TableHead className="w-[30%]">Artist</TableHead>
+            <TableHead className="w-[25%]">Song</TableHead>
+            <TableHead className="w-[15%]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -58,6 +63,20 @@ export function CampaignV2Table({ campaigns, onSelectCampaign }: CampaignV2Table
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {campaign.song || "—"}
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/campaign-v2/${campaign.id}/analytics`);
+                  }}
+                  className="gap-1.5"
+                >
+                  <BarChart3 className="size-4" />
+                  Analytics
+                </Button>
               </TableCell>
             </TableRow>
           ))}

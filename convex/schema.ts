@@ -214,6 +214,52 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_videoId_socialPlatform", ["videoId", "socialPlatform"]),
 
+  bundleSocialPostedVideos: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    postId: v.string(), // from airtable api_post_id column in Content base
+    videoId: v.string(),
+    postedAt: v.number(),
+    videoUrl: v.string(),
+    mediaUrl: v.optional(v.string()),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_postId", ["postId"]),
+
+  bundleSocialSnapshots: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    postId: v.string(), // from airtable api_post_id column in Content base
+    date: v.string(), // 24-11-2023. Make sure one snapshot per day. Do update/insert if already exists.
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_date", ["campaignId", "date"]),
+
+  bundleSocialCampaignPerformance: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    date: v.string(), // DD-MM-YYYY format
+    posts: v.number(), // Total posts for this campaign
+    views: v.number(), // Aggregated views
+    likes: v.number(), // Aggregated likes
+    comments: v.number(), // Aggregated comments
+    shares: v.number(), // Aggregated shares
+    saves: v.number(), // Aggregated saves
+    updatedAt: v.number(), // Last update timestamp (ms)
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_date", ["campaignId", "date"]),
+
+
   comments: defineTable({
     commentId: v.string(),
     campaignId: v.id('campaigns'),

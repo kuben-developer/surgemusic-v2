@@ -17,6 +17,8 @@ import type * as app_admin from "../app/admin.js";
 import type * as app_advanced_analytics from "../app/advanced_analytics.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_ayrshare from "../app/ayrshare.js";
+import type * as app_bundleSocial from "../app/bundleSocial.js";
+import type * as app_bundleSocialQueries from "../app/bundleSocialQueries.js";
 import type * as app_campaignV2 from "../app/campaignV2.js";
 import type * as app_campaigns from "../app/campaigns.js";
 import type * as app_clipper from "../app/clipper.js";
@@ -52,6 +54,8 @@ declare const fullApi: ApiFromModules<{
   "app/advanced_analytics": typeof app_advanced_analytics;
   "app/analytics": typeof app_analytics;
   "app/ayrshare": typeof app_ayrshare;
+  "app/bundleSocial": typeof app_bundleSocial;
+  "app/bundleSocialQueries": typeof app_bundleSocialQueries;
   "app/campaignV2": typeof app_campaignV2;
   "app/campaigns": typeof app_campaigns;
   "app/clipper": typeof app_clipper;

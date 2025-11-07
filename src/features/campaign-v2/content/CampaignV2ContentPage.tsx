@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
@@ -102,15 +102,26 @@ export function CampaignV2ContentPage() {
         {/* Header */}
         {!selectedCategory && (
           <div className="space-y-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/campaign-v2")}
-              className="hover:bg-muted -ml-2"
-            >
-              <ArrowLeft className="size-4 mr-2" />
-              Back to Campaigns
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/campaign-v2")}
+                className="hover:bg-muted -ml-2"
+              >
+                <ArrowLeft className="size-4 mr-2" />
+                Back to Campaigns
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/campaign-v2/${campaignRecordId}/analytics`)}
+                className="gap-2"
+              >
+                <BarChart3 className="size-4" />
+                View Analytics
+              </Button>
+            </div>
             <div>
               <h1 className="text-3xl font-bold">Campaign Content</h1>
               <p className="text-muted-foreground mt-2">
