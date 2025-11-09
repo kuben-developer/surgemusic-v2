@@ -104,7 +104,10 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
         animate="animate"
         className="space-y-6"
       >
-        <CampaignInfoSection campaignMetadata={analyticsData.campaignMetadata} />
+        <CampaignInfoSection
+          campaignMetadata={analyticsData.campaignMetadata}
+          totals={analyticsData.totals}
+        />
 
         <KPIMetrics data={kpiData} />
 

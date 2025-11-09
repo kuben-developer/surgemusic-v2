@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Music2, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInUp } from "../constants/metrics";
+import { calculateCPM, formatCPM } from "../utils/cpm.utils";
 
 interface CampaignInfoSectionProps {
   campaignMetadata: {
@@ -13,13 +14,21 @@ interface CampaignInfoSectionProps {
     artist: string;
     song: string;
   };
+  totals: {
+    posts: number;
+    views: number;
+  };
 }
 
-export function CampaignInfoSection({ campaignMetadata }: CampaignInfoSectionProps) {
+export function CampaignInfoSection({ campaignMetadata, totals }: CampaignInfoSectionProps) {
   // Only show artist/song if they have valid data
   const hasArtist = campaignMetadata.artist && campaignMetadata.artist !== 'Unknown Artist';
   const hasSong = campaignMetadata.song && campaignMetadata.song !== 'Unknown Song';
   const showArtistSong = hasArtist || hasSong;
+
+  // Calculate CPM
+  const cpm = calculateCPM(totals.views, totals.posts);
+  const formattedCPM = formatCPM(cpm);
 
   return (
     <motion.div variants={fadeInUp}>
@@ -47,8 +56,14 @@ export function CampaignInfoSection({ campaignMetadata }: CampaignInfoSectionPro
               </div>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            Campaign ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{campaignMetadata.campaignId}</code>
+          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            {/* <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> */}
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground font-medium">Cost Per 1K Views</span>
+              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formattedCPM}
+              </span>
+            </div>
           </div>
         </div>
       </Card>
