@@ -28,7 +28,7 @@ function MetricCard({ config, data }: MetricCardProps) {
       </div>
       <div className="space-y-1">
         <p className="text-2xl font-bold">{value}</p>
-        {growth && growth.value !== 0 && (
+        {/* {growth && growth.value !== 0 && (
           <div className="flex items-center gap-1 text-xs">
             <ArrowUpRight className={`h-3 w-3 ${
               growth.isPositive
@@ -42,7 +42,7 @@ function MetricCard({ config, data }: MetricCardProps) {
               {Math.abs(growth.value).toFixed(1)}%
             </span>
           </div>
-        )}
+        )} */}
       </div>
     </Card>
   );
