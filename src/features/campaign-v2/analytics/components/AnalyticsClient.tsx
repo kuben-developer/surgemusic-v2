@@ -103,16 +103,16 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
 
         <KPIMetrics data={kpiData} />
 
-        <MetricsChart
-          dailyData={analyticsData.dailyData}
-          totals={analyticsData.totals}
-          growth={analyticsData.growth}
-          dateRange={dateRange}
-          activeMetric={activeMetric}
-          onActiveMetricChange={setActiveMetric}
-        />
+        {/* Side-by-side layout for Performance Metrics and Content Performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <MetricsChart
+            dailyData={analyticsData.dailyData}
+            activeMetric={activeMetric}
+            onActiveMetricChange={setActiveMetric}
+          />
 
-        <VideoPerformanceTable videoMetrics={analyticsData.videoMetrics} />
+          <VideoPerformanceTable videoMetrics={analyticsData.videoMetrics} />
+        </div>
       </motion.div>
     </div>
   );

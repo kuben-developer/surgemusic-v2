@@ -52,7 +52,7 @@ export function KPIMetrics({ data }: KPIMetricsProps) {
   return (
     <motion.section
       variants={fadeInUp}
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-7 gap-4"
+      className="grid grid-cols-6 gap-4"
     >
       {KPI_METRICS.map((config) => (
         <MetricCard key={config.key} config={config} data={data} />

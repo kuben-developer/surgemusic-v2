@@ -6,6 +6,7 @@ import { internal } from "../_generated/api";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
+const AIRTABLE_ARTIST_TABLE_ID = "tblGoMJr5XOVFx50O";
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
 
 interface AirtableRecord {
@@ -524,13 +525,31 @@ export const getCampaignAnalyticsWithMetadata = action({
       const campaignData = await response.json();
       const fields = campaignData.fields || {};
 
+      // Fetch artist and song details from related Artist table
+      let artist = 'Unknown Artist';
+      let song = 'Unknown Song';
+
+      const artistSongIds = fields['Artist / Song'] as string[] | undefined;
+      if (artistSongIds?.[0]) {
+        const artistUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_ARTIST_TABLE_ID}/${artistSongIds[0]}`;
+        const artistResponse = await fetch(artistUrl, {
+          headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` },
+        });
+
+        if (artistResponse.ok) {
+          const artistData = await artistResponse.json();
+          artist = (artistData.fields['Artist'] as string) || 'Unknown Artist';
+          song = (artistData.fields['Song'] as string) || 'Unknown Song';
+        }
+      }
+
       return {
         ...analytics,
         campaignMetadata: {
           campaignId,
           name: fields['campaign_name'] || fields['campaign_id'] || 'Unknown Campaign',
-          artist: fields['artist'] || 'Unknown Artist',
-          song: fields['song'] || 'Unknown Song',
+          artist,
+          song,
         },
       };
     } catch (error) {

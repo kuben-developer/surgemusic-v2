@@ -1,11 +1,10 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Eye, Heart, MessageCircle, Share2, Bookmark, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Eye, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { chartVariants } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
 
@@ -18,21 +17,6 @@ interface MetricsChartProps {
     shares: number;
     saves: number;
   }>;
-  totals: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    saves: number;
-  };
-  growth: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    saves: number;
-  };
-  dateRange: number;
   activeMetric: MetricType;
   onActiveMetricChange: (metric: MetricType) => void;
 }
@@ -67,26 +51,16 @@ const METRIC_CONFIG = {
 
 export function MetricsChart({
   dailyData,
-  totals,
-  growth,
-  dateRange,
   activeMetric,
   onActiveMetricChange,
 }: MetricsChartProps) {
   const metricConfig = METRIC_CONFIG[activeMetric];
   const MetricIcon = metricConfig.icon;
-  const growthValue = growth[activeMetric];
-  const isPositive = growthValue >= 0;
 
   return (
     <Card className="p-6 border border-primary/10 shadow-md overflow-hidden">
       <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Performance Metrics</h3>
-          <Badge variant="outline" className="bg-primary/5 text-primary">
-            {dateRange} Day Trend
-          </Badge>
-        </div>
+        <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
 
         {/* Metric Info */}
         <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
@@ -161,6 +135,7 @@ export function MetricsChart({
               tickLine={false}
             />
             <YAxis
+              tickFormatter={(value: number) => value.toLocaleString()}
               className="dark:fill-gray-400 fill-gray-500"
               tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
               axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
@@ -208,25 +183,6 @@ export function MetricsChart({
           </AreaChart>
         </ResponsiveContainer>
       </motion.div>
-
-      {/* Summary Stats */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg bg-muted/30 border border-border/30">
-          <p className="text-xs text-muted-foreground mb-1">Total {metricConfig.label}</p>
-          <p className="text-2xl font-bold">{totals[activeMetric].toLocaleString()}</p>
-        </div>
-        <div className="p-4 rounded-lg bg-muted/30 border border-border/30">
-          <p className="text-xs text-muted-foreground mb-1">Growth</p>
-          <div className="flex items-center gap-2">
-            <p className="text-2xl font-bold">{Math.abs(growthValue).toFixed(1)}%</p>
-            {isPositive ? (
-              <ArrowUpRight className="h-5 w-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <ArrowDownRight className="h-5 w-5 text-red-600 dark:text-red-400" />
-            )}
-          </div>
-        </div>
-      </div>
     </Card>
   );
 }

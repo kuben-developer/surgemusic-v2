@@ -308,9 +308,10 @@ export const getCampaignAnalytics = internalQuery({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    // Sort posts by views descending
+    // Sort posts by views descending and limit to top 100
     const videoMetrics = posts
       .sort((a, b) => b.views - a.views)
+      .slice(0, 100)
       .map((post) => ({
         postId: post.postId,
         videoId: post.videoId,

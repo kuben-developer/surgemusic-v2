@@ -16,6 +16,11 @@ interface CampaignInfoSectionProps {
 }
 
 export function CampaignInfoSection({ campaignMetadata }: CampaignInfoSectionProps) {
+  // Only show artist/song if they have valid data
+  const hasArtist = campaignMetadata.artist && campaignMetadata.artist !== 'Unknown Artist';
+  const hasSong = campaignMetadata.song && campaignMetadata.song !== 'Unknown Song';
+  const showArtistSong = hasArtist || hasSong;
+
   return (
     <motion.div variants={fadeInUp}>
       <Card className="p-6 mb-6">
@@ -25,16 +30,22 @@ export function CampaignInfoSection({ campaignMetadata }: CampaignInfoSectionPro
               <h2 className="text-xl font-semibold">{campaignMetadata.name}</h2>
               <Badge variant="secondary">TikTok</Badge>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <User className="h-4 w-4" />
-                <span>{campaignMetadata.artist}</span>
+            {showArtistSong && (
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
+                {hasArtist && (
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-4 w-4" />
+                    <span>{campaignMetadata.artist}</span>
+                  </div>
+                )}
+                {hasSong && (
+                  <div className="flex items-center gap-1.5">
+                    <Music2 className="h-4 w-4" />
+                    <span>{campaignMetadata.song}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <Music2 className="h-4 w-4" />
-                <span>{campaignMetadata.song}</span>
-              </div>
-            </div>
+            )}
           </div>
           <div className="text-xs text-muted-foreground">
             Campaign ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{campaignMetadata.campaignId}</code>

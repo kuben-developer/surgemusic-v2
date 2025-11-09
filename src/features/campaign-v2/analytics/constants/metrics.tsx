@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart2, TrendingUp, Eye, Heart, MessageSquare, Share2, Bookmark } from "lucide-react";
+import { BarChart2, Eye, Heart, MessageSquare, Share2, Bookmark } from "lucide-react";
 
 // KPI Metric configurations for the KPIMetrics component
 export interface KPIMetricConfig {
@@ -33,7 +33,7 @@ export interface KPIMetricData {
 export const KPI_METRICS: KPIMetricConfig[] = [
   {
     key: "posts",
-    label: "Total Posts",
+    label: "Posts",
     icon: <BarChart2 className="h-4 w-4" />,
     bgColor: "bg-violet-100 dark:bg-violet-900/20",
     iconColor: "text-violet-600 dark:text-violet-400",
@@ -41,7 +41,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
   },
   {
     key: "views",
-    label: "Total Views",
+    label: "Views",
     icon: <Eye className="h-4 w-4" />,
     bgColor: "bg-green-100 dark:bg-green-900/20",
     iconColor: "text-green-600 dark:text-green-400",
@@ -50,7 +50,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
   },
   {
     key: "likes",
-    label: "Total Likes",
+    label: "Likes",
     icon: <Heart className="h-4 w-4" />,
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
     iconColor: "text-orange-600 dark:text-orange-400",
@@ -68,7 +68,7 @@ export const KPI_METRICS: KPIMetricConfig[] = [
   },
   {
     key: "shares",
-    label: "Total Shares",
+    label: "Shares",
     icon: <Share2 className="h-4 w-4" />,
     bgColor: "bg-blue-100 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
@@ -77,21 +77,12 @@ export const KPI_METRICS: KPIMetricConfig[] = [
   },
   {
     key: "saves",
-    label: "Total Saves",
+    label: "Saves",
     icon: <Bookmark className="h-4 w-4" />,
     bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
     iconColor: "text-yellow-600 dark:text-yellow-400",
     getValue: (data) => data.totals.saves.toLocaleString(),
     getGrowth: (data) => data.savesGrowth || null,
-  },
-  {
-    key: "engagement",
-    label: "Eng. Rate",
-    icon: <TrendingUp className="h-4 w-4" />,
-    bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
-    iconColor: "text-indigo-600 dark:text-indigo-400",
-    getValue: (data) => `${data.avgEngagementRate}%`,
-    getGrowth: (data) => data.engagementGrowth ?? null,
   },
 ];
 

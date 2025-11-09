@@ -38,7 +38,7 @@ export function VideoPerformanceTable({ videoMetrics }: VideoPerformanceTablePro
     <Card className="p-6 border border-primary/10">
       <div className="mb-6 space-y-2">
         <h3 className="text-lg font-semibold">Content Performance</h3>
-        <p className="text-sm text-muted-foreground">All videos sorted by highest views</p>
+        <p className="text-sm text-muted-foreground">Top 100 videos by highest views</p>
       </div>
 
       {/* Pagination controls */}
@@ -86,7 +86,7 @@ export function VideoPerformanceTable({ videoMetrics }: VideoPerformanceTablePro
                 <h4 className="font-medium truncate">Video {video.videoId}</h4>
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">
-                    TikTok • Posted {new Date(video.postedAt * 1000).toLocaleDateString('en-US', {
+                    {new Date(video.postedAt * 1000).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric'
