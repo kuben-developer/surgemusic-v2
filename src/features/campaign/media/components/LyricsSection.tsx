@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FileText, Loader2, Edit, AlertCircle } from "lucide-react";
+import { FileText, Loader2, Edit, AlertCircle, Upload } from "lucide-react";
 import { LyricsEditor } from "@/features/campaign-old/create/components/LyricsEditor";
 import { useCampaignLyrics } from "../hooks/useCampaignLyrics";
 
@@ -19,6 +20,8 @@ export function LyricsSection({
   audioBase64,
   hasLyrics = false,
 }: LyricsSectionProps) {
+  const srtFileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     lyrics,
     wordsData,
@@ -28,9 +31,27 @@ export function LyricsSection({
     showLyricsEditor,
     handleTranscribe,
     handleSaveLyrics,
+    handleUploadSRT,
     openLyricsEditor,
     closeLyricsEditor,
   } = useCampaignLyrics(campaignId, audioUrl);
+
+  const handleSRTFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".srt")) {
+      alert("Please upload a .srt file");
+      return;
+    }
+
+    await handleUploadSRT(file);
+
+    // Reset file input
+    if (srtFileInputRef.current) {
+      srtFileInputRef.current.value = "";
+    }
+  };
 
   // Show message if no audio uploaded yet
   if (!audioUrl) {
@@ -102,8 +123,25 @@ export function LyricsSection({
               </>
             )}
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => srtFileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload SRT
+          </Button>
         </div>
       </div>
+
+      <input
+        ref={srtFileInputRef}
+        type="file"
+        accept=".srt"
+        className="hidden"
+        onChange={handleSRTFileSelect}
+      />
 
       {hasLyrics ? (
         <Card className="p-3">
@@ -127,7 +165,7 @@ export function LyricsSection({
               </p>
               <p className="text-xs text-muted-foreground mb-3">
                 {transcriptionError ||
-                  "We tried three times but couldn't transcribe the audio. You can retry or edit manually."}
+                  "We tried three times but couldn't transcribe the audio. You can retry, upload an SRT file, or edit manually."}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -142,6 +180,14 @@ export function LyricsSection({
                     "Retry"
                   )}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => srtFileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload SRT
+                </Button>
                 <Button size="sm" onClick={openLyricsEditor}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Manually
@@ -155,8 +201,7 @@ export function LyricsSection({
           <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground mb-1">No lyrics yet</p>
           <p className="text-xs text-muted-foreground">
-            Click "Transcribe Audio" to automatically detect lyrics using
-            ElevenLabs
+            Transcribe audio using ElevenLabs or upload an SRT file
           </p>
         </Card>
       )}

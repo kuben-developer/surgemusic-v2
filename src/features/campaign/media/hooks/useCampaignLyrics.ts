@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
-import { initializeEmptyLyrics } from "@/utils/srt-converter.utils";
+import { initializeEmptyLyrics, parseSRT } from "@/utils/srt-converter.utils";
 import type { LyricLine, WordData, LyricWithWords } from "../types/media.types";
 
 export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
@@ -118,6 +118,41 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
     setShowLyricsEditor(false);
   };
 
+  /**
+   * Upload and parse SRT file
+   */
+  const handleUploadSRT = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsedLyrics = parseSRT(text);
+
+      if (parsedLyrics.length === 0) {
+        toast.error("Failed to parse SRT file", {
+          description: "The file appears to be empty or invalid",
+        });
+        return;
+      }
+
+      // Normalize to 15 seconds by taking first 15 entries or filling with empty
+      const normalizedLyrics: LyricLine[] = [];
+      for (let i = 0; i < 15; i++) {
+        normalizedLyrics.push({
+          timestamp: i,
+          text: parsedLyrics[i]?.text || "",
+        });
+      }
+
+      setLyrics(normalizedLyrics);
+      setShowLyricsEditor(true);
+      toast.success("SRT file loaded successfully");
+    } catch (error) {
+      console.error("SRT upload error:", error);
+      toast.error("Failed to upload SRT file", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
   return {
     lyrics,
     wordsData,
@@ -128,6 +163,7 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
     showLyricsEditor,
     handleTranscribe,
     handleSaveLyrics,
+    handleUploadSRT,
     openLyricsEditor,
     closeLyricsEditor,
     setLyrics,
