@@ -1,3 +1,3 @@
-import { CampaignDetailPage } from '@/features/campaigns/detail';
+import { CampaignContentPage } from "@/features/campaign";
 
-export default CampaignDetailPage;
+export default CampaignContentPage;

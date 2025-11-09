@@ -15,7 +15,9 @@ const isProtectedRoute = createRouteMatcher([
 const isPublicRoute = createRouteMatcher([
   '/public/(.*)',
   '/api/public/(.*)',
-  '/trpc/public.(.*)'
+  '/trpc/public.(.*)',
+  '/campaign-v2/(.*)/analytics',  // Campaign V2 analytics (public access)
+  '/campaign/(.*)/analytics'       // Campaign analytics (public access)
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

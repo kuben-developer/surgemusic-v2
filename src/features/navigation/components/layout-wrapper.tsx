@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react"
 import Sidebar from "./custom-sidebar"
 import { Toaster } from "@/components/ui/sonner"
@@ -73,14 +74,20 @@ function PrivateLayout({ children }: LayoutWrapperProps) {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname()
+  const { userId } = useAuth()
 
   // Check if current route is a public route
   const isPublicRoute = PUBLIC_ROUTE_PREFIXES.some(prefix =>
     pathname.startsWith(prefix)
   )
 
-  // Render appropriate layout based on route type
-  if (isPublicRoute) {
+  // Check if current route is an analytics route
+  const isAnalyticsRoute = /\/campaign(-v2)?\/[^/]+\/analytics/.test(pathname)
+
+  // Render public layout for:
+  // 1. Explicitly public routes (sign-in, sign-up, /public/*)
+  // 2. Analytics routes accessed by non-authenticated users
+  if (isPublicRoute || (isAnalyticsRoute && !userId)) {
     return <PublicLayout>{children}</PublicLayout>
   }
 

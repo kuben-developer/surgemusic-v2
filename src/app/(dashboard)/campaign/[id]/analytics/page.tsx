@@ -1,19 +1,6 @@
-import { AnalyticsContainer } from '@/features/analytics';
+import { CampaignAnalyticsPage } from '@/features/campaign/analytics';
 
-interface CampaignAnalyticsPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function CampaignAnalyticsPage({ params }: CampaignAnalyticsPageProps) {
-  return (
-    <AnalyticsContainer
-      type="campaign"
-      entityId={params.id}
-      title="Campaign Analytics"
-      showCommentsSection={true}
-      showExportButton={true}
-    />
-  );
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <CampaignAnalyticsPage campaignId={id} />;
 }

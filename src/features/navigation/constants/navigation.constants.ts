@@ -57,51 +57,51 @@ export const navigationData: { navMain: NavSection[] } = {
           icon: Home,
         },
         {
-          title: "My Campaigns",
+          title: "Campaigns",
           url: "/campaign",
-          icon: LayoutGrid,
-        },
-        {
-          title: "Campaign V2",
-          url: "/campaign-v2",
           icon: Sparkles,
         },
+        // {
+        //   title: "My Campaigns (Old)",
+        //   url: "/campaign-old",
+        //   icon: LayoutGrid,
+        // },
         {
           title: "Clipper & Montager",
           url: "/clipper",
           icon: Scissors,
         },
-        {
-          title: "Pricing",
-          url: "/pricing",
-          icon: CreditCard,
-        },
+        // {
+        //   title: "Pricing",
+        //   url: "/pricing",
+        //   icon: CreditCard,
+        // },
       ],
     },
-    {
-      section: "Manage",
-      items: [
-        {
-          title: "Social Accounts",
-          url: "/social-accounts",
-          icon: Link2,
-        },
-        {
-          title: "Social Accounts (Late)",
-          url: "/social-accounts-late",
-          icon: Link2,
-        },
-        {
-          title: "Reports",
-          url: "/reports",
-          icon: FileText,
-        },
-        {
-          title: "Analytics",
-          url: "/analytics",
-          icon: BarChart3,
-        },
-      ],
-    },
+    // {
+    //   section: "Manage",
+    //   items: [
+    //     {
+    //       title: "Social Accounts",
+    //       url: "/social-accounts",
+    //       icon: Link2,
+    //     },
+    //     {
+    //       title: "Social Accounts (Late)",
+    //       url: "/social-accounts-late",
+    //       icon: Link2,
+    //     },
+    //     {
+    //       title: "Reports",
+    //       url: "/reports",
+    //       icon: FileText,
+    //     },
+    //     {
+    //       title: "Analytics",
+    //       url: "/analytics",
+    //       icon: BarChart3,
+    //     },
+    //   ],
+    // },
   ],
 }
