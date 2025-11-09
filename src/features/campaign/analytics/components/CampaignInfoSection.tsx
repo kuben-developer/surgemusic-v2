@@ -2,6 +2,12 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Music2, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInUp } from "../constants/metrics";
@@ -56,15 +62,23 @@ export function CampaignInfoSection({ campaignMetadata, totals }: CampaignInfoSe
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
-            {/* <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> */}
-            <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground font-medium">Cost Per 1K Views</span>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {formattedCPM}
-              </span>
-            </div>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 cursor-help">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground font-medium">CPM</span>
+                    <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {formattedCPM}
+                    </span>
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cost Per 1K Views</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </Card>
     </motion.div>
