@@ -151,7 +151,7 @@ export function LyricsSection({
           <div className="space-y-3">
             <div className="max-h-60 overflow-y-auto divide-y divide-border text-sm">
               {savedLyrics.map((line, index) => (
-                <div key={index} className="flex gap-3 py-2 first:pt-0">
+                <div key={index} className="flex items-baseline gap-3 py-2 first:pt-0">
                   <span className="text-muted-foreground shrink-0 w-8 font-mono text-xs">
                     {index}s
                   </span>
