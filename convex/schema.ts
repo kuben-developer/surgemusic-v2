@@ -269,8 +269,34 @@ export default defineSchema({
       scheduled: v.number(),
       errors: v.array(v.string())
     }),
+    // Audio and Lyrics data
+    audioFileId: v.optional(v.id('_storage')),
+    audioUrl: v.optional(v.string()),
+    hasLyrics: v.optional(v.boolean()),
+    lyrics: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+    }))),
+    wordsData: v.optional(v.array(v.object({
+      text: v.string(),
+      start: v.number(),
+      end: v.number(),
+      type: v.string(),
+      logprob: v.optional(v.number()),
+    }))),
+    lyricsWithWords: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      text: v.string(),
+      wordIndices: v.array(v.number()),
+    }))),
   })
     .index("by_campaignId", ["campaignId"]),
+
+  captions: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    text: v.string(),
+  })
+    .index("by_campaign", ["campaignId"]),
 
 
   comments: defineTable({

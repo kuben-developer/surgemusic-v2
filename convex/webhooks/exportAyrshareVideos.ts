@@ -6,6 +6,7 @@ interface VideoData {
   referenceId: string;
   videoId: string;
   videoUrl: string;
+  postedAt: number;
 }
 
 interface VideoDataWithReport extends VideoData {

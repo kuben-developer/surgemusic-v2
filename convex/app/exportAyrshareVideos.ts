@@ -70,6 +70,7 @@ export const getAllAyrshareVideosWithCampaigns = internalQuery({
         referenceId: campaign?.referenceId || '',
         videoId: video.videoId,
         videoUrl: video.videoUrl,
+        postedAt: video.postedAt,
       });
     }
 

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
 import { useCampaignMetadata } from "./hooks/useCampaignMetadata";
@@ -11,6 +12,7 @@ import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
 import { CampaignSyncStats } from "./components/CampaignSyncStats";
+import { CampaignMediaSection } from "@/features/campaign/media";
 import { useState, useMemo } from "react";
 import {
   calculateCategoryStats,
@@ -28,6 +30,7 @@ export function CampaignContentPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("categories");
 
   // Calculate category stats
   const categoryStats = useMemo(() => {
@@ -134,12 +137,25 @@ export function CampaignContentPage() {
           </div>
         )}
 
-        {/* Category Table View */}
+        {/* Tabs for Categories and Campaign Assets */}
         {!selectedCategory && (
-          <VideoCategoryTable
-            categories={categoryStats}
-            onSelectCategory={handleSelectCategory}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="categories" className="cursor-pointer">Categories</TabsTrigger>
+              <TabsTrigger value="media" className="cursor-pointer">Campaign Assets</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="categories" className="space-y-4">
+              <VideoCategoryTable
+                categories={categoryStats}
+                onSelectCategory={handleSelectCategory}
+              />
+            </TabsContent>
+
+            <TabsContent value="media" className="space-y-4">
+              <CampaignMediaSection campaignId={campaignRecordId} />
+            </TabsContent>
+          </Tabs>
         )}
 
         {/* Video Grid View */}

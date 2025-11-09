@@ -10,14 +10,36 @@ interface VideoData {
   referenceId: string;
   videoId: string;
   videoUrl: string;
+  postedAt: number;
 }
 
 interface CSVRow {
   reportName: string;
+  postedDateTime: string;
   campaignId: string;
   referenceId: string;
   videoId: string;
   username: string;
+}
+
+/**
+ * Convert epoch seconds to datetime string
+ * Example: 1699363200 -> "2024-11-07 14:23:45"
+ */
+function formatDateTime(epochSeconds: number): string {
+  try {
+    const date = new Date(epochSeconds * 1000); // Convert seconds to milliseconds
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    console.error(`Error formatting timestamp: ${epochSeconds}`, error);
+    return '';
+  }
 }
 
 /**
@@ -51,13 +73,14 @@ function extractUsername(videoUrl: string): string {
  */
 function convertToCSV(rows: CSVRow[]): string {
   // CSV headers
-  const headers = ['Report Name', 'Campaign ID', 'Reference ID', 'Video ID', 'Username'];
+  const headers = ['Report Name', 'Posted DateTime', 'Campaign ID', 'Reference ID', 'Video ID', 'Username'];
   const csvLines = [headers.join(',')];
 
   // CSV rows
   for (const row of rows) {
     const values = [
       row.reportName,
+      row.postedDateTime,
       row.campaignId,
       row.referenceId,
       row.videoId,
@@ -106,6 +129,7 @@ async function main() {
     // Transform data and extract usernames
     const csvRows: CSVRow[] = videosData.map((video: VideoData) => ({
       reportName: video.reportName,
+      postedDateTime: formatDateTime(video.postedAt),
       campaignId: video.campaignId,
       referenceId: video.referenceId,
       videoId: video.videoId,
