@@ -43,6 +43,7 @@ export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) 
         audioUrl={mediaData?.audioUrl}
         audioBase64={audioBase64}
         hasLyrics={mediaData?.hasLyrics}
+        savedLyrics={mediaData?.lyrics}
       />
 
       <Separator />

@@ -6,12 +6,14 @@ import { Card } from "@/components/ui/card";
 import { FileText, Loader2, Edit, AlertCircle, Upload } from "lucide-react";
 import { LyricsEditor } from "@/features/campaign-old/create/components/LyricsEditor";
 import { useCampaignLyrics } from "../hooks/useCampaignLyrics";
+import type { LyricLine } from "../types/media.types";
 
 interface LyricsSectionProps {
   campaignId: string;
   audioUrl?: string;
   audioBase64?: string;
   hasLyrics?: boolean;
+  savedLyrics?: LyricLine[];
 }
 
 export function LyricsSection({
@@ -19,6 +21,7 @@ export function LyricsSection({
   audioUrl,
   audioBase64,
   hasLyrics = false,
+  savedLyrics = [],
 }: LyricsSectionProps) {
   const srtFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -143,15 +146,20 @@ export function LyricsSection({
         onChange={handleSRTFileSelect}
       />
 
-      {hasLyrics ? (
-        <Card className="p-3">
-          <div className="flex items-center gap-3">
-            <FileText className="h-6 w-6 text-primary" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">Lyrics transcribed</p>
-              <p className="text-xs text-muted-foreground">
-                15 seconds of synchronized lyrics
-              </p>
+      {hasLyrics && savedLyrics.length > 0 ? (
+        <Card className="p-4">
+          <div className="space-y-3">
+            <div className="max-h-60 overflow-y-auto divide-y divide-border text-sm">
+              {savedLyrics.map((line, index) => (
+                <div key={index} className="flex gap-3 py-2 first:pt-0">
+                  <span className="text-muted-foreground shrink-0 w-8 font-mono text-xs">
+                    {index}s
+                  </span>
+                  <span className="text-foreground leading-relaxed">
+                    {line.text || <span className="text-muted-foreground italic">(empty)</span>}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </Card>
