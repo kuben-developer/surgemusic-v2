@@ -35,14 +35,14 @@ export function LyricsSection({
   // Show message if no audio uploaded yet
   if (!audioUrl) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Lyrics</h3>
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Lyrics</h3>
         </div>
 
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">
+        <Card className="p-3 text-center">
+          <p className="text-sm text-muted-foreground">
             Please upload audio first to transcribe lyrics
           </p>
         </Card>
@@ -53,10 +53,10 @@ export function LyricsSection({
   // Show lyrics editor if open
   if (showLyricsEditor) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Edit Lyrics</h3>
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Edit Lyrics</h3>
         </div>
 
         <LyricsEditor
@@ -70,11 +70,11 @@ export function LyricsSection({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Lyrics</h3>
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Lyrics</h3>
         </div>
 
         <div className="flex gap-2">
@@ -106,26 +106,26 @@ export function LyricsSection({
       </div>
 
       {hasLyrics ? (
-        <Card className="p-4">
-          <div className="flex items-center gap-4">
-            <FileText className="h-8 w-8 text-primary" />
+        <Card className="p-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6 text-primary" />
             <div className="flex-1">
-              <p className="font-medium">Lyrics transcribed</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-medium">Lyrics transcribed</p>
+              <p className="text-xs text-muted-foreground">
                 15 seconds of synchronized lyrics
               </p>
             </div>
           </div>
         </Card>
       ) : transcriptionFailed ? (
-        <Card className="p-6 border-destructive">
-          <div className="flex items-start gap-4">
-            <AlertCircle className="h-6 w-6 text-destructive shrink-0" />
+        <Card className="p-3 border-destructive">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
             <div className="flex-1">
-              <p className="font-medium text-destructive mb-2">
+              <p className="text-sm font-medium text-destructive mb-1">
                 Transcription Failed
               </p>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-xs text-muted-foreground mb-3">
                 {transcriptionError ||
                   "We tried three times but couldn't transcribe the audio. You can retry or edit manually."}
               </p>
@@ -151,10 +151,10 @@ export function LyricsSection({
           </div>
         </Card>
       ) : (
-        <Card className="p-6 text-center">
-          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No lyrics yet</p>
-          <p className="text-sm text-muted-foreground">
+        <Card className="p-4 text-center">
+          <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground mb-1">No lyrics yet</p>
+          <p className="text-xs text-muted-foreground">
             Click "Transcribe Audio" to automatically detect lyrics using
             ElevenLabs
           </p>

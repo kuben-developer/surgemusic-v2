@@ -27,16 +27,7 @@ export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) 
   };
 
   return (
-    <Card className="p-6 space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Campaign Assets</h2>
-        <p className="text-muted-foreground">
-          Upload audio, transcribe lyrics, and manage captions for your campaign
-        </p>
-      </div>
-
-      <Separator />
-
+    <Card className="p-4 space-y-4">
       {/* Audio Upload Section */}
       <AudioUploadSection
         campaignId={campaignId}

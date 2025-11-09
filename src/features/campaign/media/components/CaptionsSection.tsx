@@ -67,13 +67,13 @@ export function CaptionsSection({ campaignId }: CaptionsSectionProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Captions</h3>
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Captions</h3>
           {captionCount > 0 && (
-            <Badge variant="secondary">{captionCount} captions</Badge>
+            <Badge variant="secondary" className="text-xs">{captionCount}</Badge>
           )}
         </div>
 
@@ -114,7 +114,7 @@ export function CaptionsSection({ campaignId }: CaptionsSectionProps) {
 
       {/* Add Caption Input */}
       {showAddInput && (
-        <Card className="p-4">
+        <Card className="p-3">
           <div className="flex gap-2">
             <Input
               placeholder="Enter caption text..."
@@ -128,9 +128,11 @@ export function CaptionsSection({ campaignId }: CaptionsSectionProps) {
                   setNewCaptionText("");
                 }
               }}
+              className="text-sm"
               autoFocus
             />
             <Button
+              size="sm"
               onClick={handleAddCaption}
               disabled={!newCaptionText.trim() || isAddingCaption}
             >
@@ -141,6 +143,7 @@ export function CaptionsSection({ campaignId }: CaptionsSectionProps) {
               )}
             </Button>
             <Button
+              size="sm"
               variant="outline"
               onClick={() => {
                 setShowAddInput(false);
@@ -155,30 +158,30 @@ export function CaptionsSection({ campaignId }: CaptionsSectionProps) {
 
       {/* Captions List */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-center py-4 text-sm text-muted-foreground">
           Loading captions...
         </div>
       ) : captions && captions.length > 0 ? (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="space-y-1.5 max-h-64 overflow-y-auto">
           {captions.map((caption: Caption) => (
-            <Card key={caption._id} className="p-3 flex items-start justify-between gap-2">
+            <Card key={caption._id} className="p-2 flex items-start justify-between gap-2">
               <p className="flex-1 text-sm">{caption.text}</p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveCaption(caption._id)}
-                className="shrink-0"
+                className="shrink-0 h-7 w-7 p-0"
               >
-                <Trash2 className="h-4 w-4 text-destructive" />
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </Button>
             </Card>
           ))}
         </div>
       ) : (
-        <Card className="p-8 text-center">
-          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No captions yet</p>
-          <p className="text-sm text-muted-foreground">
+        <Card className="p-4 text-center">
+          <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground mb-1">No captions yet</p>
+          <p className="text-xs text-muted-foreground">
             Upload a .txt file with one caption per line, or add captions manually
           </p>
         </Card>
