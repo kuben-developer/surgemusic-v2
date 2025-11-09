@@ -8,6 +8,7 @@ const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
 const AIRTABLE_ARTIST_TABLE_ID = "tblGoMJr5XOVFx50O";
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
+const CONCURRENT_LIMIT = 10;
 
 interface AirtableRecord {
   id: string;
@@ -316,58 +317,121 @@ export const refreshBundleSocialPostsByCampaign = internalAction({
   },
   handler: async (ctx, { campaignId }) => {
     try {
-      let updatedCount = 0;
-      let errorCount = 0;
+      const startTime = Date.now();
 
       // Get today's date in DD-MM-YYYY format
       const today = new Date();
       const date = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
 
       // Get all posts for this campaign
-      const posts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId });
+      const allPosts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId });
 
-      for (const post of posts) {
-        // Fetch updated data from Bundle Social
-        const bundleData = await fetchBundleSocialPost(post.postId);
-        if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
-          errorCount++;
-          console.error(`No data from Bundle Social for post ${post.postId}`);
-          continue;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const posts = allPosts.filter(
+        (post: { postId: string }) => uuidRegex.test(post.postId)
+      );
+
+      // Process a single post
+      const processPost = async (post: { postId: string; campaignId: string }) => {
+        try {
+          // Fetch updated data from Bundle Social
+          const bundleData = await fetchBundleSocialPost(post.postId);
+          if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
+            return {
+              postId: post.postId,
+              success: false,
+              error: `No data from Bundle Social`
+            };
+          }
+
+          const stats = bundleData.items[0];
+          if (!stats) {
+            return {
+              postId: post.postId,
+              success: false,
+              error: `No stats data`
+            };
+          }
+
+          // if (post.postId == "3ade199f-a34c-4d95-aca4-5714fc2c44f8") {
+          //   console.log(bundleData);
+          //   console.log(stats)
+          // }
+
+          // Update post stats
+          await ctx.runMutation(internal.app.bundleSocialQueries.updatePostStats, {
+            postId: post.postId,
+            views: stats.views,
+            likes: stats.likes,
+            comments: stats.comments,
+            shares: stats.shares,
+            saves: stats.saves,
+          });
+
+          // Upsert snapshot
+          await ctx.runMutation(internal.app.bundleSocialQueries.upsertSnapshot, {
+            campaignId: post.campaignId,
+            postId: post.postId,
+            date,
+            views: stats.views,
+            likes: stats.likes,
+            comments: stats.comments,
+            shares: stats.shares,
+            saves: stats.saves,
+          });
+
+          return {
+            postId: post.postId,
+            success: true
+          };
+        } catch (error) {
+          return {
+            postId: post.postId,
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+          };
         }
+      };
 
-        const stats = bundleData.items[0];
-        if (!stats) {
-          errorCount++;
-          console.error(`No stats data for post ${post.postId}`);
-          continue;
-        }
+      const results: Array<{
+        postId: string;
+        success: boolean;
+        error?: string;
+      }> = [];
 
-        // Update post stats
-        await ctx.runMutation(internal.app.bundleSocialQueries.updatePostStats, {
-          postId: post.postId,
-          views: stats.views,
-          likes: stats.likes,
-          comments: stats.comments,
-          shares: stats.shares,
-          saves: stats.saves,
+      console.log(`[refreshBundleSocial] Processing ${posts.length} posts with concurrency limit of ${CONCURRENT_LIMIT}`);
+
+      for (let i = 0; i < posts.length; i += CONCURRENT_LIMIT) {
+        const batch = posts.slice(i, i + CONCURRENT_LIMIT);
+        const batchStartTime = Date.now();
+        console.log(`[refreshBundleSocial] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(posts.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
+
+        const batchResults = await Promise.allSettled(
+          batch.map(post => processPost(post))
+        );
+
+        batchResults.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            results.push(result.value);
+          } else {
+            console.error(`[refreshBundleSocial] Unexpected error in batch processing:`, result.reason);
+            results.push({
+              postId: 'unknown',
+              success: false,
+              error: 'Unexpected error during processing'
+            });
+          }
         });
 
-        // Upsert snapshot
-        await ctx.runMutation(internal.app.bundleSocialQueries.upsertSnapshot, {
-          campaignId: post.campaignId,
-          postId: post.postId,
-          date,
-          views: stats.views,
-          likes: stats.likes,
-          comments: stats.comments,
-          shares: stats.shares,
-          saves: stats.saves,
-        });
-
-        updatedCount++;
+        console.log(`[refreshBundleSocial] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
       }
 
-      console.log(`Refresh campaign ${campaignId}: ${updatedCount} posts updated, ${errorCount} errors`);
+      const totalTime = Date.now() - startTime;
+      const updatedCount = results.filter(r => r.success).length;
+      const errorCount = results.filter(r => !r.success).length;
+
+      console.log(`Refresh campaign ${campaignId}: ${updatedCount} posts updated, ${errorCount} errors in ${totalTime}ms`);
     } catch (error) {
       console.error(`Error refreshing campaign ${campaignId}:`, error);
       throw error;
