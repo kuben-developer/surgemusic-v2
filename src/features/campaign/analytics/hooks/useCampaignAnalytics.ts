@@ -26,15 +26,24 @@ export function useCampaignAnalytics(campaignId: string) {
       let data;
 
       if (filter) {
-        // Convert dates to Unix timestamps (seconds)
-        // Set start time to beginning of day (00:00:00)
-        const startOfDay = new Date(filter.startDate);
-        startOfDay.setHours(0, 0, 0, 0);
+        // Convert dates to Unix timestamps (seconds) in UTC
+        // Use UTC methods to extract date components since we're working in UTC
+        // Set start time to beginning of day (00:00:00 UTC)
+        const startOfDay = new Date(Date.UTC(
+          filter.startDate.getUTCFullYear(),
+          filter.startDate.getUTCMonth(),
+          filter.startDate.getUTCDate(),
+          0, 0, 0, 0
+        ));
         const postedStartDate = Math.floor(startOfDay.getTime() / 1000);
 
-        // Set end time to end of day (23:59:59)
-        const endOfDay = new Date(filter.endDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        // Set end time to end of day (23:59:59 UTC)
+        const endOfDay = new Date(Date.UTC(
+          filter.endDate.getUTCFullYear(),
+          filter.endDate.getUTCMonth(),
+          filter.endDate.getUTCDate(),
+          23, 59, 59, 999
+        ));
         const postedEndDate = Math.floor(endOfDay.getTime() / 1000);
 
         data = await getCampaignAnalytics({

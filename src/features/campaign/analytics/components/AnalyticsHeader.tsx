@@ -33,15 +33,23 @@ export function AnalyticsHeader({
     dateFilter ? { from: dateFilter.startDate, to: dateFilter.endDate } : undefined
   );
 
+  // Helper function to format date as YYYY-MM-DD in UTC
+  const formatDateUTC = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Helper function to check if a date has posts
   const hasPostsOnDate = (date: Date): boolean => {
-    const dateKey = format(date, "yyyy-MM-dd");
+    const dateKey = formatDateUTC(date);
     return (postCountsByDate[dateKey] ?? 0) > 0;
   };
 
   // Helper function to get post count for a date
   const getPostCount = (date: Date): number => {
-    const dateKey = format(date, "yyyy-MM-dd");
+    const dateKey = formatDateUTC(date);
     return postCountsByDate[dateKey] ?? 0;
   };
 
