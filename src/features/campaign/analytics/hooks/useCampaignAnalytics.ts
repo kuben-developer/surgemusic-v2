@@ -3,27 +3,52 @@
 import { useState, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "convex/_generated/api";
-import type { CampaignAnalyticsData, DateRange } from "../types/analytics.types";
+import type { CampaignAnalyticsData, DateFilter } from "../types/analytics.types";
 
 export function useCampaignAnalytics(campaignId: string) {
-  const [dateRange, setDateRange] = useState<DateRange>(30);
+  const [dateFilter, setDateFilter] = useState<DateFilter | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const getCampaignAnalytics = useAction(api.app.bundleSocial.getCampaignAnalyticsWithMetadata);
+  const getPostCounts = useAction(api.app.bundleSocial.getPostCountsByDate);
+
   const [analyticsData, setAnalyticsData] = useState<CampaignAnalyticsData | null>(null);
+  const [postCountsByDate, setPostCountsByDate] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Fetch analytics data
-  const fetchAnalytics = async (days: DateRange = dateRange) => {
+  const fetchAnalytics = async (filter: DateFilter | null = dateFilter) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const data = await getCampaignAnalytics({
-        campaignId,
-        days,
-      });
+      let data;
+
+      if (filter) {
+        // Convert dates to Unix timestamps (seconds)
+        // Set start time to beginning of day (00:00:00)
+        const startOfDay = new Date(filter.startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const postedStartDate = Math.floor(startOfDay.getTime() / 1000);
+
+        // Set end time to end of day (23:59:59)
+        const endOfDay = new Date(filter.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        const postedEndDate = Math.floor(endOfDay.getTime() / 1000);
+
+        data = await getCampaignAnalytics({
+          campaignId,
+          postedStartDate,
+          postedEndDate,
+        });
+      } else {
+        // No filter - show all videos (default 30 days)
+        data = await getCampaignAnalytics({
+          campaignId,
+          days: 30,
+        });
+      }
 
       setAnalyticsData(data as CampaignAnalyticsData);
     } catch (err) {
@@ -37,29 +62,42 @@ export function useCampaignAnalytics(campaignId: string) {
   // Refresh analytics
   const refreshAnalytics = async () => {
     setIsRefreshing(true);
-    await fetchAnalytics(dateRange);
+    await fetchAnalytics(dateFilter);
     setIsRefreshing(false);
   };
 
-  // Change date range
-  const changeDateRange = async (days: DateRange) => {
-    setDateRange(days);
-    await fetchAnalytics(days);
+  // Change date filter
+  const changeDateFilter = async (filter: DateFilter | null) => {
+    setDateFilter(filter);
+    await fetchAnalytics(filter);
+  };
+
+  // Fetch post counts by date
+  const fetchPostCounts = async () => {
+    try {
+      const counts = await getPostCounts({ campaignId });
+      setPostCountsByDate(counts);
+    } catch (err) {
+      console.error('Error fetching post counts:', err);
+      // Don't set error state - this is non-critical data
+    }
   };
 
   // Initial fetch
   useEffect(() => {
-    fetchAnalytics(dateRange);
+    void fetchAnalytics(null);
+    void fetchPostCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
 
   return {
     analyticsData,
+    postCountsByDate,
     isLoading,
     isRefreshing,
     error,
-    dateRange,
-    changeDateRange,
+    dateFilter,
+    changeDateFilter,
     refreshAnalytics,
   };
 }

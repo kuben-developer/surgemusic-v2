@@ -23,10 +23,11 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
 
   const {
     analyticsData,
+    postCountsByDate,
     isLoading,
     error,
-    dateRange,
-    changeDateRange,
+    dateFilter,
+    changeDateFilter,
   } = useCampaignAnalytics(campaignId);
 
   const [activeMetric, setActiveMetric] = useState<MetricType>("views");
@@ -92,9 +93,10 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <AnalyticsHeader
         campaignId={campaignId}
-        dateRange={dateRange}
+        dateFilter={dateFilter}
+        postCountsByDate={postCountsByDate}
         lastUpdatedAt={analyticsData.lastUpdatedAt}
-        onDateRangeChange={changeDateRange}
+        onDateFilterChange={changeDateFilter}
         isPublic={isPublic}
       />
 

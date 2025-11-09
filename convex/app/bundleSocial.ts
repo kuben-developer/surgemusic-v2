@@ -543,13 +543,27 @@ export const aggregateCampaignPerformance = internalAction({
   },
 });
 
+// Get post counts by date for calendar
+export const getPostCountsByDate = action({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, { campaignId }): Promise<Record<string, number>> => {
+    return await ctx.runQuery(internal.app.bundleSocialQueries.getPostCountsByDate, {
+      campaignId,
+    });
+  },
+});
+
 // Get campaign analytics with Airtable metadata
 export const getCampaignAnalyticsWithMetadata = action({
   args: {
     campaignId: v.string(),
-    days: v.number(),
+    days: v.optional(v.number()),
+    postedStartDate: v.optional(v.number()),
+    postedEndDate: v.optional(v.number()),
   },
-  handler: async (ctx, { campaignId, days }): Promise<{
+  handler: async (ctx, { campaignId, days, postedStartDate, postedEndDate }): Promise<{
     totals: { posts: number; views: number; likes: number; comments: number; shares: number; saves: number };
     growth: { views: number; likes: number; comments: number; shares: number; saves: number };
     engagementRate: string;
@@ -560,10 +574,12 @@ export const getCampaignAnalyticsWithMetadata = action({
     campaignMetadata: { campaignId: string; name: string; artist: string; song: string };
   }> => {
     try {
-      // Fetch analytics data from pre-aggregated table
+      // Fetch analytics data from pre-aggregated table or filter by posted date
       const analytics = await ctx.runQuery(internal.app.bundleSocialQueries.getCampaignAnalytics, {
         campaignId,
         days,
+        postedStartDate,
+        postedEndDate,
       });
 
       // Fetch campaign metadata from Airtable

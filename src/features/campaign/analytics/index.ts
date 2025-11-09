@@ -15,6 +15,6 @@ export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 // Types
 export type {
   CampaignAnalyticsData,
-  DateRange,
+  DateFilter,
   MetricType,
 } from './types/analytics.types';

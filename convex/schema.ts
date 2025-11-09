@@ -229,7 +229,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_campaignId", ["campaignId"])
-    .index("by_postId", ["postId"]),
+    .index("by_postId", ["postId"])
+    .index("by_campaignId_postedAt", ["campaignId", "postedAt"]),
 
   bundleSocialSnapshots: defineTable({
     campaignId: v.string(), // airtable campaign id

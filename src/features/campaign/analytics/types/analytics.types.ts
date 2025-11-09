@@ -45,6 +45,9 @@ export interface CampaignAnalyticsData {
   };
 }
 
-export type DateRange = 7 | 30 | 90;
+export interface DateFilter {
+  startDate: Date;
+  endDate: Date;
+}
 
 export type MetricType = 'views' | 'likes' | 'comments' | 'shares' | 'saves';
