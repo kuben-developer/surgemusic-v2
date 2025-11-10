@@ -72,10 +72,8 @@ function isGetlatePostId(postId: string): boolean {
   if (postId.includes('-')) {
     return false;
   }
-
-  // MongoDB ObjectId: exactly 24 hex characters
-  const objectIdPattern = /^[a-f0-9]{24}$/i;
-  return objectIdPattern.test(postId);
+  
+  return true
 }
 
 /**
@@ -194,10 +192,13 @@ export const syncGetlatePosts = action({
 
       for (const campaign of campaigns) {
         const campaignRecordId = campaign.id;
+        if (campaignRecordId !== 'recK2FEC9YDXc0BKs') {
+          continue;
+        }
         const campaignIdField = campaign.fields['campaign_id'] as string;
 
         if (!campaignRecordId || !campaignIdField) {
-          console.log(`⊙ Skipping campaign (missing IDs)`);
+          // console.log(`⊙ Skipping campaign (missing IDs)`);
           continue;
         }
 
@@ -208,16 +209,8 @@ export const syncGetlatePosts = action({
         const getlatePosts: Array<{ apiPostId: string; videoUrl?: string }> = [];
 
         for (const content of contentRecords) {
-          const apiPostIdRaw = content.fields['api_post_id'];
+          const apiPostId = (content.fields['api_post_id'] as string[])?.[0] as string
           const videoUrl = content.fields['video_url'] as string | undefined;
-
-          // Extract api_post_id (handle both string and array formats)
-          let apiPostId: string | undefined;
-          if (Array.isArray(apiPostIdRaw)) {
-            apiPostId = apiPostIdRaw[0];
-          } else if (typeof apiPostIdRaw === 'string') {
-            apiPostId = apiPostIdRaw;
-          }
 
           // Check if this is a getlate post
           if (apiPostId && isGetlatePostId(apiPostId)) {
@@ -246,22 +239,29 @@ export const syncGetlatePosts = action({
             });
 
             if (exists) {
-              console.log(`  ⊙ Post ${apiPostId} already exists, skipping`);
+              // console.log(`  ⊙ Post ${apiPostId} already exists, skipping`);
               totalSkipped++;
               continue;
             }
 
             // Step 1: Get TikTok video ID from getlate API
-            console.log(`  🔍 Fetching TikTok video ID from getlate for post: ${apiPostId}`);
-            const tiktokVideoId = await fetchTikTokVideoIdFromGetlate(apiPostId);
+            let tiktokVideoId: string | number | null;
+            // Treat apiPostId as a TikTok video ID if it is a number or a numeric string
+            if (/^\d+$/.test(apiPostId)) {
+              tiktokVideoId = apiPostId
+              console.log(`  🔍 Using numeric apiPostId as TikTok video ID for post: ${apiPostId}`);
+            } else {
+              // console.log(`  🔍 Fetching TikTok video ID from getlate for post: ${apiPostId}`);
+              tiktokVideoId = await fetchTikTokVideoIdFromGetlate(apiPostId);
+            }
 
             if (!tiktokVideoId) {
-              console.error(`  ✗ Failed to get TikTok video ID for post ${apiPostId}`);
+              // console.error(`  ✗ Failed to get TikTok video ID for post ${apiPostId}`);
               totalFailed++;
               continue;
             }
 
-            console.log(`  ✓ Got TikTok video ID: ${tiktokVideoId}`);
+            // console.log(`  ✓ Got TikTok video ID: ${tiktokVideoId}`);
 
             // Step 2: Get video stats from TikTok
             console.log(`  🔍 Fetching video stats from TikTok...`);

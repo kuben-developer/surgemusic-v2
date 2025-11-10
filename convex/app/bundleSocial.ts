@@ -470,45 +470,123 @@ export const refreshBundleSocialPosts = internalAction({
 export const aggregateCampaignPerformanceByCampaign = internalAction({
   args: {
     campaignId: v.string(),
+    rebuildFromSnapshots: v.optional(v.boolean()), // If true, delete all existing records and rebuild from snapshots
   },
-  handler: async (ctx, { campaignId }) => {
+  handler: async (ctx, { campaignId, rebuildFromSnapshots = false }) => {
     try {
-      // Get today's date in DD-MM-YYYY format
-      const today = new Date();
-      const date = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+      if (rebuildFromSnapshots) {
+        // REBUILD MODE: Delete all existing records and recreate from snapshots
+        console.log(`[REBUILD] Starting rebuild for campaign ${campaignId} from snapshots`);
 
-      // Get all posts for this campaign
-      const posts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId });
+        // 1. Delete all existing performance records for this campaign
+        const deletedCount = await ctx.runMutation(internal.app.bundleSocialQueries.deleteCampaignPerformance, { campaignId });
+        console.log(`[REBUILD] Deleted ${deletedCount} existing performance records`);
 
-      // Aggregate stats
-      let totalViews = 0;
-      let totalLikes = 0;
-      let totalComments = 0;
-      let totalShares = 0;
-      let totalSaves = 0;
-      const totalPosts = posts.length;
+        // 2. Get all valid posts for this campaign to filter snapshots
+        const posts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId });
+        const validPostIds = new Set(posts.map(post => post.postId));
+        console.log(`[REBUILD] Found ${validPostIds.size} valid posts in bundleSocialPostedVideos`);
 
-      for (const post of posts) {
-        totalViews += post.views;
-        totalLikes += post.likes;
-        totalComments += post.comments;
-        totalShares += post.shares;
-        totalSaves += post.saves;
+        // 3. Get all snapshots for this campaign
+        const allSnapshots = await ctx.runQuery(internal.app.bundleSocialQueries.getAllSnapshotsForCampaign, { campaignId });
+        console.log(`[REBUILD] Found ${allSnapshots.length} total snapshots`);
+
+        // 4. Filter snapshots to only include those with postIds that exist in bundleSocialPostedVideos
+        const snapshots = allSnapshots.filter(snapshot => validPostIds.has(snapshot.postId));
+        console.log(`[REBUILD] Filtered to ${snapshots.length} snapshots with valid postIds`);
+
+        if (snapshots.length === 0) {
+          console.log(`[REBUILD] No valid snapshots found for campaign ${campaignId}`);
+          return;
+        }
+
+        // 5. Group snapshots by date and aggregate
+        const snapshotsByDate = new Map<string, {
+          postIds: Set<string>;
+          views: number;
+          likes: number;
+          comments: number;
+          shares: number;
+          saves: number;
+        }>();
+
+        for (const snapshot of snapshots) {
+          const existing = snapshotsByDate.get(snapshot.date);
+          if (existing) {
+            existing.postIds.add(snapshot.postId);
+            existing.views += snapshot.views;
+            existing.likes += snapshot.likes;
+            existing.comments += snapshot.comments;
+            existing.shares += snapshot.shares;
+            existing.saves += snapshot.saves;
+          } else {
+            snapshotsByDate.set(snapshot.date, {
+              postIds: new Set([snapshot.postId]),
+              views: snapshot.views,
+              likes: snapshot.likes,
+              comments: snapshot.comments,
+              shares: snapshot.shares,
+              saves: snapshot.saves,
+            });
+          }
+        }
+
+        // 6. Insert aggregated performance records for each date
+        let insertedCount = 0;
+        for (const [date, metrics] of snapshotsByDate.entries()) {
+          await ctx.runMutation(internal.app.bundleSocialQueries.upsertCampaignPerformance, {
+            campaignId,
+            date,
+            posts: metrics.postIds.size,
+            views: metrics.views,
+            likes: metrics.likes,
+            comments: metrics.comments,
+            shares: metrics.shares,
+            saves: metrics.saves,
+          });
+          insertedCount++;
+        }
+
+        console.log(`[REBUILD] Rebuilt ${insertedCount} performance records for campaign ${campaignId}`);
+      } else {
+        // NORMAL MODE: Only update today's record
+        // Get today's date in DD-MM-YYYY format
+        const today = new Date();
+        const date = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+
+        // Get all posts for this campaign
+        const posts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId });
+
+        // Aggregate stats
+        let totalViews = 0;
+        let totalLikes = 0;
+        let totalComments = 0;
+        let totalShares = 0;
+        let totalSaves = 0;
+        const totalPosts = posts.length;
+
+        for (const post of posts) {
+          totalViews += post.views;
+          totalLikes += post.likes;
+          totalComments += post.comments;
+          totalShares += post.shares;
+          totalSaves += post.saves;
+        }
+
+        // Upsert aggregated performance
+        await ctx.runMutation(internal.app.bundleSocialQueries.upsertCampaignPerformance, {
+          campaignId,
+          date,
+          posts: totalPosts,
+          views: totalViews,
+          likes: totalLikes,
+          comments: totalComments,
+          shares: totalShares,
+          saves: totalSaves,
+        });
+
+        console.log(`Aggregated campaign ${campaignId}: ${totalPosts} posts, ${totalViews} views`);
       }
-
-      // Upsert aggregated performance
-      await ctx.runMutation(internal.app.bundleSocialQueries.upsertCampaignPerformance, {
-        campaignId,
-        date,
-        posts: totalPosts,
-        views: totalViews,
-        likes: totalLikes,
-        comments: totalComments,
-        shares: totalShares,
-        saves: totalSaves,
-      });
-
-      console.log(`Aggregated campaign ${campaignId}: ${totalPosts} posts, ${totalViews} views`);
     } catch (error) {
       console.error(`Error aggregating campaign ${campaignId}:`, error);
       throw error;

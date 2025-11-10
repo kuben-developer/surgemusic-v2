@@ -596,3 +596,31 @@ export const getPostCountsByDate = internalQuery({
     return countsByDate;
   },
 });
+
+// Delete all campaign performance records for a specific campaign
+export const deleteCampaignPerformance = internalMutation({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const records = await ctx.db
+      .query("bundleSocialCampaignPerformance")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    for (const record of records) {
+      await ctx.db.delete(record._id);
+    }
+
+    return records.length;
+  },
+});
+
+// Get all snapshots for a campaign
+export const getAllSnapshotsForCampaign = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    return await ctx.db
+      .query("bundleSocialSnapshots")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+  },
+});
