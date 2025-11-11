@@ -165,6 +165,46 @@ export const syncBundleSocialPostsByCampaign = internalAction({
       // Fetch content for this campaign using the campaign_id field
       const contentRecords = await fetchAirtableContent(campaignIdField);
 
+      // DELETION LOGIC: Remove posts that no longer exist in Airtable
+      // Get all existing posts from database for this campaign
+      const existingPosts = await ctx.runQuery(internal.app.bundleSocialQueries.getPostsByCampaign, { campaignId: campaignRecordId });
+
+      // Build Set of valid postIds from Airtable content
+      const validPostIds = new Set<string>();
+      for (const content of contentRecords) {
+        const apiPostIdRaw = content.fields['api_post_id'];
+        let apiPostId: string | undefined;
+        if (Array.isArray(apiPostIdRaw)) {
+          apiPostId = apiPostIdRaw[0];
+        } else if (typeof apiPostIdRaw === 'string') {
+          apiPostId = apiPostIdRaw;
+        }
+        if (apiPostId) {
+          validPostIds.add(apiPostId);
+        }
+      }
+
+      // Find orphaned posts (exist in DB but not in Airtable)
+      const orphanedPosts = existingPosts.filter(post => !validPostIds.has(post.postId));
+
+      // Delete orphaned posts
+      let deletedCount = 0;
+      for (const orphanedPost of orphanedPosts) {
+        const deleted = await ctx.runMutation(internal.app.bundleSocialQueries.deletePostByPostId, { postId: orphanedPost.postId });
+        if (deleted) {
+          deletedCount++;
+        }
+      }
+
+      // If we deleted any posts, schedule a rebuild of campaign performance
+      if (deletedCount > 0) {
+        console.log(`Deleted ${deletedCount} orphaned posts for campaign ${campaignRecordId}, scheduling performance rebuild`);
+        await ctx.scheduler.runAfter(0, internal.app.bundleSocial.aggregateCampaignPerformanceByCampaign, {
+          campaignId: campaignRecordId,
+          rebuildFromSnapshots: true,
+        });
+      }
+
       for (const content of contentRecords) {
         const apiPostIdRaw = content.fields['api_post_id'];
         const videoUrl = content.fields['video_url'] as string | undefined;
@@ -608,6 +648,7 @@ export const aggregateCampaignPerformance = internalAction({
         // Schedule background job for this campaign
         await ctx.scheduler.runAfter(0, internal.app.bundleSocial.aggregateCampaignPerformanceByCampaign, {
           campaignId,
+          rebuildFromSnapshots: true,
         });
 
         scheduledCount++;

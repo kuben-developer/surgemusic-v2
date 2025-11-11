@@ -4,38 +4,11 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 // crons.interval(
-//     "monitorManuallyPostedVideos",
-//     { minutes: 15 },
-//     internal.app.tiktok.monitorManuallyPostedVideos,
-// );
-
-// crons.interval(
-//     "aggregateCampaignPerformance",
+//     "syncBundleSocialPosts",
 //     { minutes: 30 },
-//     internal.app.analytics.aggregateCampaignPerformance,
+//     internal.app.bundleSocial.syncBundleSocialPosts,
 //     {}
 // );
-
-// crons.interval(
-//     "monitorApiPostedVideos",
-//     { minutes: 60 },
-//     internal.app.ayrshare.monitorApiPostedVideos,
-//     {}
-// );
-
-// crons.interval(
-//     "monitorLatePostedVideos",
-//     { minutes: 60 },
-//     internal.app.late.monitorLatePostedVideos,
-//     {}
-// );
-
-crons.interval(
-    "syncBundleSocialPosts",
-    { minutes: 30 },
-    internal.app.bundleSocial.syncBundleSocialPosts,
-    {}
-);
 
 crons.interval(
     "refreshBundleSocialPosts",
@@ -44,18 +17,11 @@ crons.interval(
     {}
 );
 
-crons.interval(
-    "aggregateBundleSocialCampaignPerformance",
-    { minutes: 30 },
-    internal.app.bundleSocial.aggregateCampaignPerformance,
-    {}
-);
-
 // crons.interval(
-//     "refreshCampaignVideoAnalytics",
-//     { minutes: 300 },
-//     internal.app.tiktok.refreshCampaignVideoAnalytics,
-//     { campaignIds: [] as Id<"campaigns">[], weeksAgo: 1 }
-// )
+//     "aggregateBundleSocialCampaignPerformance",
+//     { minutes: 30 },
+//     internal.app.bundleSocial.aggregateCampaignPerformance,
+//     {}
+// );
 
 export default crons;

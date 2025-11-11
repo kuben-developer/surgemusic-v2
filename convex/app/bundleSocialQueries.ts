@@ -36,6 +36,23 @@ export const insertPost = internalMutation({
   },
 });
 
+// Delete post by postId
+export const deletePostByPostId = internalMutation({
+  args: { postId: v.string() },
+  handler: async (ctx, { postId }) => {
+    const post = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_postId", (q) => q.eq("postId", postId))
+      .first();
+
+    if (post) {
+      await ctx.db.delete(post._id);
+      return true;
+    }
+    return false;
+  },
+});
+
 // Get all posts for refresh
 export const getAllPosts = internalQuery({
   args: {},

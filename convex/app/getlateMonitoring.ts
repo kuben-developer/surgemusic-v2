@@ -192,9 +192,7 @@ export const syncGetlatePosts = action({
 
       for (const campaign of campaigns) {
         const campaignRecordId = campaign.id;
-        if (campaignRecordId !== 'recK2FEC9YDXc0BKs') {
-          continue;
-        }
+
         const campaignIdField = campaign.fields['campaign_id'] as string;
 
         if (!campaignRecordId || !campaignIdField) {
