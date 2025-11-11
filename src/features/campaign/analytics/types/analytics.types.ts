@@ -1,4 +1,5 @@
 export interface CampaignAnalyticsData {
+  campaignId: string;
   totals: {
     posts: number;
     views: number;
@@ -7,15 +8,6 @@ export interface CampaignAnalyticsData {
     shares: number;
     saves: number;
   };
-  growth: {
-    views: number;
-    likes: number;
-    comments: number;
-    shares: number;
-    saves: number;
-  };
-  engagementRate: string;
-  engagementGrowth: string;
   dailyData: Array<{
     date: string;
     views: number;

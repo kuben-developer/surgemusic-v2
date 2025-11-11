@@ -45,7 +45,7 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-lg font-semibold text-destructive mb-2">Error Loading Analytics</p>
-          <p className="text-sm text-muted-foreground">{error.message}</p>
+          <p className="text-sm text-muted-foreground">Failed to load analytics data</p>
         </div>
       </div>
     );
@@ -59,34 +59,9 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
     );
   }
 
-  // Prepare KPI data
+  // Prepare KPI data (simplified - no growth metrics)
   const kpiData = {
     totals: analyticsData.totals,
-    avgEngagementRate: analyticsData.engagementRate,
-    viewsGrowth: {
-      value: analyticsData.growth.views,
-      isPositive: analyticsData.growth.views >= 0,
-    },
-    likesGrowth: {
-      value: analyticsData.growth.likes,
-      isPositive: analyticsData.growth.likes >= 0,
-    },
-    commentsGrowth: {
-      value: analyticsData.growth.comments,
-      isPositive: analyticsData.growth.comments >= 0,
-    },
-    sharesGrowth: {
-      value: analyticsData.growth.shares,
-      isPositive: analyticsData.growth.shares >= 0,
-    },
-    savesGrowth: {
-      value: analyticsData.growth.saves,
-      isPositive: analyticsData.growth.saves >= 0,
-    },
-    engagementGrowth: {
-      value: parseFloat(analyticsData.engagementGrowth),
-      isPositive: parseFloat(analyticsData.engagementGrowth) >= 0,
-    },
   };
 
   return (

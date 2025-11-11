@@ -433,6 +433,162 @@ export const getPostCountsByDate = query({
  * getTopVideosByPostDate({ campaignId: "recXXX", dates: [] })
  * getTopVideosByPostDate({ campaignId: "recXXX" })
  */
+/**
+ * Get campaign analytics with optional date filtering
+ *
+ * Fetches campaign analytics from the campaignAnalytics table.
+ * When dates are provided, filters to only show analytics for posts published on those dates.
+ *
+ * @param campaignId - Airtable campaign ID
+ * @param dates - Optional array of post dates in DD-MM-YYYY format. If provided, filters to only posts published on these dates.
+ * @returns Campaign analytics data with totals, daily data array, and metadata
+ *
+ * @example
+ * // Get all-time analytics
+ * getCampaignAnalytics({ campaignId: "recXXX" })
+ *
+ * // Get analytics for posts published on specific dates
+ * getCampaignAnalytics({ campaignId: "recXXX", dates: ["08-11-2025", "09-11-2025"] })
+ */
+export const getCampaignAnalytics = query({
+  args: {
+    campaignId: v.string(),
+    dates: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { campaignId, dates }) => {
+    // Fetch campaign analytics record
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      return null;
+    }
+
+    // If no date filter, return all-time data
+    if (!dates || dates.length === 0) {
+      // Transform dailySnapshots from record to array for charting
+      const dailyData = Object.entries(analytics.dailySnapshots)
+        .map(([date, snapshot]) => ({
+          date,
+          views: snapshot.totalViews,
+          likes: snapshot.totalLikes,
+          comments: snapshot.totalComments,
+          shares: snapshot.totalShares,
+          saves: snapshot.totalSaves,
+        }))
+        .sort((a, b) => {
+          // Sort by date ascending
+          const dateA = parseDate(a.date);
+          const dateB = parseDate(b.date);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+      return {
+        campaignId: analytics.campaignId,
+        campaignMetadata: {
+          campaignId: analytics.campaignId,
+          name: analytics.campaignName,
+          artist: analytics.artist,
+          song: analytics.song,
+        },
+        totals: {
+          posts: analytics.totalPosts,
+          views: analytics.totalViews,
+          likes: analytics.totalLikes,
+          comments: analytics.totalComments,
+          shares: analytics.totalShares,
+          saves: analytics.totalSaves,
+        },
+        dailyData,
+        lastUpdatedAt: analytics._creationTime,
+      };
+    }
+
+    // Filter by selected post dates
+    const datesSet = new Set(dates);
+    const filteredDateAnalytics = Object.entries(analytics.dailySnapshotsByDate)
+      .filter(([postDate]) => datesSet.has(postDate));
+
+    // Calculate filtered totals from dailySnapshotsByDate
+    let totalPosts = 0;
+    let totalViews = 0;
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalShares = 0;
+    let totalSaves = 0;
+
+    // Collect all unique snapshot dates from filtered post dates
+    const snapshotDateMap = new Map<string, { views: number; likes: number; comments: number; shares: number; saves: number }>();
+
+    for (const [, postDateData] of filteredDateAnalytics) {
+      totalPosts += postDateData.totalPosts;
+      totalViews += postDateData.totalViews;
+      totalLikes += postDateData.totalLikes;
+      totalComments += postDateData.totalComments;
+      totalShares += postDateData.totalShares;
+      totalSaves += postDateData.totalSaves;
+
+      // Aggregate daily snapshots across filtered post dates
+      for (const [snapshotDate, snapshot] of Object.entries(postDateData.dailySnapshots)) {
+        const existing = snapshotDateMap.get(snapshotDate);
+        if (existing) {
+          existing.views += snapshot.totalViews;
+          existing.likes += snapshot.totalLikes;
+          existing.comments += snapshot.totalComments;
+          existing.shares += snapshot.totalShares;
+          existing.saves += snapshot.totalSaves;
+        } else {
+          snapshotDateMap.set(snapshotDate, {
+            views: snapshot.totalViews,
+            likes: snapshot.totalLikes,
+            comments: snapshot.totalComments,
+            shares: snapshot.totalShares,
+            saves: snapshot.totalSaves,
+          });
+        }
+      }
+    }
+
+    // Transform to array format for charting
+    const dailyData = Array.from(snapshotDateMap.entries())
+      .map(([date, snapshot]) => ({
+        date,
+        views: snapshot.views,
+        likes: snapshot.likes,
+        comments: snapshot.comments,
+        shares: snapshot.shares,
+        saves: snapshot.saves,
+      }))
+      .sort((a, b) => {
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    return {
+      campaignId: analytics.campaignId,
+      campaignMetadata: {
+        campaignId: analytics.campaignId,
+        name: analytics.campaignName,
+        artist: analytics.artist,
+        song: analytics.song,
+      },
+      totals: {
+        posts: totalPosts,
+        views: totalViews,
+        likes: totalLikes,
+        comments: totalComments,
+        shares: totalShares,
+        saves: totalSaves,
+      },
+      dailyData,
+      lastUpdatedAt: analytics._creationTime,
+    };
+  },
+});
+
 export const getTopVideosByPostDate = query({
   args: {
     campaignId: v.string(),

@@ -1,114 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAction } from "convex/react";
+import { useState, useMemo } from "react";
+import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
 import type { CampaignAnalyticsData, DateFilter } from "../types/analytics.types";
 
+/**
+ * Helper function to convert Date to DD-MM-YYYY format
+ */
+function formatDateToDDMMYYYY(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+/**
+ * Helper function to get all dates between start and end (inclusive)
+ */
+function getDatesBetween(start: Date, end: Date): string[] {
+  const dates: string[] = [];
+  const current = new Date(start);
+
+  while (current <= end) {
+    dates.push(formatDateToDDMMYYYY(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
+}
+
 export function useCampaignAnalytics(campaignId: string) {
   const [dateFilter, setDateFilter] = useState<DateFilter | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const getCampaignAnalytics = useAction(api.app.bundleSocial.getCampaignAnalyticsWithMetadata);
-  const getPostCounts = useAction(api.app.bundleSocial.getPostCountsByDate);
+  // Convert date filter to array of DD-MM-YYYY strings for post dates
+  const postDatesFilter = useMemo(() => {
+    if (!dateFilter) return undefined;
+    return getDatesBetween(dateFilter.startDate, dateFilter.endDate);
+  }, [dateFilter]);
 
-  const [analyticsData, setAnalyticsData] = useState<CampaignAnalyticsData | null>(null);
-  const [postCountsByDate, setPostCountsByDate] = useState<Record<string, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  // Fetch campaign analytics
+  const analyticsResult = useQuery(
+    api.app.analytics.getCampaignAnalytics,
+    { campaignId, dates: postDatesFilter }
+  );
 
-  // Fetch analytics data
-  const fetchAnalytics = async (filter: DateFilter | null = dateFilter) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Fetch top videos
+  const videoMetrics = useQuery(
+    api.app.analytics.getTopVideosByPostDate,
+    { campaignId, dates: postDatesFilter }
+  );
 
-      let data;
+  // Fetch post counts by date (for calendar)
+  const postCountsByDate = useQuery(
+    api.app.analytics.getPostCountsByDate,
+    { campaignId }
+  );
 
-      if (filter) {
-        // Convert dates to Unix timestamps (seconds) in UTC
-        // Use local date methods to preserve the user's selected date
-        // The calendar gives us dates at midnight local time, so we extract local components
-        // and then create UTC timestamps to match how posts are stored
-        // Set start time to beginning of day (00:00:00 UTC)
-        const startOfDay = new Date(Date.UTC(
-          filter.startDate.getFullYear(),
-          filter.startDate.getMonth(),
-          filter.startDate.getDate(),
-          0, 0, 0, 0
-        ));
-        const postedStartDate = Math.floor(startOfDay.getTime() / 1000);
+  // Combine analytics and video data
+  const analyticsData: CampaignAnalyticsData | null = useMemo(() => {
+    if (!analyticsResult || !videoMetrics) return null;
 
-        // Set end time to end of day (23:59:59 UTC)
-        const endOfDay = new Date(Date.UTC(
-          filter.endDate.getFullYear(),
-          filter.endDate.getMonth(),
-          filter.endDate.getDate(),
-          23, 59, 59, 999
-        ));
-        const postedEndDate = Math.floor(endOfDay.getTime() / 1000);
+    return {
+      campaignId: analyticsResult.campaignId,
+      totals: analyticsResult.totals,
+      dailyData: analyticsResult.dailyData,
+      videoMetrics,
+      lastUpdatedAt: analyticsResult.lastUpdatedAt,
+      campaignMetadata: analyticsResult.campaignMetadata,
+    };
+  }, [analyticsResult, videoMetrics]);
 
-        data = await getCampaignAnalytics({
-          campaignId,
-          postedStartDate,
-          postedEndDate,
-        });
-      } else {
-        // No filter - show all videos (default 30 days)
-        data = await getCampaignAnalytics({
-          campaignId,
-          days: 30,
-        });
-      }
-
-      setAnalyticsData(data as CampaignAnalyticsData);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch analytics'));
-      console.error('Error fetching analytics:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Refresh analytics
-  const refreshAnalytics = async () => {
-    setIsRefreshing(true);
-    await fetchAnalytics(dateFilter);
-    setIsRefreshing(false);
-  };
+  // Loading state: true if any query is still loading
+  const isLoading = analyticsResult === undefined || videoMetrics === undefined;
 
   // Change date filter
-  const changeDateFilter = async (filter: DateFilter | null) => {
+  const changeDateFilter = (filter: DateFilter | null) => {
     setDateFilter(filter);
-    await fetchAnalytics(filter);
   };
-
-  // Fetch post counts by date
-  const fetchPostCounts = async () => {
-    try {
-      const counts = await getPostCounts({ campaignId });
-      setPostCountsByDate(counts);
-    } catch (err) {
-      console.error('Error fetching post counts:', err);
-      // Don't set error state - this is non-critical data
-    }
-  };
-
-  // Initial fetch
-  useEffect(() => {
-    void fetchAnalytics(null);
-    void fetchPostCounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
 
   return {
     analyticsData,
-    postCountsByDate,
+    postCountsByDate: postCountsByDate ?? {},
     isLoading,
-    isRefreshing,
-    error,
+    isRefreshing: false, // No manual refresh needed with Convex real-time queries
+    error: null, // Convex handles errors differently, can be enhanced if needed
     dateFilter,
     changeDateFilter,
-    refreshAnalytics,
+    refreshAnalytics: () => {}, // No-op since Convex queries auto-refresh
   };
 }

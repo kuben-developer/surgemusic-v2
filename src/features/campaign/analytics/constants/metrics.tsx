@@ -9,7 +9,6 @@ export interface KPIMetricConfig {
   bgColor: string;
   iconColor: string;
   getValue: (data: KPIMetricData) => string | number;
-  getGrowth?: (data: KPIMetricData) => { value: number; isPositive: boolean } | null;
 }
 
 export interface KPIMetricData {
@@ -21,13 +20,6 @@ export interface KPIMetricData {
     shares: number;
     saves: number;
   };
-  avgEngagementRate: string;
-  viewsGrowth?: { value: number; isPositive: boolean };
-  likesGrowth?: { value: number; isPositive: boolean };
-  commentsGrowth?: { value: number; isPositive: boolean };
-  sharesGrowth?: { value: number; isPositive: boolean };
-  savesGrowth?: { value: number; isPositive: boolean };
-  engagementGrowth?: { value: number; isPositive: boolean };
 }
 
 export const KPI_METRICS: KPIMetricConfig[] = [
@@ -46,7 +38,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-green-100 dark:bg-green-900/20",
     iconColor: "text-green-600 dark:text-green-400",
     getValue: (data) => data.totals.views.toLocaleString(),
-    getGrowth: (data) => data.viewsGrowth || null,
   },
   {
     key: "likes",
@@ -55,7 +46,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
     iconColor: "text-orange-600 dark:text-orange-400",
     getValue: (data) => data.totals.likes.toLocaleString(),
-    getGrowth: (data) => data.likesGrowth || null,
   },
   {
     key: "comments",
@@ -64,7 +54,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-red-100 dark:bg-red-900/20",
     iconColor: "text-red-600 dark:text-red-400",
     getValue: (data) => data.totals.comments.toLocaleString(),
-    getGrowth: (data) => data.commentsGrowth || null,
   },
   {
     key: "shares",
@@ -73,7 +62,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-blue-100 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
     getValue: (data) => data.totals.shares.toLocaleString(),
-    getGrowth: (data) => data.sharesGrowth || null,
   },
   {
     key: "saves",
@@ -82,7 +70,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
     iconColor: "text-yellow-600 dark:text-yellow-400",
     getValue: (data) => data.totals.saves.toLocaleString(),
-    getGrowth: (data) => data.savesGrowth || null,
   },
 ];
 
