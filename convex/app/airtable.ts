@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
-import { internalAction, internalMutation, internalQuery } from "../_generated/server";
+import { api, internal } from "../_generated/api";
+import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 
 // Airtable configuration - these should come from environment variables
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
@@ -87,7 +87,7 @@ async function fetchRecordById(
 /**
  * Fetch all active campaigns from Airtable
  */
-export const getCampaigns = internalAction({
+export const getCampaigns = action({
     args: {},
     handler: async (): Promise<CampaignOutput[]> => {
         const records = await fetchRecords(
@@ -126,7 +126,7 @@ export const getCampaigns = internalAction({
 /**
  * Fetch all content for a specific campaign
  */
-export const getCampaignContent = internalAction({
+export const getCampaignContent = action({
     args: {
         campaignRecordId: v.string(),
     },
@@ -311,7 +311,7 @@ export const syncAirtableCampaign = internalAction({
     handler: async (ctx) => {
         try {
             // Fetch all active campaigns from Airtable
-            const campaigns = await ctx.runAction(internal.app.airtable.getCampaigns, {});
+            const campaigns = await ctx.runAction(api.app.airtable.getCampaigns, {});
 
             let syncedCount = 0;
 
@@ -358,7 +358,7 @@ export const syncAirtableContentByCampaign = internalAction({
     }> => {
         try {
             // Fetch content for this campaign from Airtable
-            const result: { content: ContentItem[]; campaign_id: string } = await ctx.runAction(internal.app.airtable.getCampaignContent, {
+            const result: { content: ContentItem[]; campaign_id: string } = await ctx.runAction(api.app.airtable.getCampaignContent, {
                 campaignRecordId,
             });
 
@@ -427,7 +427,7 @@ export const syncAirtableContentByCampaign = internalAction({
             const publishedCount = validPostIds.size;
 
             // Get campaign info for updating
-            const campaigns = await ctx.runAction(internal.app.airtable.getCampaigns, {});
+            const campaigns = await ctx.runAction(api.app.airtable.getCampaigns, {});
             const campaign = campaigns.find((c: CampaignOutput) => c.id === campaignRecordId);
 
             if (campaign) {
@@ -468,7 +468,7 @@ export const syncAirtableContent = internalAction({
     handler: async (ctx): Promise<{ campaignCount: number }> => {
         try {
             // Fetch all active campaigns from Airtable
-            const campaigns: CampaignOutput[] = await ctx.runAction(internal.app.airtable.getCampaigns, {});
+            const campaigns: CampaignOutput[] = await ctx.runAction(api.app.airtable.getCampaigns, {});
 
             console.log(`Starting content sync for ${campaigns.length} active campaigns`);
 

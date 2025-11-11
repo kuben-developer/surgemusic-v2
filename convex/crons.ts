@@ -3,25 +3,24 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// crons.interval(
-//     "syncBundleSocialPosts",
-//     { minutes: 30 },
-//     internal.app.bundleSocial.syncBundleSocialPosts,
-//     {}
-// );
+crons.hourly(
+    "syncAirtableCampaign",
+    { minuteUTC: 0 }, // Every hour at 0 minutes past the hour
+    internal.app.airtable.syncAirtableCampaign,
+    {}
+);
 
-// crons.interval(
-//     "refreshBundleSocialPosts",
-//     { minutes: 120 },
-//     internal.app.bundleSocial.refreshBundleSocialPosts,
-//     {}
-// );
+crons.hourly(
+    "syncAirtableContent",
+    { minuteUTC: 15 }, // Every hour at 15 minutes past the hour
+    internal.app.airtable.syncAirtableContent,
+    {}
+);
 
-// crons.interval(
-//     "aggregateBundleSocialCampaignPerformance",
-//     { minutes: 30 },
-//     internal.app.bundleSocial.aggregateCampaignPerformance,
-//     {}
-// );
+crons.cron(
+    "refreshTiktokStats",
+    "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
+    internal.app.bundle.refreshTiktokStats,
+);
 
 export default crons;

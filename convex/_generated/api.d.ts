@@ -14,10 +14,8 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as app_airtable from "../app/airtable.js";
+import type * as app_analytics from "../app/analytics.js";
 import type * as app_bundle from "../app/bundle.js";
-import type * as app_bundleSocial from "../app/bundleSocial.js";
-import type * as app_bundleSocialQueries from "../app/bundleSocialQueries.js";
-import type * as app_campaignV2 from "../app/campaignV2.js";
 import type * as app_captions from "../app/captions.js";
 import type * as app_clipper from "../app/clipper.js";
 import type * as app_montager from "../app/montager.js";
@@ -38,10 +36,8 @@ import type * as webhooks_test from "../webhooks/test.js";
  */
 declare const fullApi: ApiFromModules<{
   "app/airtable": typeof app_airtable;
+  "app/analytics": typeof app_analytics;
   "app/bundle": typeof app_bundle;
-  "app/bundleSocial": typeof app_bundleSocial;
-  "app/bundleSocialQueries": typeof app_bundleSocialQueries;
-  "app/campaignV2": typeof app_campaignV2;
   "app/captions": typeof app_captions;
   "app/clipper": typeof app_clipper;
   "app/montager": typeof app_montager;

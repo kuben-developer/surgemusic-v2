@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { CampaignContentData } from "../../shared/types/campaign.types";
 
 export function useCampaignContent(campaignRecordId: string) {
-  const getCampaignContent = useAction(api.app.campaignV2.getCampaignContent);
+  const getCampaignContent = useAction(api.app.airtable.getCampaignContent);
   const [data, setData] = useState<CampaignContentData | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

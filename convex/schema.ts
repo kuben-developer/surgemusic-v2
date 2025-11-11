@@ -42,6 +42,7 @@ export default defineSchema({
   })
     .index("by_campaignId", ["campaignId"]),
 
+  // BUNDLE SOCIAL
   bundleSocialPostedVideos: defineTable({
     campaignId: v.string(), // airtable campaign id
     postId: v.string(), // from airtable api_post_id column in Content base
