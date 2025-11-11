@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { internalAction, internalMutation, internalQuery } from "../_generated/server";
 
 // Airtable configuration - these should come from environment variables
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
@@ -261,7 +261,7 @@ export const deleteContentByPostId = internalMutation({
 });
 
 /**
- * Upsert campaign with metadata (name, artist, song, and sync statistics)
+ * Upsert campaign with name, artist, song, and sync statistics
  */
 export const upsertAirtableCampaign = internalMutation({
     args: {
@@ -269,15 +269,10 @@ export const upsertAirtableCampaign = internalMutation({
         campaignName: v.string(),
         artist: v.string(),
         song: v.string(),
-        metadata: v.object({
-            posted: v.number(),
-            noPostId: v.number(),
-            noVideoUrl: v.number(),
-            scheduled: v.number(),
-            errors: v.array(v.string()),
-        }),
+        total: v.number(),
+        published: v.number(),
     },
-    handler: async (ctx, { campaignId, campaignName, artist, song, metadata }) => {
+    handler: async (ctx, { campaignId, campaignName, artist, song, total, published }) => {
         // Check if campaign record exists
         const existing = await ctx.db
             .query("airtableCampaigns")
@@ -290,7 +285,8 @@ export const upsertAirtableCampaign = internalMutation({
                 campaignName,
                 artist,
                 song,
-                metadata,
+                total,
+                published,
             });
         } else {
             // Insert new record
@@ -299,15 +295,12 @@ export const upsertAirtableCampaign = internalMutation({
                 campaignName,
                 artist,
                 song,
-                metadata,
+                total,
+                published,
             });
         }
     },
 });
-
-// ============================================================
-// SYNC FUNCTIONS
-// ============================================================
 
 /**
  * Sync campaign metadata from Airtable to airtableCampaigns table
@@ -321,7 +314,6 @@ export const syncAirtableCampaign = internalAction({
             const campaigns = await ctx.runAction(internal.app.airtable.getCampaigns, {});
 
             let syncedCount = 0;
-            const errors: string[] = [];
 
             for (const campaign of campaigns) {
                 try {
@@ -331,28 +323,18 @@ export const syncAirtableCampaign = internalAction({
                         campaignName: campaign.campaign_id, // campaign_id field value
                         artist: campaign.artist,
                         song: campaign.song,
-                        metadata: {
-                            posted: 0,
-                            noPostId: 0,
-                            noVideoUrl: 0,
-                            scheduled: 0,
-                            errors: [],
-                        },
+                        total: 0,
+                        published: 0,
                     });
                     syncedCount++;
                 } catch (error) {
-                    const errorMsg = `Failed to sync campaign ${campaign.id}: ${error}`;
-                    console.error(errorMsg);
-                    errors.push(errorMsg);
+                    console.error(`Failed to sync campaign ${campaign.id}:`, error);
                 }
             }
 
             console.log(`Synced ${syncedCount} campaigns from Airtable`);
-            if (errors.length > 0) {
-                console.error(`Errors during campaign sync:`, errors);
-            }
 
-            return { syncedCount, errors };
+            return { syncedCount };
         } catch (error) {
             console.error("Error syncing campaigns from Airtable:", error);
             throw error;
@@ -362,30 +344,28 @@ export const syncAirtableCampaign = internalAction({
 
 /**
  * Sync content for a specific campaign from Airtable to airtableContents table
- * Handles deletion of orphaned records and tracks sync statistics
+ * Handles deletion of orphaned records and tracks total and published counts
  */
 export const syncAirtableContentByCampaign = internalAction({
     args: {
         campaignRecordId: v.string(),
     },
-    handler: async (ctx, { campaignRecordId }) => {
+    handler: async (ctx, { campaignRecordId }): Promise<{
+        totalCount: number;
+        publishedCount: number;
+        insertedCount: number;
+        deletedCount: number;
+    }> => {
         try {
-            let processedCount = 0;
-            let noApiPostIdCount = 0;
-            let noVideoUrlCount = 0;
-            let alreadyExistsCount = 0;
-            let errorCount = 0;
-            const errorMessages: string[] = [];
-
             // Fetch content for this campaign from Airtable
-            const result = await ctx.runAction(internal.app.airtable.getCampaignContent, {
+            const result: { content: ContentItem[]; campaign_id: string } = await ctx.runAction(internal.app.airtable.getCampaignContent, {
                 campaignRecordId,
             });
 
-            const contentRecords = result.content;
+            const contentRecords: ContentItem[] = result.content;
+            const totalCount: number = contentRecords.length;
 
             // DELETION LOGIC: Remove content that no longer exists in Airtable
-            // Get all existing content from database for this campaign
             const existingContent = await ctx.runQuery(
                 internal.app.airtable.getContentByCampaign,
                 { campaignId: campaignRecordId }
@@ -399,12 +379,11 @@ export const syncAirtableContentByCampaign = internalAction({
                 }
             }
 
-            // Find orphaned content (exist in DB but not in Airtable)
+            // Find and delete orphaned content
             const orphanedContent = existingContent.filter(
                 (content: { postId: string }) => !validPostIds.has(content.postId)
             );
 
-            // Delete orphaned content
             let deletedCount = 0;
             for (const orphaned of orphanedContent) {
                 const deleted = await ctx.runMutation(
@@ -416,26 +395,14 @@ export const syncAirtableContentByCampaign = internalAction({
                 }
             }
 
-            if (deletedCount > 0) {
-                console.log(
-                    `Deleted ${deletedCount} orphaned content records for campaign ${campaignRecordId}`
-                );
-            }
-
             // Process each content record from Airtable
+            let insertedCount = 0;
             for (const content of contentRecords) {
                 const apiPostId = content.api_post_id;
-                const videoUrl = content.video_url;
 
                 // Skip if no api_post_id
                 if (!apiPostId) {
-                    noApiPostIdCount++;
                     continue;
-                }
-
-                // Track if no video_url (but still continue to store the record)
-                if (!videoUrl) {
-                    noVideoUrlCount++;
                 }
 
                 // Check if already exists
@@ -444,27 +411,22 @@ export const syncAirtableContentByCampaign = internalAction({
                 });
 
                 if (exists) {
-                    alreadyExistsCount++;
                     continue;
                 }
 
-                try {
-                    // Insert into database using the Airtable record ID (immutable)
-                    await ctx.runMutation(internal.app.airtable.insertContent, {
-                        campaignId: campaignRecordId, // Using Airtable record ID
-                        postId: apiPostId,
-                    });
+                // Insert into database
+                await ctx.runMutation(internal.app.airtable.insertContent, {
+                    campaignId: campaignRecordId,
+                    postId: apiPostId,
+                });
 
-                    processedCount++;
-                } catch (error) {
-                    const errorMsg = `Failed to insert content ${apiPostId}: ${error}`;
-                    console.error(errorMsg);
-                    errorMessages.push(errorMsg);
-                    errorCount++;
-                }
+                insertedCount++;
             }
 
-            // Get campaign info for updating metadata
+            // Calculate published count (records with valid api_post_id)
+            const publishedCount = validPostIds.size;
+
+            // Get campaign info for updating
             const campaigns = await ctx.runAction(internal.app.airtable.getCampaigns, {});
             const campaign = campaigns.find((c: CampaignOutput) => c.id === campaignRecordId);
 
@@ -475,27 +437,20 @@ export const syncAirtableContentByCampaign = internalAction({
                     campaignName: campaign.campaign_id,
                     artist: campaign.artist,
                     song: campaign.song,
-                    metadata: {
-                        posted: processedCount + alreadyExistsCount,
-                        noPostId: noApiPostIdCount,
-                        noVideoUrl: noVideoUrlCount,
-                        scheduled: 0, // Not tracking scheduled for airtable content
-                        errors: errorMessages,
-                    },
+                    total: totalCount,
+                    published: publishedCount,
                 });
             }
 
             console.log(
-                `Sync campaign ${campaignRecordId}: ${processedCount} new content, ${alreadyExistsCount} already exist, ${noApiPostIdCount} no api_post_id, ${noVideoUrlCount} no video_url, ${deletedCount} deleted, ${errorCount} errors`
+                `Synced campaign ${campaignRecordId}: ${totalCount} total, ${publishedCount} published, ${insertedCount} inserted, ${deletedCount} deleted`
             );
 
             return {
-                processedCount,
-                alreadyExistsCount,
-                noApiPostIdCount,
-                noVideoUrlCount,
+                totalCount,
+                publishedCount,
+                insertedCount,
                 deletedCount,
-                errorCount,
             };
         } catch (error) {
             console.error(`Error syncing content for campaign ${campaignRecordId}:`, error);

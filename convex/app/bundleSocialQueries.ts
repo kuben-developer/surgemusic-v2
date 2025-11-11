@@ -811,7 +811,8 @@ export const getAirtableCampaignMetadata = query({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
 
-    return campaign?.metadata || null;
+    // return campaign?.metadata || null;
+    return null;
   },
 });
 

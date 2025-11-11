@@ -1,12 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
-const socialPlatforms = v.union(
-  v.literal("tiktok"),
-  v.literal("instagram"),
-  v.literal("youtube"),
-);
-
 export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
@@ -28,20 +22,11 @@ export default defineSchema({
   })
     .index("by_clerkId", ["clerkId"]),
 
+  // AIRTABLE
   airtableContents: defineTable({
     campaignId: v.string(), // airtable campaign id
     postId: v.string(), // from airtable api_post_id column in Content base
     error: v.optional(v.string()),
-    tiktokData: v.optional(v.object({
-      videoId: v.string(),
-      postedAt: v.number(),
-      videoUrl: v.string(),
-      views: v.number(),
-      likes: v.number(),
-      comments: v.number(),
-      shares: v.number(),
-      saves: v.number(),
-    }))
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_postId", ["postId"])
@@ -52,13 +37,8 @@ export default defineSchema({
     campaignName: v.string(),
     artist: v.string(),
     song: v.string(),
-    metadata: v.object({
-      posted: v.number(),
-      noPostId: v.number(),
-      noVideoUrl: v.number(),
-      scheduled: v.number(),
-      errors: v.array(v.string())
-    }),
+    total: v.number(), // Total content records from Airtable for this campaign
+    published: v.number(), // Number of rows with valid api_post_id
   })
     .index("by_campaignId", ["campaignId"]),
 
