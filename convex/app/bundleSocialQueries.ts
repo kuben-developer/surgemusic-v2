@@ -229,6 +229,59 @@ export const getCampaignAnalytics = internalQuery({
       return ((current - previous) / previous) * 100;
     };
 
+    // Helper: Forward-fill missing dates with previous day's values
+    const forwardFillMissingDates = <T extends { date: string; views: number; likes: number; comments: number; shares: number; saves: number }>(
+      data: T[]
+    ): T[] => {
+      if (data.length === 0) return data;
+      if (data.length === 1) return data;
+
+      // Parse date string (DD-MM-YYYY) to Date object
+      const parseDate = (dateStr: string): Date => {
+        const parts = dateStr.split('-');
+        const day = parseInt(parts[0] || '0', 10);
+        const month = parseInt(parts[1] || '0', 10);
+        const year = parseInt(parts[2] || '0', 10);
+        return new Date(year, month - 1, day);
+      };
+
+      const firstDate = parseDate(data[0].date);
+      const lastDate = parseDate(data[data.length - 1].date);
+
+      // Create a map of existing dates for quick lookup
+      const dataByDate = new Map<string, T>();
+      for (const item of data) {
+        dataByDate.set(item.date, item);
+      }
+
+      // Generate all dates between first and last
+      const filledData: T[] = [];
+      const currentDate = new Date(firstDate);
+      let previousEntry = data[0];
+
+      while (currentDate <= lastDate) {
+        const dateStr = formatDate(currentDate);
+        const existing = dataByDate.get(dateStr);
+
+        if (existing) {
+          // Use existing snapshot
+          filledData.push(existing);
+          previousEntry = existing;
+        } else {
+          // Forward-fill from previous entry
+          filledData.push({
+            ...previousEntry,
+            date: dateStr,
+          });
+        }
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return filledData;
+    };
+
     // If post date filter is provided, use snapshot-based filtering
     if (postedStartDate !== undefined && postedEndDate !== undefined) {
       // 1. Filter posts by postedAt timestamp
@@ -268,7 +321,23 @@ export const getCampaignAnalytics = internalQuery({
         filteredPostIds.has(snapshot.postId)
       );
 
-      // 3. Aggregate snapshots by date
+      // 3. Aggregate snapshots by date WITH per-post forward-fill
+      // For each date, sum the most recent snapshot for each post
+
+      // Helper to parse date string for comparison
+      const parseDateForComparison = (dateStr: string): number => {
+        const parts = dateStr.split('-');
+        const day = parseInt(parts[0] || '0', 10);
+        const month = parseInt(parts[1] || '0', 10);
+        const year = parseInt(parts[2] || '0', 10);
+        return new Date(year, month - 1, day).getTime();
+      };
+
+      // Get unique sorted dates from snapshots
+      const uniqueDates = [...new Set(filteredSnapshots.map(s => s.date))].sort((a, b) =>
+        parseDateForComparison(a) - parseDateForComparison(b)
+      );
+
       const snapshotsByDate = new Map<string, {
         views: number;
         likes: number;
@@ -278,29 +347,47 @@ export const getCampaignAnalytics = internalQuery({
         updatedAt: number;
       }>();
 
-      for (const snapshot of filteredSnapshots) {
-        const existing = snapshotsByDate.get(snapshot.date);
-        if (existing) {
-          existing.views += snapshot.views;
-          existing.likes += snapshot.likes;
-          existing.comments += snapshot.comments;
-          existing.shares += snapshot.shares;
-          existing.saves += snapshot.saves;
-          existing.updatedAt = Math.max(existing.updatedAt, snapshot.updatedAt);
-        } else {
-          snapshotsByDate.set(snapshot.date, {
-            views: snapshot.views,
-            likes: snapshot.likes,
-            comments: snapshot.comments,
-            shares: snapshot.shares,
-            saves: snapshot.saves,
-            updatedAt: snapshot.updatedAt,
-          });
+      // For each date, calculate totals by using most recent snapshot per post
+      for (const date of uniqueDates) {
+        const dateTimestamp = parseDateForComparison(date);
+        let totalViews = 0;
+        let totalLikes = 0;
+        let totalComments = 0;
+        let totalShares = 0;
+        let totalSaves = 0;
+        let maxUpdatedAt = 0;
+
+        // For each post, find its most recent snapshot <= current date
+        for (const postId of filteredPostIds) {
+          // Get all snapshots for this post up to current date
+          const postSnapshotsUpToDate = filteredSnapshots
+            .filter(s => s.postId === postId && parseDateForComparison(s.date) <= dateTimestamp)
+            .sort((a, b) => parseDateForComparison(b.date) - parseDateForComparison(a.date));
+
+          // Use the most recent snapshot (first after sorting desc)
+          const mostRecentSnapshot = postSnapshotsUpToDate[0];
+          if (mostRecentSnapshot) {
+            totalViews += mostRecentSnapshot.views;
+            totalLikes += mostRecentSnapshot.likes;
+            totalComments += mostRecentSnapshot.comments;
+            totalShares += mostRecentSnapshot.shares;
+            totalSaves += mostRecentSnapshot.saves;
+            maxUpdatedAt = Math.max(maxUpdatedAt, mostRecentSnapshot.updatedAt);
+          }
         }
+
+        snapshotsByDate.set(date, {
+          views: totalViews,
+          likes: totalLikes,
+          comments: totalComments,
+          shares: totalShares,
+          saves: totalSaves,
+          updatedAt: maxUpdatedAt,
+        });
       }
 
       // Convert to array and sort by date
-      const dailyData = Array.from(snapshotsByDate.entries())
+      const sortedDailyData = Array.from(snapshotsByDate.entries())
         .map(([date, metrics]) => ({ date, ...metrics }))
         .sort((a, b) => {
           const partsA = a.date.split('-');
@@ -318,25 +405,53 @@ export const getCampaignAnalytics = internalQuery({
           return dateA.getTime() - dateB.getTime();
         });
 
-      // 4. Calculate totals from latest snapshot date
+      // Forward-fill missing dates with previous day's values
+      const dailyData = forwardFillMissingDates(sortedDailyData);
+
+      // 4. Calculate totals from current post data (not snapshots)
+      // Sum up the latest metrics from the filtered posts
+      let totalViews = 0;
+      let totalLikes = 0;
+      let totalComments = 0;
+      let totalShares = 0;
+      let totalSaves = 0;
+
+      for (const post of allPosts) {
+        totalViews += post.views;
+        totalLikes += post.likes;
+        totalComments += post.comments;
+        totalShares += post.shares;
+        totalSaves += post.saves;
+      }
+
+      const totals = {
+        posts: filteredPostIds.size,
+        views: totalViews,
+        likes: totalLikes,
+        comments: totalComments,
+        shares: totalShares,
+        saves: totalSaves,
+      };
+
+      // Forward-fill to today using current post data if latest snapshot is not today
+      const today = formatDate(new Date());
+      const latestSnapshotDate = dailyData[dailyData.length - 1]?.date;
+
+      if (latestSnapshotDate !== today && dailyData.length > 0) {
+        // Add today's entry using current post totals
+        dailyData.push({
+          date: today,
+          views: totalViews,
+          likes: totalLikes,
+          comments: totalComments,
+          shares: totalShares,
+          saves: totalSaves,
+          updatedAt: Date.now(),
+        });
+      }
+
       const latestRecord = dailyData[dailyData.length - 1];
       const firstRecord = dailyData[0];
-
-      const totals = latestRecord ? {
-        posts: filteredPostIds.size,
-        views: latestRecord.views,
-        likes: latestRecord.likes,
-        comments: latestRecord.comments,
-        shares: latestRecord.shares,
-        saves: latestRecord.saves,
-      } : {
-        posts: 0,
-        views: 0,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        saves: 0,
-      };
 
       // 5. Calculate growth metrics
       const growth = firstRecord && latestRecord ? {
@@ -401,19 +516,134 @@ export const getCampaignAnalytics = internalQuery({
       };
     }
 
-    // Default behavior: use pre-aggregated data with days parameter
+    // Default behavior: use snapshot-based data filtering out deleted posts
     const effectiveDays = days || 30; // Default to 30 days if not specified
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - effectiveDays * 24 * 60 * 60 * 1000);
 
-    // Get all performance records for this campaign
-    const allPerformance = await ctx.db
-      .query("bundleSocialCampaignPerformance")
+    // 1. Get ALL current posts for this campaign (filters out deleted posts)
+    const allPosts = await ctx.db
+      .query("bundleSocialPostedVideos")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    // Filter by date range
-    const performanceInRange = allPerformance.filter((record) => {
+    // Get postIds from current videos (only these are valid)
+    const validPostIds = new Set(allPosts.map(post => post.postId));
+
+    if (validPostIds.size === 0) {
+      // No posts in this campaign
+      return {
+        totals: { posts: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0 },
+        growth: { views: 0, likes: 0, comments: 0, shares: 0, saves: 0 },
+        engagementRate: "0.00",
+        engagementGrowth: "0.00",
+        dailyData: [],
+        videoMetrics: [],
+        lastUpdatedAt: Date.now(),
+      };
+    }
+
+    // 2. Get all snapshots for this campaign and filter by valid postIds only
+    const allSnapshots = await ctx.db
+      .query("bundleSocialSnapshots")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Filter snapshots to only include those from current posts (exclude deleted)
+    const validSnapshots = allSnapshots.filter(snapshot =>
+      validPostIds.has(snapshot.postId)
+    );
+
+    // 3. Aggregate snapshots by date WITH per-post forward-fill
+    // For each date, sum the most recent snapshot for each post
+
+    // Helper to parse date string for comparison
+    const parseDateForComparison = (dateStr: string): number => {
+      const parts = dateStr.split('-');
+      const day = parseInt(parts[0] || '0', 10);
+      const month = parseInt(parts[1] || '0', 10);
+      const year = parseInt(parts[2] || '0', 10);
+      return new Date(year, month - 1, day).getTime();
+    };
+
+    // Get unique sorted dates from snapshots
+    const uniqueDates = [...new Set(validSnapshots.map(s => s.date))].sort((a, b) =>
+      parseDateForComparison(a) - parseDateForComparison(b)
+    );
+
+    const snapshotsByDate = new Map<string, {
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+      updatedAt: number;
+    }>();
+
+    // For each date, calculate totals by using most recent snapshot per post
+    for (const date of uniqueDates) {
+      const dateTimestamp = parseDateForComparison(date);
+      let totalViews = 0;
+      let totalLikes = 0;
+      let totalComments = 0;
+      let totalShares = 0;
+      let totalSaves = 0;
+      let maxUpdatedAt = 0;
+
+      // For each post, find its most recent snapshot <= current date
+      for (const postId of validPostIds) {
+        // Get all snapshots for this post up to current date
+        const postSnapshotsUpToDate = validSnapshots
+          .filter(s => s.postId === postId && parseDateForComparison(s.date) <= dateTimestamp)
+          .sort((a, b) => parseDateForComparison(b.date) - parseDateForComparison(a.date));
+
+        // Use the most recent snapshot (first after sorting desc)
+        const mostRecentSnapshot = postSnapshotsUpToDate[0];
+        if (mostRecentSnapshot) {
+          totalViews += mostRecentSnapshot.views;
+          totalLikes += mostRecentSnapshot.likes;
+          totalComments += mostRecentSnapshot.comments;
+          totalShares += mostRecentSnapshot.shares;
+          totalSaves += mostRecentSnapshot.saves;
+          maxUpdatedAt = Math.max(maxUpdatedAt, mostRecentSnapshot.updatedAt);
+        }
+      }
+
+      snapshotsByDate.set(date, {
+        views: totalViews,
+        likes: totalLikes,
+        comments: totalComments,
+        shares: totalShares,
+        saves: totalSaves,
+        updatedAt: maxUpdatedAt,
+      });
+    }
+
+    // 4. Convert to array and sort by date
+    const sortedDailyData = Array.from(snapshotsByDate.entries())
+      .map(([date, metrics]) => ({ date, ...metrics }))
+      .sort((a, b) => {
+        const partsA = a.date.split('-');
+        const dayA = parseInt(partsA[0] || '0', 10);
+        const monthA = parseInt(partsA[1] || '0', 10);
+        const yearA = parseInt(partsA[2] || '0', 10);
+
+        const partsB = b.date.split('-');
+        const dayB = parseInt(partsB[0] || '0', 10);
+        const monthB = parseInt(partsB[1] || '0', 10);
+        const yearB = parseInt(partsB[2] || '0', 10);
+
+        const dateA = new Date(yearA, monthA - 1, dayA);
+        const dateB = new Date(yearB, monthB - 1, dayB);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    // Forward-fill missing dates with previous day's values
+    const filledDailyData = forwardFillMissingDates(sortedDailyData);
+
+    // 5. Filter to last X days
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - effectiveDays * 24 * 60 * 60 * 1000);
+
+    const performanceInRange = filledDailyData.filter((record) => {
       const parts = record.date.split('-');
       const day = parseInt(parts[0] || '0', 10);
       const month = parseInt(parts[1] || '0', 10);
@@ -422,42 +652,49 @@ export const getCampaignAnalytics = internalQuery({
       return recordDate >= startDate && recordDate <= endDate;
     });
 
-    // Sort by date ascending
-    performanceInRange.sort((a, b) => {
-      const partsA = a.date.split('-');
-      const dayA = parseInt(partsA[0] || '0', 10);
-      const monthA = parseInt(partsA[1] || '0', 10);
-      const yearA = parseInt(partsA[2] || '0', 10);
+    // 6. Calculate totals from current post data (not snapshots)
+    let totalViews = 0;
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalShares = 0;
+    let totalSaves = 0;
 
-      const partsB = b.date.split('-');
-      const dayB = parseInt(partsB[0] || '0', 10);
-      const monthB = parseInt(partsB[1] || '0', 10);
-      const yearB = parseInt(partsB[2] || '0', 10);
+    for (const post of allPosts) {
+      totalViews += post.views;
+      totalLikes += post.likes;
+      totalComments += post.comments;
+      totalShares += post.shares;
+      totalSaves += post.saves;
+    }
 
-      const dateA = new Date(yearA, monthA - 1, dayA);
-      const dateB = new Date(yearB, monthB - 1, dayB);
-      return dateA.getTime() - dateB.getTime();
-    });
+    const totals = {
+      posts: validPostIds.size,
+      views: totalViews,
+      likes: totalLikes,
+      comments: totalComments,
+      shares: totalShares,
+      saves: totalSaves,
+    };
 
-    // Calculate totals from latest record
+    // Forward-fill to today using current post data if latest snapshot is not today
+    const today = formatDate(new Date());
+    const latestSnapshotDate = performanceInRange[performanceInRange.length - 1]?.date;
+
+    if (latestSnapshotDate !== today && performanceInRange.length > 0) {
+      // Add today's entry using current post totals
+      performanceInRange.push({
+        date: today,
+        views: totalViews,
+        likes: totalLikes,
+        comments: totalComments,
+        shares: totalShares,
+        saves: totalSaves,
+        updatedAt: Date.now(),
+      });
+    }
+
     const latestRecord = performanceInRange[performanceInRange.length - 1];
     const firstRecord = performanceInRange[0];
-
-    const totals = latestRecord ? {
-      posts: latestRecord.posts,
-      views: latestRecord.views,
-      likes: latestRecord.likes,
-      comments: latestRecord.comments,
-      shares: latestRecord.shares,
-      saves: latestRecord.saves,
-    } : {
-      posts: 0,
-      views: 0,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      saves: 0,
-    };
 
     // Calculate growth metrics (comparing first vs last day in range)
     const growth = firstRecord && latestRecord ? {
@@ -495,14 +732,8 @@ export const getCampaignAnalytics = internalQuery({
       saves: record.saves,
     }));
 
-    // Get individual posts for video performance table
-    const posts = await ctx.db
-      .query("bundleSocialPostedVideos")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .collect();
-
-    // Sort posts by views descending and limit to top 100
-    const videoMetrics = posts
+    // Sort posts by views descending and limit to top 100 (already have allPosts)
+    const videoMetrics = allPosts
       .sort((a, b) => b.views - a.views)
       .slice(0, 100)
       .map((post) => ({
@@ -558,16 +789,16 @@ export const upsertAirtableCampaignStats = internalMutation({
       errors,
     };
 
-    if (existing) {
-      // Update existing record
-      await ctx.db.patch(existing._id, { metadata });
-    } else {
-      // Insert new record
-      await ctx.db.insert("airtableCampaigns", {
-        campaignId,
-        metadata,
-      });
-    }
+    // if (existing) {
+    //   // Update existing record
+    //   await ctx.db.patch(existing._id, { metadata });
+    // } else {
+    //   // Insert new record
+    //   await ctx.db.insert("airtableCampaigns", {
+    //     campaignId,
+    //     metadata,
+    //   });
+    // }
   },
 });
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, query } from "../_generated/server";
+import { action } from "../_generated/server";
 
 // Airtable configuration - these should come from environment variables
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";

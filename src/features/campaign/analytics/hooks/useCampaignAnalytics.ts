@@ -27,21 +27,23 @@ export function useCampaignAnalytics(campaignId: string) {
 
       if (filter) {
         // Convert dates to Unix timestamps (seconds) in UTC
-        // Use UTC methods to extract date components since we're working in UTC
+        // Use local date methods to preserve the user's selected date
+        // The calendar gives us dates at midnight local time, so we extract local components
+        // and then create UTC timestamps to match how posts are stored
         // Set start time to beginning of day (00:00:00 UTC)
         const startOfDay = new Date(Date.UTC(
-          filter.startDate.getUTCFullYear(),
-          filter.startDate.getUTCMonth(),
-          filter.startDate.getUTCDate(),
+          filter.startDate.getFullYear(),
+          filter.startDate.getMonth(),
+          filter.startDate.getDate(),
           0, 0, 0, 0
         ));
         const postedStartDate = Math.floor(startOfDay.getTime() / 1000);
 
         // Set end time to end of day (23:59:59 UTC)
         const endOfDay = new Date(Date.UTC(
-          filter.endDate.getUTCFullYear(),
-          filter.endDate.getUTCMonth(),
-          filter.endDate.getUTCDate(),
+          filter.endDate.getFullYear(),
+          filter.endDate.getMonth(),
+          filter.endDate.getDate(),
           23, 59, 59, 999
         ));
         const postedEndDate = Math.floor(endOfDay.getTime() / 1000);

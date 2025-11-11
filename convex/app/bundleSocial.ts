@@ -571,12 +571,90 @@ export const aggregateCampaignPerformanceByCampaign = internalAction({
           }
         }
 
-        // 6. Insert aggregated performance records for each date
+        // 6. Sort dates and forward-fill missing dates
+        const sortedDates = Array.from(snapshotsByDate.entries())
+          .map(([date, metrics]) => ({ date, ...metrics }))
+          .sort((a, b) => {
+            const partsA = a.date.split('-');
+            const dayA = parseInt(partsA[0] || '0', 10);
+            const monthA = parseInt(partsA[1] || '0', 10);
+            const yearA = parseInt(partsA[2] || '0', 10);
+
+            const partsB = b.date.split('-');
+            const dayB = parseInt(partsB[0] || '0', 10);
+            const monthB = parseInt(partsB[1] || '0', 10);
+            const yearB = parseInt(partsB[2] || '0', 10);
+
+            const dateA = new Date(yearA, monthA - 1, dayA);
+            const dateB = new Date(yearB, monthB - 1, dayB);
+            return dateA.getTime() - dateB.getTime();
+          });
+
+        // Helper to format date as DD-MM-YYYY
+        const formatDate = (date: Date): string => {
+          return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+        };
+
+        // Helper to parse DD-MM-YYYY to Date
+        const parseDate = (dateStr: string): Date => {
+          const parts = dateStr.split('-');
+          const day = parseInt(parts[0] || '0', 10);
+          const month = parseInt(parts[1] || '0', 10);
+          const year = parseInt(parts[2] || '0', 10);
+          return new Date(year, month - 1, day);
+        };
+
+        // Forward-fill missing dates
+        const filledDates: Array<{
+          date: string;
+          postIds: Set<string>;
+          views: number;
+          likes: number;
+          comments: number;
+          shares: number;
+          saves: number;
+        }> = [];
+
+        if (sortedDates.length > 0) {
+          const firstDate = parseDate(sortedDates[0].date);
+          const lastDate = parseDate(sortedDates[sortedDates.length - 1].date);
+
+          // Create map for quick lookup
+          const dateMap = new Map(sortedDates.map(item => [item.date, item]));
+
+          const currentDate = new Date(firstDate);
+          let previousEntry = sortedDates[0];
+
+          while (currentDate <= lastDate) {
+            const dateStr = formatDate(currentDate);
+            const existing = dateMap.get(dateStr);
+
+            if (existing) {
+              filledDates.push(existing);
+              previousEntry = existing;
+            } else {
+              // Forward-fill from previous entry (create new Set to avoid reference sharing)
+              filledDates.push({
+                date: dateStr,
+                postIds: new Set(previousEntry.postIds),
+                views: previousEntry.views,
+                likes: previousEntry.likes,
+                comments: previousEntry.comments,
+                shares: previousEntry.shares,
+                saves: previousEntry.saves,
+              });
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        }
+
+        // 7. Insert aggregated performance records for each date (including forward-filled)
         let insertedCount = 0;
-        for (const [date, metrics] of snapshotsByDate.entries()) {
+        for (const metrics of filledDates) {
           await ctx.runMutation(internal.app.bundleSocialQueries.upsertCampaignPerformance, {
             campaignId,
-            date,
+            date: metrics.date,
             posts: metrics.postIds.size,
             views: metrics.views,
             likes: metrics.likes,
@@ -587,7 +665,7 @@ export const aggregateCampaignPerformanceByCampaign = internalAction({
           insertedCount++;
         }
 
-        console.log(`[REBUILD] Rebuilt ${insertedCount} performance records for campaign ${campaignId}`);
+        console.log(`[REBUILD] Rebuilt ${insertedCount} performance records for campaign ${campaignId} (with forward-filled gaps)`);
       } else {
         // NORMAL MODE: Only update today's record
         // Get today's date in DD-MM-YYYY format

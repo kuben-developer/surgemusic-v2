@@ -13,37 +13,18 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as app_admin from "../app/admin.js";
-import type * as app_advanced_analytics from "../app/advanced_analytics.js";
-import type * as app_airtableCampaignsMedia from "../app/airtableCampaignsMedia.js";
-import type * as app_analytics from "../app/analytics.js";
-import type * as app_ayrshare from "../app/ayrshare.js";
+import type * as app_airtable from "../app/airtable.js";
 import type * as app_bundleSocial from "../app/bundleSocial.js";
 import type * as app_bundleSocialQueries from "../app/bundleSocialQueries.js";
 import type * as app_campaignV2 from "../app/campaignV2.js";
-import type * as app_campaigns from "../app/campaigns.js";
 import type * as app_captions from "../app/captions.js";
 import type * as app_clipper from "../app/clipper.js";
-import type * as app_exportAyrshareVideos from "../app/exportAyrshareVideos.js";
-import type * as app_files from "../app/files.js";
-import type * as app_folders from "../app/folders.js";
-import type * as app_getlateMonitoring from "../app/getlateMonitoring.js";
-import type * as app_late from "../app/late.js";
 import type * as app_montager from "../app/montager.js";
-import type * as app_public from "../app/public.js";
-import type * as app_reports from "../app/reports.js";
-import type * as app_stripe from "../app/stripe.js";
-import type * as app_tiktok from "../app/tiktok.js";
 import type * as app_transcription from "../app/transcription.js";
 import type * as app_users from "../app/users.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
-import type * as utils_srt_generator from "../utils/srt_generator.js";
-import type * as webhooks_ayrshare from "../webhooks/ayrshare.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
-import type * as webhooks_exportAyrshareVideos from "../webhooks/exportAyrshareVideos.js";
-import type * as webhooks_make from "../webhooks/make.js";
-import type * as webhooks_stripe from "../webhooks/stripe.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
 /**
@@ -55,37 +36,18 @@ import type * as webhooks_test from "../webhooks/test.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  "app/admin": typeof app_admin;
-  "app/advanced_analytics": typeof app_advanced_analytics;
-  "app/airtableCampaignsMedia": typeof app_airtableCampaignsMedia;
-  "app/analytics": typeof app_analytics;
-  "app/ayrshare": typeof app_ayrshare;
+  "app/airtable": typeof app_airtable;
   "app/bundleSocial": typeof app_bundleSocial;
   "app/bundleSocialQueries": typeof app_bundleSocialQueries;
   "app/campaignV2": typeof app_campaignV2;
-  "app/campaigns": typeof app_campaigns;
   "app/captions": typeof app_captions;
   "app/clipper": typeof app_clipper;
-  "app/exportAyrshareVideos": typeof app_exportAyrshareVideos;
-  "app/files": typeof app_files;
-  "app/folders": typeof app_folders;
-  "app/getlateMonitoring": typeof app_getlateMonitoring;
-  "app/late": typeof app_late;
   "app/montager": typeof app_montager;
-  "app/public": typeof app_public;
-  "app/reports": typeof app_reports;
-  "app/stripe": typeof app_stripe;
-  "app/tiktok": typeof app_tiktok;
   "app/transcription": typeof app_transcription;
   "app/users": typeof app_users;
   crons: typeof crons;
   http: typeof http;
-  "utils/srt_generator": typeof utils_srt_generator;
-  "webhooks/ayrshare": typeof webhooks_ayrshare;
   "webhooks/clerk": typeof webhooks_clerk;
-  "webhooks/exportAyrshareVideos": typeof webhooks_exportAyrshareVideos;
-  "webhooks/make": typeof webhooks_make;
-  "webhooks/stripe": typeof webhooks_stripe;
   "webhooks/test": typeof webhooks_test;
 }>;
 export declare const api: FilterApi<

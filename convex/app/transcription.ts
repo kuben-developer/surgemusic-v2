@@ -1,8 +1,8 @@
 "use node"
 
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
 
 const elevenlabs = new ElevenLabsClient({

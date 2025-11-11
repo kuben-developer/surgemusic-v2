@@ -33,11 +33,12 @@ export function AnalyticsHeader({
     dateFilter ? { from: dateFilter.startDate, to: dateFilter.endDate } : undefined
   );
 
-  // Helper function to format date as YYYY-MM-DD in UTC
+  // Helper function to format date as YYYY-MM-DD treating calendar date as UTC
+  // Calendar gives us dates at local midnight, but we treat them as UTC dates
   const formatDateUTC = (date: Date): string => {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 

@@ -10,12 +10,12 @@ const crons = cronJobs();
 //     {}
 // );
 
-crons.interval(
-    "refreshBundleSocialPosts",
-    { minutes: 120 },
-    internal.app.bundleSocial.refreshBundleSocialPosts,
-    {}
-);
+// crons.interval(
+//     "refreshBundleSocialPosts",
+//     { minutes: 120 },
+//     internal.app.bundleSocial.refreshBundleSocialPosts,
+//     {}
+// );
 
 // crons.interval(
 //     "aggregateBundleSocialCampaignPerformance",

@@ -1,5 +1,5 @@
-import { query, internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { internalQuery, query } from "../_generated/server";
 
 export const getCurrentUser = query({
   args: {},
@@ -35,61 +35,5 @@ export const getByClerkId = internalQuery({
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .unique();
-  },
-})
-
-export const updateStripeCustomerId = internalMutation({
-  args: {
-    userId: v.id("users"),
-    stripeCustomerId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    await ctx.db.patch(args.userId, {
-      billing: {
-        ...user.billing,
-        stripeCustomerId: args.stripeCustomerId,
-      },
-    });
-  },
-})
-
-export const updateTrial = internalMutation({
-  args: {
-    userId: v.id("users"),
-    isTrial: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    await ctx.db.patch(args.userId, {
-      billing: {
-        ...user.billing,
-        isTrial: args.isTrial,
-      },
-    });
-  },
-})
-
-export const updateUserFirstTimeAndTrial = internalMutation({
-  args: {
-    userId: v.id("users"),
-    firstTimeUser: v.boolean(),
-    isTrial: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    await ctx.db.patch(args.userId, {
-      billing: {
-        ...user.billing,
-        firstTimeUser: args.firstTimeUser,
-        isTrial: args.isTrial,
-      },
-    });
   },
 })
