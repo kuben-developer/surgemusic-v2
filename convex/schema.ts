@@ -89,61 +89,33 @@ export default defineSchema({
     totalShares: v.number(),
     totalSaves: v.number(),
 
-    topVideos: v.array(v.object({
-      videoId: v.string(),
-      postedAt: v.number(),
-      videoUrl: v.string(),
-      mediaUrl: v.optional(v.string()),
-      views: v.number(),
-      likes: v.number(),
-      comments: v.number(),
-      shares: v.number(),
-      saves: v.number(),
-    })),
-
-    postCountsByDate: v.array(
-      v.object({
-        date: v.string(),
-        count: v.number(),
-      })
-    ),
-
-    dailyTotalSnapshots: v.record(v.string(), v.object({
+    dailySnapshotsByDate: v.record(v.string(), v.object({
+      totalPosts: v.number(),
       totalViews: v.number(),
       totalLikes: v.number(),
       totalComments: v.number(),
       totalShares: v.number(),
       totalSaves: v.number(),
+      dailySnapshots: v.record(v.string(), v.object({
+        totalViews: v.number(),
+        totalLikes: v.number(),
+        totalComments: v.number(),
+        totalShares: v.number(),
+        totalSaves: v.number(),
+      })),
     })),
-    // dailyTotalSnapshotsByPostedDate: v.array(
-    //   v.object({
-    //     date: v.string(),
-    //     totalViews: v.number(),
-    //     totalLikes: v.number(),
-    //     totalComments: v.number(),
-    //     totalShares: v.number(),
-    //     totalSaves: v.number(),
-    //   })
-    // )
+
+    dailySnapshots: v.record(v.string(), v.object({
+      totalViews: v.number(),
+      totalLikes: v.number(),
+      totalComments: v.number(),
+      totalShares: v.number(),
+      totalSaves: v.number(),
+    }))
+
 
   })
     .index("by_campaignId", ["campaignId"]),
-
-
-
-  bundleSocialCampaignPerformance: defineTable({
-    campaignId: v.string(), // airtable campaign id
-    date: v.string(), // DD-MM-YYYY format
-    posts: v.number(), // Total posts for this campaign
-    views: v.number(), // Aggregated views
-    likes: v.number(), // Aggregated likes
-    comments: v.number(), // Aggregated comments
-    shares: v.number(), // Aggregated shares
-    saves: v.number(), // Aggregated saves
-    updatedAt: v.number(), // Last update timestamp (ms)
-  })
-    .index("by_campaignId", ["campaignId"])
-    .index("by_campaignId_date", ["campaignId", "date"]),
 
   captions: defineTable({
     campaignId: v.string(), // airtable campaign id
