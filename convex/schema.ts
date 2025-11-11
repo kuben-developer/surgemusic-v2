@@ -26,6 +26,7 @@ export default defineSchema({
   airtableContents: defineTable({
     campaignId: v.string(), // airtable campaign id
     postId: v.string(), // from airtable api_post_id column in Content base
+    caption: v.optional(v.string()),
     error: v.optional(v.string()),
   })
     .index("by_campaignId", ["campaignId"])
@@ -74,6 +75,61 @@ export default defineSchema({
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_campaignId_date", ["campaignId", "date"]),
+
+  campaignAnalytics: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    campaignName: v.string(),
+    artist: v.string(),
+    song: v.string(),
+
+    totalPosts: v.number(),
+    totalViews: v.number(),
+    totalLikes: v.number(),
+    totalComments: v.number(),
+    totalShares: v.number(),
+    totalSaves: v.number(),
+
+    topVideos: v.array(v.object({
+      videoId: v.string(),
+      postedAt: v.number(),
+      videoUrl: v.string(),
+      mediaUrl: v.optional(v.string()),
+      views: v.number(),
+      likes: v.number(),
+      comments: v.number(),
+      shares: v.number(),
+      saves: v.number(),
+    })),
+
+    postCountsByDate: v.array(
+      v.object({
+        date: v.string(),
+        count: v.number(),
+      })
+    ),
+
+    dailyTotalSnapshots: v.record(v.string(), v.object({
+      totalViews: v.number(),
+      totalLikes: v.number(),
+      totalComments: v.number(),
+      totalShares: v.number(),
+      totalSaves: v.number(),
+    })),
+    // dailyTotalSnapshotsByPostedDate: v.array(
+    //   v.object({
+    //     date: v.string(),
+    //     totalViews: v.number(),
+    //     totalLikes: v.number(),
+    //     totalComments: v.number(),
+    //     totalShares: v.number(),
+    //     totalSaves: v.number(),
+    //   })
+    // )
+
+  })
+    .index("by_campaignId", ["campaignId"]),
+
+
 
   bundleSocialCampaignPerformance: defineTable({
     campaignId: v.string(), // airtable campaign id
