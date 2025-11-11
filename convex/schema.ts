@@ -76,6 +76,7 @@ export default defineSchema({
     .index("by_campaignId", ["campaignId"])
     .index("by_campaignId_date", ["campaignId", "date"]),
 
+  // CAMPAIGN
   campaignAnalytics: defineTable({
     campaignId: v.string(), // airtable campaign id
     campaignName: v.string(),
