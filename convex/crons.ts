@@ -23,4 +23,11 @@ crons.cron(
     internal.app.bundle.refreshTiktokStats,
 );
 
+crons.interval(
+    "calculateCampaignAnalytics",
+    { minutes: 15 }, // Every 15 minute
+    internal.app.analytics.calculateCampaignAnalytics,
+    {}
+);
+
 export default crons;

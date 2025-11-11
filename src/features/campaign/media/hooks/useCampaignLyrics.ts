@@ -17,7 +17,7 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
   const [showLyricsEditor, setShowLyricsEditor] = useState(false);
 
   const transcribeAudioAction = useAction(api.app.transcription.transcribeAudio);
-  const updateLyricsMutation = useMutation(api.app.airtableCampaignsMedia.updateLyrics);
+  const updateLyricsMutation = useMutation(api.app.campaignAssets.updateLyrics);
 
   /**
    * Transcribe audio using ElevenLabs

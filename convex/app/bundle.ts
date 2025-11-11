@@ -46,9 +46,10 @@ async function fetchBundleSocialPost(postId: string): Promise<BundleSocialPost |
     );
 
     if (!response.ok) {
+      const errorData = await response.text();
+      console.log(`Bundle Social API error for post ${postId}: ${errorData}`);
       // Check for "Post not found" error
       if (response.status === 404) {
-        const errorData = await response.text();
         if (errorData.includes("Post not found")) {
           throw new Error("Post not found");
         }
@@ -76,12 +77,12 @@ async function fetchBundleSocialPost(postId: string): Promise<BundleSocialPost |
 // INTERNAL QUERIES
 // ============================================================================
 
-// Get unique campaign IDs from airtableContents
+// Get unique campaign IDs from airtableCampaigns
 export const getUniqueCampaignIdsFromAirtable = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const contents = await ctx.db.query("airtableContents").collect();
-    const uniqueCampaignIds = [...new Set(contents.map(content => content.campaignId))];
+    const campaigns = await ctx.db.query("airtableCampaigns").collect();
+    const uniqueCampaignIds = [...new Set(campaigns.map(content => content.campaignId))];
     return uniqueCampaignIds;
   },
 });
@@ -627,7 +628,7 @@ export const refreshTiktokStats = internalAction({
   args: {},
   handler: async (ctx) => {
     try {
-      // Get unique campaign IDs from airtableContents
+      // Get unique campaign IDs from airtableCampaigns
       const campaignIds = await ctx.runQuery(internal.app.bundle.getUniqueCampaignIdsFromAirtable, {});
       let scheduledCount = 0;
 

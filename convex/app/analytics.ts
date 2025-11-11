@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, query } from "../_generated/server";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 /**
@@ -776,7 +776,7 @@ export const upsertCampaignAnalytics = internalMutation({
   },
 });
 
-export const calculateCampaignAnalytics = internalAction({
+export const calculateCampaignAnalyticsByCampaign = internalAction({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
     const campaign = await ctx.runQuery(internal.app.analytics.getCampaignById, { campaignId });
@@ -838,5 +838,23 @@ export const calculateCampaignAnalytics = internalAction({
       dailySnapshotsByDate,
       dailySnapshots,
     };
+  },
+});
+
+export const calculateCampaignAnalytics = internalAction({
+  handler: async (ctx) => {
+    const campaignIds = await ctx.runQuery(internal.app.bundle.getUniqueCampaignIdsFromAirtable, {});
+    let scheduledCount = 0;
+
+    for (const campaignId of campaignIds) {
+      // Schedule background job for this campaign
+      await ctx.scheduler.runAfter(0, internal.app.analytics.calculateCampaignAnalyticsByCampaign, {
+        campaignId,
+      });
+
+      scheduledCount++;
+    }
+
+    console.log(`${scheduledCount} campaigns scheduled for processing`);
   },
 });

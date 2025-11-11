@@ -17,7 +17,7 @@ export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) 
   const [audioBase64, setAudioBase64] = useState<string | undefined>(undefined);
 
   // Fetch media data for this campaign
-  const mediaData = useQuery(api.app.airtableCampaignsMedia.getMediaData, {
+  const mediaData = useQuery(api.app.campaignAssets.getMediaData, {
     campaignId,
   });
 

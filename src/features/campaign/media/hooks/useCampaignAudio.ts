@@ -16,14 +16,14 @@ export function useCampaignAudio(campaignId: string) {
   const [showTrimmer, setShowTrimmer] = useState(false);
   const [isTrimming, setIsTrimming] = useState(false);
 
-  const updateMediaMutation = useMutation(api.app.airtableCampaignsMedia.updateAudioAndLyrics);
-  const removeMediaMutation = useMutation(api.app.airtableCampaignsMedia.removeAudioAndLyrics);
+  const updateMediaMutation = useMutation(api.app.campaignAssets.updateAudioAndLyrics);
+  const removeMediaMutation = useMutation(api.app.campaignAssets.removeAudioAndLyrics);
 
   const { uploadFile, fileToBase64, isUploading, uploadProgress } = useConvexUpload({
     fileType: "audio",
     trackUpload: true,
     onSuccess: async (result) => {
-      // Save to airtableCampaigns
+      // Save to campaignAssets
       await updateMediaMutation({
         campaignId,
         audioFileId: result.storageId,

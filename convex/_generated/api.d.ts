@@ -16,6 +16,7 @@ import type {
 import type * as app_airtable from "../app/airtable.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_bundle from "../app/bundle.js";
+import type * as app_campaignAssets from "../app/campaignAssets.js";
 import type * as app_captions from "../app/captions.js";
 import type * as app_clipper from "../app/clipper.js";
 import type * as app_montager from "../app/montager.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "app/airtable": typeof app_airtable;
   "app/analytics": typeof app_analytics;
   "app/bundle": typeof app_bundle;
+  "app/campaignAssets": typeof app_campaignAssets;
   "app/captions": typeof app_captions;
   "app/clipper": typeof app_clipper;
   "app/montager": typeof app_montager;

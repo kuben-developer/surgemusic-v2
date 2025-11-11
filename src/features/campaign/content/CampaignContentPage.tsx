@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
-import { useCampaignMetadata } from "./hooks/useCampaignMetadata";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
-import { CampaignSyncStats } from "./components/CampaignSyncStats";
 import { CampaignMediaSection } from "@/features/campaign/media";
 import { useState, useMemo } from "react";
 import {
@@ -26,7 +24,6 @@ export function CampaignContentPage() {
   const router = useRouter();
   const campaignRecordId = params.id as string;
   const { data, isLoading, error } = useCampaignContent(campaignRecordId);
-  const { metadata } = useCampaignMetadata(campaignRecordId);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<string>("all");
@@ -132,7 +129,6 @@ export function CampaignContentPage() {
               <div>
                 <h1 className="text-3xl font-bold">Campaign Content</h1>
               </div>
-              <CampaignSyncStats metadata={metadata} />
             </div>
           </div>
         )}
