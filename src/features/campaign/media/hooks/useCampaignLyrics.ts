@@ -5,6 +5,9 @@ import { useAction, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import { initializeEmptyLyrics, parseSRT } from "@/utils/srt-converter.utils";
+import { generateWordLevelSRT, generateEstimatedSRT, convertSRTToFile } from "@/utils/srt-generator.utils";
+import { parseWordLevelDataFromSRT } from "@/utils/srt-parser.utils";
+import { useConvexUpload } from "@/hooks/useConvexUpload";
 import type { LyricLine, WordData, LyricWithWords } from "../types/media.types";
 
 export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
@@ -18,6 +21,7 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
 
   const transcribeAudioAction = useAction(api.app.transcription.transcribeAudio);
   const updateLyricsMutation = useMutation(api.app.campaignAssets.updateLyrics);
+  const { uploadFile } = useConvexUpload();
 
   /**
    * Transcribe audio using ElevenLabs
@@ -85,11 +89,38 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
    */
   const handleSaveLyrics = async (editedLyrics: LyricLine[]) => {
     try {
+      let srtFileId = undefined;
+      let srtUrl = undefined;
+
+      // Generate and upload SRT file
+      let srtContent: string;
+
+      if (wordsData && wordsData.length > 0) {
+        // Generate word-level SRT from transcription data
+        srtContent = generateWordLevelSRT(wordsData);
+      } else {
+        // Generate estimated SRT from lyrics text
+        const lyricsText = editedLyrics.map((line) => line.text).join(" ");
+        srtContent = generateEstimatedSRT(lyricsText);
+      }
+
+      // Convert to File and upload
+      const srtFile = convertSRTToFile(srtContent, `campaign-${campaignId}.srt`);
+      const uploadResult = await uploadFile(srtFile);
+
+      if (uploadResult) {
+        srtFileId = uploadResult.storageId;
+        srtUrl = uploadResult.publicUrl;
+      }
+
+      // Save lyrics and SRT reference to database
       await updateLyricsMutation({
         campaignId,
         lyrics: editedLyrics,
         wordsData,
         lyricsWithWords,
+        srtFileId,
+        srtUrl,
       });
 
       setLyrics(editedLyrics);
@@ -131,6 +162,19 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
           description: "The file appears to be empty or invalid",
         });
         return;
+      }
+
+      // Parse word-level data from SRT for precise timing
+      const parsedWordsData = parseWordLevelDataFromSRT(text);
+      if (parsedWordsData.length > 0) {
+        setWordsData(parsedWordsData);
+      }
+
+      // Upload the SRT file to storage
+      const uploadResult = await uploadFile(file);
+      if (uploadResult) {
+        // Store SRT file reference for later use
+        console.log("SRT file uploaded:", uploadResult.publicUrl);
       }
 
       // Normalize to 15 seconds by taking first 15 entries or filling with empty

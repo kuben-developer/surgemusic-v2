@@ -34,6 +34,8 @@ export interface LyricWithWords {
 export interface CampaignMediaData {
   audioFileId?: Id<"_storage">;
   audioUrl?: string;
+  srtFileId?: Id<"_storage">;
+  srtUrl?: string;
   hasLyrics: boolean;
   lyrics?: LyricLine[];
   wordsData?: WordData[];

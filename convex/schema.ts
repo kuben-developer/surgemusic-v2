@@ -47,6 +47,8 @@ export default defineSchema({
     campaignId: v.string(), // airtable campaign id
     audioFileId: v.optional(v.id('_storage')),
     audioUrl: v.optional(v.string()),
+    srtFileId: v.optional(v.id('_storage')),
+    srtUrl: v.optional(v.string()),
     hasLyrics: v.optional(v.boolean()),
     lyrics: v.optional(v.array(v.object({
       timestamp: v.number(),
@@ -171,4 +173,22 @@ export default defineSchema({
     .index("by_username", ["username"])
     .index("by_campaignId", ["campaignId"])
     .index("by_videoId", ["videoId"]),
+
+  files: defineTable({
+    userId: v.id('users'),
+    storageId: v.id('_storage'),
+    filename: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    uploadedAt: v.number(),
+    campaignId: v.optional(v.id('campaigns')),
+    fileType: v.union(
+      v.literal('audio'),
+      v.literal('image'),
+      v.literal('video')
+    ),
+    publicUrl: v.string(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_campaignId", ["campaignId"]),
 })

@@ -21,6 +21,8 @@ export const getMediaData = query({
     return {
       audioFileId: assets.audioFileId,
       audioUrl: assets.audioUrl,
+      srtFileId: assets.srtFileId,
+      srtUrl: assets.srtUrl,
       hasLyrics: assets.hasLyrics ?? false,
       lyrics: assets.lyrics,
       wordsData: assets.wordsData,
@@ -37,6 +39,8 @@ export const updateAudioAndLyrics = mutation({
     campaignId: v.string(),
     audioFileId: v.optional(v.id("_storage")),
     audioUrl: v.optional(v.string()),
+    srtFileId: v.optional(v.id("_storage")),
+    srtUrl: v.optional(v.string()),
     hasLyrics: v.optional(v.boolean()),
     lyrics: v.optional(
       v.array(
@@ -121,6 +125,8 @@ export const removeAudioAndLyrics = mutation({
 export const updateLyrics = mutation({
   args: {
     campaignId: v.string(),
+    srtFileId: v.optional(v.id("_storage")),
+    srtUrl: v.optional(v.string()),
     lyrics: v.array(
       v.object({
         timestamp: v.number(),
