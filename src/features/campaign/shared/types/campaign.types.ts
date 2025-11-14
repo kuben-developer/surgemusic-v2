@@ -28,4 +28,7 @@ export interface NicheStats {
 export interface CampaignContentData {
   content: AirtableContent[];
   campaign_id: string;
+  campaign_name: string;
+  artist: string;
+  song: string;
 }

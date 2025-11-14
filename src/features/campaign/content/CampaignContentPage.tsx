@@ -4,13 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, ArrowLeft, BarChart3 } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
 import { CampaignMediaSection } from "@/features/campaign/media";
+import { CampaignInfoCard } from "./components/CampaignInfoCard";
 import { useState, useMemo } from "react";
 import {
   calculateCategoryStats,
@@ -105,31 +106,21 @@ export function CampaignContentPage() {
         {/* Header */}
         {!selectedCategory && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/campaign")}
-                className="hover:bg-muted -ml-2"
-              >
-                <ArrowLeft className="size-4 mr-2" />
-                Back to Campaigns
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/campaign/${campaignRecordId}/analytics`)}
-                className="gap-2"
-              >
-                <BarChart3 className="size-4" />
-                View Analytics
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h1 className="text-3xl font-bold">Campaign Content</h1>
-              </div>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/campaign")}
+              className="hover:bg-muted -ml-2"
+            >
+              <ArrowLeft className="size-4 mr-2" />
+              Back to Campaigns
+            </Button>
+            <CampaignInfoCard
+              campaignName={data.campaign_name}
+              artist={data.artist}
+              song={data.song}
+              campaignId={campaignRecordId}
+            />
           </div>
         )}
 

@@ -48,3 +48,5 @@ yarn-error.log*
 private
 *.json
 *.csv
+*.mp3
+*.wav

@@ -147,4 +147,28 @@ export default defineSchema({
     text: v.string(),
   })
     .index("by_campaign", ["campaignId"]),
+
+  tiktokVideos: defineTable({
+    userId: v.string(),
+    username: v.string(),
+    nickname: v.string(),
+    profilePicture: v.string(),
+
+    videoId: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    createTime: v.number(),
+    desc: v.string(),
+    videoUrl: v.string(),
+    musicUrl: v.string(),
+
+    campaignId: v.optional(v.string()),
+  })
+    .index("by_createTime", ["createTime"])
+    .index("by_username", ["username"])
+    .index("by_campaignId", ["campaignId"])
+    .index("by_videoId", ["videoId"]),
 })

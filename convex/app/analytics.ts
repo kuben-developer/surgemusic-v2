@@ -624,6 +624,10 @@ export const getTopVideosByPostDate = query({
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
     let filteredPosts = bundlePosts.filter((post) => airtablePostIds.has(post.postId));
 
+    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
+      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
+    }
+
     // If dates are provided and not empty, filter by those dates
     if (dates && dates.length > 0) {
       // Convert dates to timestamp ranges
@@ -683,6 +687,16 @@ export const getSnapshotsByCampaign = internalQuery({
   handler: async (ctx, { campaignId }) => {
     return await ctx.db
       .query("bundleSocialSnapshots")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+  },
+});
+
+export const getTikTokVideosByCampaign = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    return await ctx.db
+      .query("tiktokVideos")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
   },
@@ -787,11 +801,39 @@ export const calculateCampaignAnalyticsByCampaign = internalAction({
     const bundlePosts: Doc<"bundleSocialPostedVideos">[] = await ctx.runQuery(internal.app.analytics.getBundleSocialPostsByCampaign, { campaignId });
     const airtablePosts: Doc<"airtableContents">[] = await ctx.runQuery(internal.app.analytics.getAirtablePostsByCampaign, { campaignId });
     const bundleSnapshots: Doc<"bundleSocialSnapshots">[] = await ctx.runQuery(internal.app.analytics.getSnapshotsByCampaign, { campaignId });
+    const tiktokVideos: Doc<"tiktokVideos">[] = await ctx.runQuery(internal.app.analytics.getTikTokVideosByCampaign, { campaignId });
 
     // Only include bundlePosts that have a matching postId in airtablePosts
     const airtablePostIds = new Set(airtablePosts.map((item: Doc<"airtableContents">) => item.postId));
-    const posts: Doc<"bundleSocialPostedVideos">[] = bundlePosts.filter((post: Doc<"bundleSocialPostedVideos">) => airtablePostIds.has(post.postId));
+    let posts: Doc<"bundleSocialPostedVideos">[] = bundlePosts.filter((post: Doc<"bundleSocialPostedVideos">) => airtablePostIds.has(post.postId));
     const snapshots: Doc<"bundleSocialSnapshots">[] = bundleSnapshots.filter((snapshot: Doc<"bundleSocialSnapshots">) => airtablePostIds.has(snapshot.postId));
+
+    // Append tiktok videos to posts (skip if videoId already exists)
+    const existingVideoIds = new Set(posts.map((post: Doc<"bundleSocialPostedVideos">) => post.videoId));
+    const tiktokPostsToAdd = tiktokVideos
+      .filter((video: Doc<"tiktokVideos">) => !existingVideoIds.has(video.videoId))
+      .map((video: Doc<"tiktokVideos">) => ({
+        _id: video._id as any,
+        _creationTime: video._creationTime,
+        campaignId: video.campaignId || campaignId,
+        postId: video.videoId, // Use videoId as postId since tiktokVideos doesn't have postId
+        videoId: video.videoId,
+        postedAt: video.createTime,
+        videoUrl: video.videoUrl,
+        mediaUrl: video.videoUrl, // Use videoUrl as mediaUrl
+        views: video.views,
+        likes: video.likes,
+        comments: video.comments,
+        shares: video.shares,
+        saves: video.saves,
+        updatedAt: video.createTime,
+      } as Doc<"bundleSocialPostedVideos">));
+
+    posts.push(...tiktokPostsToAdd);
+
+    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
+      posts = posts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
+    }
 
     const totalPosts: number = posts.length;
     const totalViews: number = posts.reduce((acc: number, post: Doc<"bundleSocialPostedVideos">) => acc + post.views, 0);

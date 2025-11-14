@@ -181,8 +181,14 @@ export const getCampaignContent = action({
     args: {
         campaignRecordId: v.string(),
     },
-    handler: async (ctx, args): Promise<{ content: ContentItem[]; campaign_id: string }> => {
-        // First, get the campaign to extract campaign_id
+    handler: async (ctx, args): Promise<{
+        content: ContentItem[];
+        campaign_id: string;
+        campaign_name: string;
+        artist: string;
+        song: string;
+    }> => {
+        // First, get the campaign to extract campaign_id and metadata
         const campaign = await fetchRecordById(AIRTABLE_CAMPAIGN_TABLE_ID, args.campaignRecordId);
 
         if (!campaign) {
@@ -192,6 +198,18 @@ export const getCampaignContent = action({
         const campaignId = campaign.fields["campaign_id"] as string;
         if (!campaignId) {
             throw new Error("Campaign has no campaign_id");
+        }
+
+        // Fetch artist and song details from related table
+        let artist = "";
+        let song = "";
+        const artistSongIds = campaign.fields["Artist / Song"] as string[] | undefined;
+        if (artistSongIds?.[0]) {
+            const artistRecord = await fetchRecordById(AIRTABLE_ARTIST_TABLE_ID, artistSongIds[0]);
+            if (artistRecord) {
+                artist = (artistRecord.fields["Artist"] as string) || "";
+                song = (artistRecord.fields["Song"] as string) || "";
+            }
         }
 
         // Fetch all content for this campaign
@@ -241,6 +259,9 @@ export const getCampaignContent = action({
         return {
             content: allRecords,
             campaign_id: campaignId,
+            campaign_name: campaignId,
+            artist,
+            song,
         };
     },
 });

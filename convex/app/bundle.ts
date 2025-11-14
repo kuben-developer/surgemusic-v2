@@ -387,7 +387,7 @@ export const refreshTiktokStatsByCampaign = action({
 
       // Filter to only UUID format postIds
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const contents = allContents.filter(content => uuidRegex.test(content.postId));
+      const contents = allContents.filter((content: { postId: string; campaignId: string; }) => uuidRegex.test(content.postId));
 
       // Fetch posts to skip (older than 7 days OR updated within 6 hours) ONCE for this campaign
       // We'll skip Bundle Social API calls for these to save API requests
@@ -401,7 +401,7 @@ export const refreshTiktokStatsByCampaign = action({
       console.log(`[refreshTiktokStats] Found ${existingPostIdsSet.size} total existing posts in database`);
 
       // Filter out posts to skip BEFORE batching (optimization!)
-      const contentsToProcess = contents.filter(content => !postsToSkipSet.has(content.postId));
+      const contentsToProcess = contents.filter((content: { postId: string; campaignId: string; }) => !postsToSkipSet.has(content.postId));
       console.log(`[refreshTiktokStats] Filtered to ${contentsToProcess.length} contents to process (skipped ${contents.length - contentsToProcess.length} already tracked posts)`);
 
       // Collect all successful data for bulk operations
@@ -559,10 +559,10 @@ export const refreshTiktokStatsByCampaign = action({
         console.log(`[refreshTiktokStats] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(contentsToProcess.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
 
         const batchResults = await Promise.allSettled(
-          batch.map(content => processContent(content))
+          batch.map((content: { postId: string; campaignId: string; }) => processContent(content))
         );
 
-        batchResults.forEach((result) => {
+        batchResults.forEach((result: PromiseSettledResult<{ postId: string; success: boolean; error?: string; skipped?: boolean; }>) => {
           if (result.status === 'fulfilled') {
             results.push(result.value);
           } else {
