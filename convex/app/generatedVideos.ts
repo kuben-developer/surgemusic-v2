@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "../_generated/server";
 
 /**
  * Generates a random UUID-like string
@@ -157,6 +157,55 @@ export const batchMarkAsSentToAirtable = mutation({
     return {
       success: true,
       count: args.videoIds.length,
+    };
+  },
+});
+
+/**
+ * INTERNAL: Get all videos where generatedVideoUrl is null
+ * Used by webhook endpoint to fetch pending videos for processing
+ */
+export const getPendingVideosInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    // Get all videos from the table
+    const allVideos = await ctx.db.query("generatedVideos").collect();
+
+    // Filter for videos where generatedVideoUrl is null or undefined
+    return allVideos.filter((video) => !video.generatedVideoUrl);
+  },
+});
+
+/**
+ * INTERNAL: Update the generatedVideoUrl for a specific video
+ * Used by webhook endpoint when external service completes video processing
+ */
+export const updateGeneratedVideoUrlInternal = internalMutation({
+  args: {
+    generatedVideoId: v.string(),
+    generatedVideoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find the video by generatedVideoId
+    const video = await ctx.db
+      .query("generatedVideos")
+      .withIndex("by_generatedVideoId", (q) =>
+        q.eq("generatedVideoId", args.generatedVideoId)
+      )
+      .unique();
+
+    if (!video) {
+      throw new Error(`Video with generatedVideoId ${args.generatedVideoId} not found`);
+    }
+
+    // Update the generatedVideoUrl
+    await ctx.db.patch(video._id, {
+      generatedVideoUrl: args.generatedVideoUrl,
+    });
+
+    return {
+      success: true,
+      videoId: video._id,
     };
   },
 });

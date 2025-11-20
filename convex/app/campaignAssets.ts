@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, internalQuery } from "../_generated/server";
 
 /**
  * Get media data (audio and lyrics) for a campaign
@@ -172,5 +172,23 @@ export const updateLyrics = mutation({
     });
 
     return { success: true };
+  },
+});
+
+/**
+ * INTERNAL: Get campaign assets by campaignId
+ * Used by webhook endpoints to fetch campaign data
+ */
+export const getAssetsByCampaignIdInternal = internalQuery({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const assets = await ctx.db
+      .query("campaignAssets")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .first();
+
+    return assets;
   },
 });
