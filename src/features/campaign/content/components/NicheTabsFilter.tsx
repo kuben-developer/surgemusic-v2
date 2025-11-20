@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { FolderPlus } from "lucide-react";
 import type { NicheStats } from "../../shared/types/campaign.types";
 import { MontagerVideoDialog } from "../dialogs/MontagerVideoDialog";
+import { MissingAssetsDialog } from "../dialogs/MissingAssetsDialog";
 
 interface NicheTabsFilterProps {
   niches: NicheStats[];
@@ -29,6 +32,12 @@ export function NicheTabsFilter({
   onVideosAdded,
 }: NicheTabsFilterProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [missingAssetsDialogOpen, setMissingAssetsDialogOpen] = useState(false);
+
+  // Validate campaign assets
+  const validation = useQuery(api.app.campaignValidation.validateCampaignAssets, {
+    campaignId,
+  });
 
   // Get selected niche stats
   const selectedNicheStats = niches.find((n) => n.niche === selectedNiche);
@@ -39,6 +48,22 @@ export function NicheTabsFilter({
   const videosNeeded = selectedNicheStats
     ? selectedNicheStats.totalCount - selectedNicheStats.withUrlCount
     : 0;
+
+  const handleAddFromMontager = () => {
+    // Check if validation data is loaded
+    if (!validation) {
+      return;
+    }
+
+    // If validation fails, show warning dialog
+    if (!validation.isValid) {
+      setMissingAssetsDialogOpen(true);
+      return;
+    }
+
+    // All validations passed, open montager dialog
+    setDialogOpen(true);
+  };
 
   return (
     <div className="space-y-3">
@@ -74,7 +99,8 @@ export function NicheTabsFilter({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setDialogOpen(true)}
+            onClick={handleAddFromMontager}
+            disabled={!validation}
             className="shrink-0"
           >
             <FolderPlus className="size-4 mr-2" />
@@ -82,6 +108,18 @@ export function NicheTabsFilter({
           </Button>
         )}
       </div>
+
+      {/* Missing Assets Warning Dialog */}
+      {validation && !validation.isValid && (
+        <MissingAssetsDialog
+          open={missingAssetsDialogOpen}
+          onOpenChange={setMissingAssetsDialogOpen}
+          missingRequirements={validation.missingRequirements}
+          hasAudioUrl={validation.hasAudioUrl}
+          hasSrtUrl={validation.hasSrtUrl}
+          hasCaptions={validation.hasCaptions}
+        />
+      )}
 
       {/* Montager Video Dialog */}
       {isNicheIncomplete && (
