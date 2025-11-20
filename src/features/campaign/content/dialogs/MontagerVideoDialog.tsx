@@ -1,0 +1,297 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronLeft, ChevronRight, FolderOpen, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { OverlayStyleSelector } from "./OverlayStyleSelector";
+import { useMontagerVideoAddition } from "../hooks/useMontagerVideoAddition";
+import type { MontagerFolder } from "../../shared/types/campaign.types";
+import { formatDistanceToNow } from "date-fns";
+
+interface MontagerVideoDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  campaignId: string;
+  categoryName: string;
+  nicheName: string;
+  videosNeeded: number;
+  onSuccess?: () => void;
+}
+
+export function MontagerVideoDialog({
+  open,
+  onOpenChange,
+  campaignId,
+  categoryName,
+  nicheName,
+  videosNeeded,
+  onSuccess,
+}: MontagerVideoDialogProps) {
+  const [folders, setFolders] = useState<MontagerFolder[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+
+  const {
+    currentStep,
+    selectedFolder,
+    selectedStyle,
+    isLoading,
+    setSelectedFolder,
+    setSelectedStyle,
+    handleNextStep,
+    handlePreviousStep,
+    handleSubmit,
+    listFolders,
+  } = useMontagerVideoAddition({
+    campaignId,
+    categoryName,
+    nicheName,
+    videosNeeded,
+    onSuccess: () => {
+      onSuccess?.();
+      onOpenChange(false);
+    },
+  });
+
+  const loadFolders = useCallback(async () => {
+    setLoadingFolders(true);
+    try {
+      const result = await listFolders({});
+      setFolders(result);
+    } catch (error) {
+      console.error("Error loading folders:", error);
+      toast.error("Failed to load folders. Please try again.");
+    } finally {
+      setLoadingFolders(false);
+    }
+  }, [listFolders]);
+
+  // Load folders when dialog opens
+  useEffect(() => {
+    if (open && currentStep === "folder") {
+      loadFolders();
+    }
+  }, [open, currentStep, loadFolders]);
+
+  const canProceed = () => {
+    if (currentStep === "folder") return selectedFolder !== null;
+    if (currentStep === "overlay") return selectedStyle !== null;
+    if (currentStep === "confirm") return true;
+    return false;
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case "folder":
+        return "Select Montager Folder";
+      case "overlay":
+        return "Select Overlay Style";
+      case "confirm":
+        return "Confirm & Submit";
+      default:
+        return "";
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (currentStep) {
+      case "folder":
+        return `Select a folder with at least ${videosNeeded} video${videosNeeded === 1 ? "" : "s"}`;
+      case "overlay":
+        return "Choose the visual style for video processing";
+      case "confirm":
+        return "Review your selections before adding videos";
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{getStepTitle()}</DialogTitle>
+          <DialogDescription>{getStepDescription()}</DialogDescription>
+        </DialogHeader>
+
+        <div className="min-h-[300px] py-4">
+          {/* Step 1: Select Folder */}
+          {currentStep === "folder" && (
+            <div className="space-y-3">
+              {loadingFolders ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : folders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No montager folders found
+                </div>
+              ) : (
+                <div className="max-h-[400px] space-y-2 overflow-y-auto rounded-lg border p-3">
+                  {folders.map((folder) => {
+                    const isSelected = selectedFolder?.name === folder.name;
+                    const hasEnough = folder.montageCount >= videosNeeded;
+
+                    return (
+                      <button
+                        key={folder.name}
+                        type="button"
+                        onClick={() => hasEnough && setSelectedFolder(folder)}
+                        disabled={!hasEnough}
+                        className={cn(
+                          "w-full rounded-md border-2 p-3 text-left transition-all hover:bg-accent",
+                          isSelected && "border-primary bg-accent",
+                          !isSelected && "border-border",
+                          !hasEnough && "cursor-not-allowed opacity-50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "rounded-md p-2",
+                                isSelected ? "bg-primary/10" : "bg-muted"
+                              )}
+                            >
+                              <FolderOpen
+                                className={cn(
+                                  "size-5",
+                                  isSelected ? "text-primary" : "text-muted-foreground"
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <div className="font-medium">{folder.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {folder.montageCount} video{folder.montageCount === 1 ? "" : "s"} •{" "}
+                                {formatDistanceToNow(new Date(folder.lastModified), {
+                                  addSuffix: true,
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                          {!hasEnough && (
+                            <span className="text-xs text-destructive font-medium">
+                              Not enough videos
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedFolder && (
+                <div className="rounded-lg bg-muted p-3 text-sm">
+                  <span className="font-medium">{selectedFolder.name}</span> selected
+                  ({selectedFolder.montageCount} videos available)
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Select Overlay Style */}
+          {currentStep === "overlay" && (
+            <OverlayStyleSelector
+              selectedStyle={selectedStyle}
+              onSelectStyle={setSelectedStyle}
+            />
+          )}
+
+          {/* Step 3: Confirm */}
+          {currentStep === "confirm" && (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-4 space-y-3">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Campaign</div>
+                  <div className="font-medium">{campaignId}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Category</div>
+                  <div className="font-medium">{categoryName}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Niche</div>
+                  <div className="font-medium">{nicheName}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Montager Folder</div>
+                  <div className="font-medium">{selectedFolder?.name}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Overlay Style</div>
+                  <div className="font-medium">{selectedStyle}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Videos to Add</div>
+                  <div className="font-medium">{videosNeeded}</div>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-100">
+                <strong>Note:</strong> {videosNeeded} video{videosNeeded === 1 ? "" : "s"} will
+                be randomly selected from the folder and added to the generated videos table.
+                An external service will process them with the selected overlay style.
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            Step {currentStep === "folder" ? 1 : currentStep === "overlay" ? 2 : 3} of 3
+          </div>
+          <div className="flex gap-2">
+            {currentStep !== "folder" && (
+              <Button
+                variant="outline"
+                onClick={handlePreviousStep}
+                disabled={isLoading}
+              >
+                <ChevronLeft className="size-4 mr-2" />
+                Back
+              </Button>
+            )}
+
+            {currentStep !== "confirm" ? (
+              <Button
+                onClick={handleNextStep}
+                disabled={!canProceed() || isLoading}
+              >
+                Next
+                <ChevronRight className="size-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Adding Videos...
+                  </>
+                ) : (
+                  "Add Videos"
+                )}
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

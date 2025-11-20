@@ -20,6 +20,7 @@ import type * as app_campaignAssets from "../app/campaignAssets.js";
 import type * as app_captions from "../app/captions.js";
 import type * as app_clipper from "../app/clipper.js";
 import type * as app_files from "../app/files.js";
+import type * as app_generatedVideos from "../app/generatedVideos.js";
 import type * as app_insertTiktokPosts from "../app/insertTiktokPosts.js";
 import type * as app_montager from "../app/montager.js";
 import type * as app_tiktok from "../app/tiktok.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "app/captions": typeof app_captions;
   "app/clipper": typeof app_clipper;
   "app/files": typeof app_files;
+  "app/generatedVideos": typeof app_generatedVideos;
   "app/insertTiktokPosts": typeof app_insertTiktokPosts;
   "app/montager": typeof app_montager;
   "app/tiktok": typeof app_tiktok;

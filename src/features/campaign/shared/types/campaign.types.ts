@@ -32,3 +32,17 @@ export interface CampaignContentData {
   artist: string;
   song: string;
 }
+
+export interface MontagerVideo {
+  key: string;
+  url: string;
+  filename: string;
+  size: number;
+  lastModified: number;
+}
+
+export interface MontagerFolder {
+  name: string;
+  montageCount: number;
+  lastModified: number;
+}

@@ -451,3 +451,71 @@ export const getMontageConfigStatus = action({
     }
   },
 });
+
+/**
+ * Get all video URLs from a montager folder
+ * Returns videos with presigned URLs for accessing the content
+ */
+export const getMontagerVideos = action({
+  args: {
+    folderName: v.string(),
+  },
+  handler: async (_ctx, args): Promise<Array<{
+    key: string;
+    url: string;
+    filename: string;
+    size: number;
+    lastModified: number;
+  }>> => {
+    try {
+      // List all montages from outputs folder
+      const outputsResponse = await s3Client.send(new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: `montages/${args.folderName}/outputs/`,
+      }));
+
+      if (!outputsResponse.Contents) {
+        return [];
+      }
+
+      // Filter and map montages
+      const montageKeys = outputsResponse.Contents
+        .filter((obj) => {
+          if (!obj.Key || obj.Key.endsWith('/')) return false;
+          if (obj.Key.includes('/thumbnails/')) return false;
+          return obj.Key.toLowerCase().endsWith('.mp4');
+        })
+        .map((obj) => ({
+          key: obj.Key!,
+          filename: obj.Key!.split('/').pop()!,
+          size: obj.Size || 0,
+          lastModified: obj.LastModified?.getTime() || 0,
+        }));
+
+      // Generate presigned URLs for all videos in parallel
+      const videosWithUrls = await Promise.all(
+        montageKeys.map(async (montage) => {
+          const command = new GetObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: montage.key,
+          });
+
+          const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+
+          return {
+            key: montage.key,
+            url,
+            filename: montage.filename,
+            size: montage.size,
+            lastModified: montage.lastModified,
+          };
+        })
+      );
+
+      return videosWithUrls;
+    } catch (error) {
+      console.error("Error getting montager videos:", error);
+      throw new Error(`Failed to get montager videos: ${error}`);
+    }
+  },
+});

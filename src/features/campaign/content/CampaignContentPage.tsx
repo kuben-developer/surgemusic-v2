@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
+import { useGeneratedVideos } from "./hooks/useGeneratedVideos";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
+import { ViewToggle } from "./components/ViewToggle";
+import type { VideoView } from "./components/ViewToggle";
+import { ReadyToPublishGrid } from "./components/ReadyToPublishGrid";
 import { CampaignMediaSection } from "@/features/campaign/media";
 import { CampaignInfoCard } from "./components/CampaignInfoCard";
 import { useState, useMemo } from "react";
@@ -29,6 +33,14 @@ export function CampaignContentPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("categories");
+  const [videoView, setVideoView] = useState<VideoView>("airtable");
+
+  // Fetch generated videos for ready-to-publish view (only when category is selected)
+  const { videos: generatedVideos, isLoading: isLoadingGenerated, error: generatedVideosError } = useGeneratedVideos({
+    campaignId: campaignRecordId,
+    categoryName: selectedCategory || "",
+    nicheName: selectedNiche !== "all" ? selectedNiche : undefined,
+  });
 
   // Calculate category stats
   const categoryStats = useMemo(() => {
@@ -57,11 +69,18 @@ export function CampaignContentPage() {
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
     setSelectedNiche("all"); // Reset niche filter when changing category
+    setVideoView("airtable"); // Reset to airtable view when changing category
   };
 
   const handleBack = () => {
     setSelectedCategory(null);
     setSelectedNiche("all");
+    setVideoView("airtable");
+  };
+
+  const handleVideosAdded = () => {
+    // Videos added successfully - the useGeneratedVideos hook will automatically refetch
+    // No need to manually refresh, Convex handles real-time updates
   };
 
   if (isLoading) {
@@ -163,10 +182,28 @@ export function CampaignContentPage() {
               onSelectNiche={setSelectedNiche}
               totalWithUrl={categoryVideoStats.withUrl}
               totalCount={categoryVideoStats.total}
+              campaignId={campaignRecordId}
+              categoryName={selectedCategory}
+              onVideosAdded={handleVideosAdded}
             />
 
-            {/* Video Grid */}
-            <VideoGrid videos={filteredVideos} />
+            {/* View Toggle */}
+            <ViewToggle
+              view={videoView}
+              onViewChange={setVideoView}
+              readyCount={generatedVideos.length}
+            />
+
+            {/* Conditional Video Grid */}
+            {videoView === "airtable" ? (
+              <VideoGrid videos={filteredVideos} />
+            ) : (
+              <ReadyToPublishGrid
+                videos={generatedVideos}
+                isLoading={isLoadingGenerated}
+                error={generatedVideosError}
+              />
+            )}
           </div>
         )}
       </div>

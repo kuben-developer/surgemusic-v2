@@ -191,4 +191,18 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_campaignId", ["campaignId"]),
+
+  generatedVideos: defineTable({
+    generatedVideoId: v.string(), // "{campaignId}-{categoryName}-{nicheName}"
+    campaignId: v.string(),
+    categoryName: v.string(),
+    nicheName: v.string(),
+    overlayStyle: v.string(),
+    videoUrl: v.string(),
+    generatedVideoUrl: v.optional(v.string()),
+    sentToAirtable: v.boolean(),
+  })
+    .index("by_generatedVideoId", ["generatedVideoId"])
+    .index("by_generatedVideoUrl_sentToAirtable", ["generatedVideoUrl", "sentToAirtable"])
+    .index("by_campaign_category", ["campaignId", "categoryName", "sentToAirtable"])
 })
