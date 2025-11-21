@@ -29,7 +29,6 @@ export function ClipsPage() {
   const folderId = params.folderId as Id<"clipperFolders">;
   const inputVideoName = params.inputVideoName as string;
 
-  const [autoplay, setAutoplay] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -50,12 +49,6 @@ export function ClipsPage() {
 
   const handleBack = () => {
     router.push(`/clipper/${folderId}`);
-  };
-
-  const handleRefresh = () => {
-    // Convex will auto-refresh on data changes
-    // This is a placeholder for manual refresh if needed
-    toast.info("Data is automatically refreshed");
   };
 
   const handleDelete = async () => {
@@ -118,9 +111,6 @@ export function ClipsPage() {
           onDelete={() => setIsDeleteDialogOpen(true)}
           sortOptions={sortOptions}
           onSortChange={setSortField}
-          onRefresh={handleRefresh}
-          autoplay={autoplay}
-          onToggleAutoplay={() => setAutoplay(!autoplay)}
           videoName={video.inputVideoName}
         />
 
@@ -128,7 +118,6 @@ export function ClipsPage() {
           clips={sortedClips}
           selectedIndices={selectedIndices}
           onToggleSelection={toggleSelection}
-          autoplay={autoplay}
         />
       </div>
 

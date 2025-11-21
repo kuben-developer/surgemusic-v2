@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 /**
@@ -487,5 +487,86 @@ export const restoreClips = mutation({
     });
 
     return { success: true, restoredCount: args.clipIndices.length };
+  },
+});
+
+// =====================================================
+// INTERNAL API FUNCTIONS (for HTTP endpoints)
+// =====================================================
+
+/**
+ * Internal query to get all videos with empty outputUrls (pending processing)
+ * Used by the external API endpoint
+ */
+export const getPendingVideosInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    // Get all clippedVideoUrls where outputUrls is empty
+    const allVideos = await ctx.db.query("clippedVideoUrls").collect();
+
+    // Filter to only pending videos (empty outputUrls array)
+    const pendingVideos = allVideos.filter(
+      (video) => video.outputUrls.length === 0
+    );
+
+    // For each video, get the folder info
+    const videosWithFolderInfo = await Promise.all(
+      pendingVideos.map(async (video) => {
+        const folder = await ctx.db.get(video.clipperFolderId);
+        return {
+          _id: video._id,
+          clipperFolderId: video.clipperFolderId,
+          folderName: folder?.folderName || "Unknown",
+          inputVideoName: video.inputVideoName,
+          inputVideoUrl: video.inputVideoUrl,
+        };
+      })
+    );
+
+    return videosWithFolderInfo;
+  },
+});
+
+/**
+ * Internal mutation to update video outputs from external API
+ * Validates the video exists and updates outputUrls
+ */
+export const updateVideoOutputsExternal = internalMutation({
+  args: {
+    videoId: v.id("clippedVideoUrls"),
+    outputUrls: v.array(
+      v.object({
+        videoUrl: v.string(),
+        thumbnailUrl: v.string(),
+        clipNumber: v.number(),
+        brightness: v.number(),
+        clarity: v.number(),
+        isDeleted: v.optional(v.boolean()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    // Verify video exists
+    const video = await ctx.db.get(args.videoId);
+    if (!video) {
+      throw new Error(`Video not found: ${args.videoId}`);
+    }
+
+    // Normalize outputUrls - set isDeleted to false if not provided
+    const normalizedOutputUrls = args.outputUrls.map((clip) => ({
+      ...clip,
+      isDeleted: clip.isDeleted ?? false,
+    }));
+
+    // Update the video with new outputUrls
+    await ctx.db.patch(args.videoId, {
+      outputUrls: normalizedOutputUrls,
+    });
+
+    return {
+      success: true,
+      videoId: args.videoId,
+      clipCount: normalizedOutputUrls.length,
+    };
   },
 });

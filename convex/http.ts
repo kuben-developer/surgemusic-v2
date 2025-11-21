@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { clerkWebhook } from "./webhooks/clerk";
 import { testWebhook } from "./webhooks/test";
 import { getPendingVideos, updateGeneratedVideos } from "./webhooks/generatedVideos";
+import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/clipper";
 
 const http = httpRouter();
 
@@ -36,6 +37,20 @@ http.route({
   path: "/api/generatedVideos/update",
   method: "POST",
   handler: updateGeneratedVideos,
+});
+
+// Clipper API - Get pending videos (where outputUrls is empty)
+http.route({
+  path: "/api/clipper/pending",
+  method: "GET",
+  handler: getPendingClipperVideos,
+});
+
+// Clipper API - Update videos with output URLs
+http.route({
+  path: "/api/clipper/update",
+  method: "POST",
+  handler: updateClipperVideoOutputs,
 });
 
 export default http;

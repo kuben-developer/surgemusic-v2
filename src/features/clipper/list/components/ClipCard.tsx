@@ -11,14 +11,12 @@ interface ClipCardProps {
   clip: ClipWithIndex;
   isSelected: boolean;
   onToggleSelection: () => void;
-  autoplay: boolean;
 }
 
 export function ClipCard({
   clip,
   isSelected,
   onToggleSelection,
-  autoplay,
 }: ClipCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);

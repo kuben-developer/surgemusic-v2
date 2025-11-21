@@ -31,6 +31,7 @@ import type * as app_users from "../app/users.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
+import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_generatedVideos from "../webhooks/generatedVideos.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   http: typeof http;
   "webhooks/clerk": typeof webhooks_clerk;
+  "webhooks/clipper": typeof webhooks_clipper;
   "webhooks/generatedVideos": typeof webhooks_generatedVideos;
   "webhooks/test": typeof webhooks_test;
 }>;

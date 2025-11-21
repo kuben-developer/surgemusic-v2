@@ -8,14 +8,12 @@ interface ClipsGridProps {
   clips: ClipWithIndex[];
   selectedIndices: number[];
   onToggleSelection: (index: number) => void;
-  autoplay: boolean;
 }
 
 export function ClipsGrid({
   clips,
   selectedIndices,
   onToggleSelection,
-  autoplay,
 }: ClipsGridProps) {
   if (clips.length === 0) {
     return (
@@ -40,7 +38,6 @@ export function ClipsGrid({
             clip={clip}
             isSelected={selectedIndices.includes(clip.index)}
             onToggleSelection={() => onToggleSelection(clip.index)}
-            autoplay={autoplay}
           />
         ))}
       </div>
