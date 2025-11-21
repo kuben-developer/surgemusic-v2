@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { ClipperFolder } from "../../shared/types/common.types";
 
 export function useClipperFolders() {
-  const listFoldersAction = useAction(api.app.clipper.listFolders);
+  const listFoldersAction = useAction(api.app.clipperS3.listFolders);
   const [folders, setFolders] = useState<ClipperFolder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

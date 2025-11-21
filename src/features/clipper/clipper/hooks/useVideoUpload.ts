@@ -17,7 +17,7 @@ interface UseVideoUploadOptions {
 }
 
 export function useVideoUpload(folderName: string | null, options?: UseVideoUploadOptions) {
-  const generateUploadUrlAction = useAction(api.app.clipper.generateUploadUrl);
+  const generateUploadUrlAction = useAction(api.app.clipperS3.generateUploadUrl);
   const [uploads, setUploads] = useState<Map<string, UploadProgress>>(
     new Map()
   );

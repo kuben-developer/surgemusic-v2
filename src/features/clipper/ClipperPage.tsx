@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipperContent } from "./clipper";
+import { FolderListPage } from "./list";
 import { MontagerContent } from "./montager";
 
 export default function ClipperPage() {
@@ -14,7 +14,7 @@ export default function ClipperPage() {
         </TabsList>
 
         <TabsContent value="clipper" className="mt-0">
-          <ClipperContent />
+          <FolderListPage />
         </TabsContent>
 
         <TabsContent value="montager" className="mt-0">

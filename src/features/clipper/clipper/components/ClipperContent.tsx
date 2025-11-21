@@ -58,8 +58,8 @@ export function ClipperContent() {
     filteredClips: clipsWithUrls,
   } = useClipsOrganization(allClipsWithUrls);
 
-  const deleteClipsAction = useAction(api.app.clipper.deleteClips);
-  const deleteFolderAction = useAction(api.app.clipper.deleteFolder);
+  const deleteClipsAction = useAction(api.app.clipperS3.deleteClips);
+  const deleteFolderAction = useAction(api.app.clipperS3.deleteFolder);
 
   const handleFolderSelect = (folderName: string) => {
     setSelectedFolder(folderName);

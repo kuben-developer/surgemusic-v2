@@ -204,5 +204,28 @@ export default defineSchema({
   })
     .index("by_generatedVideoId", ["generatedVideoId"])
     .index("by_generatedVideoUrl_sentToAirtable", ["generatedVideoUrl", "sentToAirtable"])
-    .index("by_campaign_category", ["campaignId", "categoryName", "sentToAirtable"])
+    .index("by_campaign_category", ["campaignId", "categoryName", "sentToAirtable"]),
+
+  clipperFolders: defineTable({
+    userId: v.id('users'),
+    folderName: v.string(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_folderName", ["folderName"]),
+
+  clippedVideoUrls: defineTable({
+    clipperFolderId: v.id('clipperFolders'),
+    inputVideoName: v.string(),
+    inputVideoUrl: v.string(),
+    outputUrls: v.array(v.object({
+      videoUrl: v.string(),
+      clipNumber: v.number(),
+      brightness: v.number(),
+      clarity: v.number(),
+      isDeleted: v.boolean(),
+      thumbnailUrl: v.string(),
+    })),
+  })
+    .index("by_clipperFolderId", ["clipperFolderId"])
+    .index("by_inputVideoName", ["inputVideoName"])
 })

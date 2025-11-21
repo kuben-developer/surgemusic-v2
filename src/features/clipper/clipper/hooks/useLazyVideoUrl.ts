@@ -9,7 +9,7 @@ import { useState, useCallback, useRef } from "react";
  * This is used when a user clicks on a thumbnail to play the video
  */
 export function useLazyVideoUrl() {
-  const getVideoUrlAction = useAction(api.app.clipper.getVideoUrl);
+  const getVideoUrlAction = useAction(api.app.clipperS3.getVideoUrl);
   const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
   const [error, setError] = useState<Error | null>(null);
 

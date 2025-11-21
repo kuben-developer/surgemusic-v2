@@ -3,7 +3,8 @@
 import { DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v } from "convex/values";
-import { action } from "../_generated/server";
+import { action, internalAction } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const BUCKET_NAME = "surge-clipper";
 const accessKeyId = process.env.CLIPPER_ACCESS_KEY_ID ?? "";
@@ -63,15 +64,12 @@ function parseClipNumberFromFilename(filename: string): number {
 }
 
 /**
- * List all folders under clips/
- * Optimized to batch all S3 list operations in parallel instead of sequentially
+ * List all folders under clips/ (S3-based - legacy)
  */
 export const listFolders = action({
   args: {},
   handler: async (): Promise<ClipperFolder[]> => {
-
     try {
-      // List all folders under clips/
       const command = new ListObjectsV2Command({
         Bucket: BUCKET_NAME,
         Prefix: "clips/",
@@ -84,7 +82,6 @@ export const listFolders = action({
         return [];
       }
 
-      // Extract folder names
       const folderNames = response.CommonPrefixes
         .map((prefix) => prefix.Prefix?.split('/').filter(Boolean)[1])
         .filter((name): name is string => name !== undefined);
@@ -93,7 +90,6 @@ export const listFolders = action({
         return [];
       }
 
-      // Batch all S3 list operations in parallel for better performance
       const folderStatsPromises = folderNames.map(async (folderName) => {
         const [inputsResponse, outputsResponse] = await Promise.all([
           s3Client.send(new ListObjectsV2Command({
@@ -106,14 +102,11 @@ export const listFolders = action({
           })),
         ]);
 
-        // Count files (exclude folder placeholders and thumbnails)
         const videoCount = Math.max(0, (inputsResponse.Contents?.length || 0) - 1);
-        // Exclude thumbnails from clip count (only count actual video files)
         const clipCount = Math.max(0, (outputsResponse.Contents?.filter(obj =>
           obj.Key && !obj.Key.includes('/thumbnails/')
         ).length || 0) - 1);
 
-        // Get last modified time (use the most recent file)
         const allContents = [
           ...(inputsResponse.Contents || []),
           ...(outputsResponse.Contents || []),
@@ -132,9 +125,7 @@ export const listFolders = action({
         };
       });
 
-      // Wait for all folder stats to be fetched in parallel
       const folders = await Promise.all(folderStatsPromises);
-
       return folders;
     } catch (error) {
       console.error("Error listing folders:", error);
@@ -144,15 +135,13 @@ export const listFolders = action({
 });
 
 /**
- * Create a new folder in clips/
+ * Create a new folder in clips/ (S3-based - legacy)
  */
 export const createFolder = action({
   args: {
     folderName: v.string(),
   },
   handler: async (_ctx, args): Promise<{ success: boolean; message: string }> => {
-
-    // Validate folder name (no special characters)
     if (!/^[a-zA-Z0-9_-]+$/.test(args.folderName)) {
       return {
         success: false,
@@ -160,7 +149,6 @@ export const createFolder = action({
       };
     }
 
-    // Check if folder already exists
     try {
       const checkCommand = new ListObjectsV2Command({
         Bucket: BUCKET_NAME,
@@ -184,7 +172,6 @@ export const createFolder = action({
       };
     }
 
-    // Create inputs and outputs folders by uploading empty objects
     try {
       const inputsKey = `clips/${args.folderName}/inputs/.keep`;
       const outputsKey = `clips/${args.folderName}/outputs/.keep`;
@@ -216,7 +203,7 @@ export const createFolder = action({
 });
 
 /**
- * Delete a folder and all its contents
+ * Delete a folder and all its contents (S3-based - legacy)
  */
 export const deleteFolder = action({
   args: {
@@ -224,7 +211,6 @@ export const deleteFolder = action({
   },
   handler: async (_ctx, args): Promise<{ success: boolean; message: string; deletedCount: number }> => {
     try {
-      // List all objects in the folder
       const command = new ListObjectsV2Command({
         Bucket: BUCKET_NAME,
         Prefix: `clips/${args.folderName}/`,
@@ -240,7 +226,6 @@ export const deleteFolder = action({
         };
       }
 
-      // Delete all objects in the folder
       const deleteCommand = new DeleteObjectsCommand({
         Bucket: BUCKET_NAME,
         Delete: {
@@ -275,7 +260,7 @@ export const deleteFolder = action({
 });
 
 /**
- * Generate presigned upload URL for video upload to S3
+ * Generate presigned upload URL for video upload to S3 (legacy with folder)
  */
 export const generateUploadUrl = action({
   args: {
@@ -284,8 +269,6 @@ export const generateUploadUrl = action({
     contentType: v.string(),
   },
   handler: async (_ctx, args): Promise<{ uploadUrl: string; key: string }> => {
-
-    // Validate file type
     const validExtensions = ['.mp4', '.mov', '.mkv', '.avi', '.webm'];
     const hasValidExtension = validExtensions.some(ext => args.filename.toLowerCase().endsWith(ext));
 
@@ -296,15 +279,13 @@ export const generateUploadUrl = action({
     try {
       const key = `clips/${args.folderName}/inputs/${args.filename}`;
 
-      // Generate presigned URL for PUT operation
-      // ContentType must be included in the signature for Backblaze B2
       const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: key,
         ContentType: args.contentType,
       });
 
-      const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+      const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
       return {
         uploadUrl,
@@ -318,7 +299,46 @@ export const generateUploadUrl = action({
 });
 
 /**
- * List all clips from a folder's outputs directory with thumbnails
+ * Generate presigned upload URL for video upload to S3 (simplified - for new DB flow)
+ */
+export const generateUploadUrlSimple = action({
+  args: {
+    filename: v.string(),
+    contentType: v.string(),
+  },
+  handler: async (_ctx, args): Promise<{ uploadUrl: string; fileUrl: string }> => {
+    const validExtensions = ['.mp4', '.mov', '.mkv', '.avi', '.webm'];
+    const hasValidExtension = validExtensions.some(ext => args.filename.toLowerCase().endsWith(ext));
+
+    if (!hasValidExtension) {
+      throw new Error(`Invalid file type. Supported formats: ${validExtensions.join(', ')}`);
+    }
+
+    try {
+      const uniqueKey = `inputs/${Date.now()}_${args.filename}`;
+
+      const command = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: uniqueKey,
+        ContentType: args.contentType,
+      });
+
+      const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+      const fileUrl = `https://${BUCKET_NAME}.s3.us-west-004.backblazeb2.com/${uniqueKey}`;
+
+      return {
+        uploadUrl,
+        fileUrl,
+      };
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      throw new Error(`Failed to generate upload URL: ${error}`);
+    }
+  },
+});
+
+/**
+ * List all clips from a folder's outputs directory with thumbnails (legacy)
  */
 export const listClips = action({
   args: {
@@ -326,7 +346,6 @@ export const listClips = action({
   },
   handler: async (_ctx, args): Promise<ClipperClip[]> => {
     try {
-      // Fetch both outputs and thumbnails in parallel
       const [outputsResponse, thumbnailsResponse] = await Promise.all([
         s3Client.send(new ListObjectsV2Command({
           Bucket: BUCKET_NAME,
@@ -342,40 +361,30 @@ export const listClips = action({
         return [];
       }
 
-      // Video file extensions to include
       const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.mkv', '.avi', '.webm'];
 
-      // Create a map of thumbnails by filename (without extension)
       const thumbnailMap = new Map<string, string>();
       if (thumbnailsResponse.Contents) {
         thumbnailsResponse.Contents.forEach((obj) => {
           if (obj.Key && !obj.Key.endsWith('/') && obj.Key.toLowerCase().endsWith('.jpg')) {
             const filename = obj.Key.split('/').pop()!;
-            // Remove .jpg extension to get base filename
             const baseFilename = filename.replace(/\.jpg$/i, '');
             thumbnailMap.set(baseFilename, obj.Key);
           }
         });
       }
 
-      // Filter out folders, non-video files, thumbnails subfolder, and map to ClipperClip objects
       const clips: ClipperClip[] = outputsResponse.Contents
         .filter((obj): obj is NonNullable<typeof obj> & { Key: string; Size: number; LastModified: Date } => {
           if (!obj.Key || obj.Key.endsWith('/')) return false;
-
-          // Exclude files in the thumbnails subfolder
           if (obj.Key.includes('/thumbnails/')) return false;
-
           const filename = obj.Key.toLowerCase();
-          // Check if file has a video extension
           return VIDEO_EXTENSIONS.some(ext => filename.endsWith(ext));
         })
         .map((obj): ClipperClip => {
           const filename = obj.Key.split('/').pop()!;
           const metrics = parseMetricsFromFilename(filename);
           const clipNumber = parseClipNumberFromFilename(filename);
-
-          // Get base filename without extension for thumbnail lookup
           const baseFilename = filename.replace(/\.(mp4|mov|mkv|avi|webm)$/i, '');
           const thumbnailKey = thumbnailMap.get(baseFilename);
 
@@ -413,7 +422,7 @@ export const getClipUrl = action({
         Key: args.key,
       });
 
-      const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+      const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       return url;
     } catch (error) {
       console.error("Error generating clip URL:", error);
@@ -436,7 +445,7 @@ export const getVideoUrl = action({
         Key: args.key,
       });
 
-      const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+      const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       return url;
     } catch (error) {
       console.error("Error generating video URL:", error);
@@ -453,7 +462,6 @@ export const deleteClips = action({
     keys: v.array(v.string()),
   },
   handler: async (_ctx, args): Promise<{ success: boolean; message: string; deletedCount: number }> => {
-
     if (args.keys.length === 0) {
       return {
         success: true,
@@ -504,14 +512,13 @@ export const checkFileExists = action({
     key: v.string(),
   },
   handler: async (_ctx, args): Promise<boolean> => {
-
     try {
       await s3Client.send(new HeadObjectCommand({
         Bucket: BUCKET_NAME,
         Key: args.key,
       }));
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   },
@@ -519,7 +526,6 @@ export const checkFileExists = action({
 
 /**
  * Get presigned URLs for multiple clips (batch operation)
- * This is more efficient than calling getClipUrl multiple times
  * @deprecated Use getThumbnailUrls for thumbnails instead
  */
 export const getPresignedUrls = action({
@@ -532,14 +538,13 @@ export const getPresignedUrls = action({
     }
 
     try {
-      // Generate presigned URLs for all clips in parallel
       const urlPromises = args.keys.map(async (key) => {
         const command = new GetObjectCommand({
           Bucket: BUCKET_NAME,
           Key: key,
         });
 
-        const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+        const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
         return {
           key,
@@ -558,7 +563,6 @@ export const getPresignedUrls = action({
 
 /**
  * Get presigned URLs for multiple thumbnails (batch operation)
- * This is used to load thumbnail images for the clips grid
  */
 export const getThumbnailUrls = action({
   args: {
@@ -570,14 +574,13 @@ export const getThumbnailUrls = action({
     }
 
     try {
-      // Generate presigned URLs for all thumbnails in parallel
       const urlPromises = args.keys.map(async (key) => {
         const command = new GetObjectCommand({
           Bucket: BUCKET_NAME,
           Key: key,
         });
 
-        const thumbnailUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+        const thumbnailUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
         return {
           key,
@@ -591,5 +594,54 @@ export const getThumbnailUrls = action({
       console.error("Error generating thumbnail URLs:", error);
       throw new Error(`Failed to generate thumbnail URLs: ${error}`);
     }
+  },
+});
+
+/**
+ * Background job to process video and get output URLs
+ * This makes a dummy API call for now
+ */
+export const processVideo = internalAction({
+  args: {
+    videoId: v.id("clippedVideoUrls"),
+  },
+  handler: async (ctx, args) => {
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Dummy output URLs with all required fields
+    // In production this would call the actual clipping API
+    const dummyOutputUrls = [
+      {
+        videoUrl: `https://example.com/clips/${args.videoId}_clip_001.mp4`,
+        thumbnailUrl: `https://example.com/clips/${args.videoId}_clip_001_thumb.jpg`,
+        clipNumber: 1,
+        brightness: 65,
+        clarity: 95,
+        isDeleted: false,
+      },
+      {
+        videoUrl: `https://example.com/clips/${args.videoId}_clip_002.mp4`,
+        thumbnailUrl: `https://example.com/clips/${args.videoId}_clip_002_thumb.jpg`,
+        clipNumber: 2,
+        brightness: 45,
+        clarity: 110,
+        isDeleted: false,
+      },
+      {
+        videoUrl: `https://example.com/clips/${args.videoId}_clip_003.mp4`,
+        thumbnailUrl: `https://example.com/clips/${args.videoId}_clip_003_thumb.jpg`,
+        clipNumber: 3,
+        brightness: 55,
+        clarity: 80,
+        isDeleted: false,
+      },
+    ];
+
+    // Update the video record with output URLs
+    await ctx.runMutation(internal.app.clipperDb.updateVideoOutputs, {
+      videoId: args.videoId,
+      outputUrls: dummyOutputUrls,
+    });
   },
 });

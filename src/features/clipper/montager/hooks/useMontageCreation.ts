@@ -7,7 +7,7 @@ import type { ClipperClip, MontageConfigInput } from "../../shared/types/common.
 import { distributeClipsToMontages, validateMontageRequest } from "../utils/clip-distribution.utils";
 
 export function useMontageCreation() {
-  const listClipsAction = useAction(api.app.clipper.listClips);
+  const listClipsAction = useAction(api.app.clipperS3.listClips);
   const uploadConfigAction = useAction(api.app.montager.uploadMontageConfig);
 
   const [isCreating, setIsCreating] = useState(false);

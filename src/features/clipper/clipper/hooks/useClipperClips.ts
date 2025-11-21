@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { ClipperClip } from "../../shared/types/common.types";
 
 export function useClipperClips(folderName: string | null) {
-  const listClipsAction = useAction(api.app.clipper.listClips);
+  const listClipsAction = useAction(api.app.clipperS3.listClips);
   const [clips, setClips] = useState<ClipperClip[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

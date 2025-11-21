@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import type { ClipperClip } from "../../shared/types/common.types";
 
 export function usePresignedUrls(clips: ClipperClip[]) {
-  const getThumbnailUrlsAction = useAction(api.app.clipper.getThumbnailUrls);
+  const getThumbnailUrlsAction = useAction(api.app.clipperS3.getThumbnailUrls);
   const [clipsWithUrls, setClipsWithUrls] = useState<ClipperClip[]>(clips);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

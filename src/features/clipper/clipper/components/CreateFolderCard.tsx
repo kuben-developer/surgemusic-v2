@@ -26,7 +26,7 @@ export function CreateFolderCard({ onFolderCreated }: CreateFolderCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const createFolderAction = useAction(api.app.clipper.createFolder);
+  const createFolderAction = useAction(api.app.clipperS3.createFolder);
 
   const handleCreate = async () => {
     if (!folderName.trim()) {
