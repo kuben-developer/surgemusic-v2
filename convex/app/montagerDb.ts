@@ -115,7 +115,7 @@ export const getVideos = query({
 
     const videos = await ctx.db
       .query("montagerVideos")
-      .withIndex("by_montagerFolderId", (q) => q.eq("montagerFolderId", args.folderId))
+      .withIndex("by_montagerFolderId_isUsed", (q) => q.eq("montagerFolderId", args.folderId).eq("isUsed", false))
       .collect();
 
     return videos;
@@ -481,6 +481,8 @@ export const updateVideosExternal = internalMutation({
         montagerFolderId: config.montagerFolderId,
         videoUrl: video.videoUrl,
         thumbnailUrl: video.thumbnailUrl,
+        isUsed: false,
+        isPublished: false,
       });
       insertedIds.push(videoId);
     }

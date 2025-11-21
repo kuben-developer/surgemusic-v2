@@ -1,9 +1,8 @@
 "use client";
 
-import { VideoGridItem } from "./VideoGridItem";
-import type { AirtableContent } from "../../shared/types/campaign.types";
-import { motion } from "framer-motion";
 import { Video } from "lucide-react";
+import type { AirtableContent } from "../../shared/types/campaign.types";
+import { VideoGridItem } from "./VideoGridItem";
 
 interface VideoGridProps {
   videos: AirtableContent[];
@@ -39,17 +38,10 @@ export function VideoGrid({ videos }: VideoGridProps) {
   }
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {videosWithUrls.map((video) => (
-        <motion.div key={video.id} variants={item}>
-          <VideoGridItem video={video} />
-        </motion.div>
+        <VideoGridItem key={video.id} video={video} />
       ))}
-    </motion.div>
+    </div>
   );
 }

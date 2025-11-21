@@ -85,7 +85,7 @@ export function VideoGridItem({ video }: VideoGridItemProps) {
         {/* Video Category */}
         <div className="flex items-center gap-2">
           <Film className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">{video.video_category}</span>
+          <span className="text-sm text-muted-foreground">{video.id}</span>
         </div>
 
         {/* API Post ID if available */}

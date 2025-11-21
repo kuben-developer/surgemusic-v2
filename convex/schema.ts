@@ -249,7 +249,12 @@ export default defineSchema({
     montagerFolderId: v.id('montagerFolders'),
     videoUrl: v.string(),
     thumbnailUrl: v.string(),
+    isUsed: v.boolean(),
+    isPublished: v.boolean(),
+    airtableRecordId: v.optional(v.string()),
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
-    .index("by_videoUrl", ["videoUrl"]),
+    .index("by_montagerFolderId_isUsed", ["montagerFolderId", "isUsed"])
+    .index("by_videoUrl", ["videoUrl"])
+    .index("by_airtableRecordId", ["airtableRecordId"]),
 })
