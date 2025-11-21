@@ -128,7 +128,14 @@ export const getVideos = query({
       .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", args.folderId))
       .collect();
 
-    return videos;
+    // Return videos with limited outputUrls for preview (only first 3)
+    // Include counts for display
+    return videos.map((video) => ({
+      ...video,
+      totalClipCount: video.outputUrls.length,
+      activeClipCount: video.outputUrls.filter((c) => !c.isDeleted).length,
+      outputUrls: video.outputUrls.slice(0, 3),
+    }));
   },
 });
 
@@ -234,11 +241,6 @@ export const uploadVideo = mutation({
       inputVideoName: sanitizedName,
       inputVideoUrl: args.inputVideoUrl,
       outputUrls: [], // Empty initially, will be populated by background job
-    });
-
-    // Schedule background processing
-    await ctx.scheduler.runAfter(0, internal.app.clipperS3.processVideo, {
-      videoId,
     });
 
     return { videoId, sanitizedName };

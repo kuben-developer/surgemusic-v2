@@ -29,8 +29,8 @@ export function VideoCard({ video, folderId, onDeleteVideo }: VideoCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isProcessing = video.outputUrls.length === 0;
-  const activeClips = video.outputUrls.filter((c) => !c.isDeleted).length;
+  const isProcessing = video.totalClipCount === 0;
+  const activeClips = video.activeClipCount;
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,7 +55,7 @@ export function VideoCard({ video, folderId, onDeleteVideo }: VideoCardProps) {
   return (
     <>
       <Link href={`/clipper/${folderId}/${video.inputVideoName}`}>
-        <Card className="group cursor-pointer hover:border-primary transition-colors">
+        <Card className="group cursor-pointer hover:border-primary transition-colors min-h-[470px]">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -112,9 +112,9 @@ export function VideoCard({ video, folderId, onDeleteVideo }: VideoCardProps) {
                     </div>
                   ))}
                 </div>
-                {video.outputUrls.length > 3 && (
+                {video.totalClipCount > 3 && (
                   <p className="text-xs text-muted-foreground mt-2 text-center">
-                    +{video.outputUrls.length - 3} more clips
+                    +{video.totalClipCount - 3} more clips
                   </p>
                 )}
               </div>

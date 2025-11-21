@@ -5,7 +5,10 @@ export type ClipperFolder = Doc<"clipperFolders"> & {
   clipCount: number;
 };
 
-export type ClippedVideo = Doc<"clippedVideoUrls">;
+export type ClippedVideo = Doc<"clippedVideoUrls"> & {
+  totalClipCount: number; // Total clips count (outputUrls is limited to 3 for preview)
+  activeClipCount: number; // Count of non-deleted clips
+};
 
 export interface OutputUrl {
   videoUrl: string;
