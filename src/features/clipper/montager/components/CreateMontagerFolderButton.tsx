@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,19 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useMontagerFolders } from "../hooks/useMontagerFolders";
 
-interface CreateMontagerFolderButtonProps {
-  onFolderCreated?: () => void;
-}
-
-export function CreateMontagerFolderButton({
-  onFolderCreated,
-}: CreateMontagerFolderButtonProps) {
+export function CreateMontagerFolderButton() {
   const [open, setOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const createFolderAction = useAction(api.app.montager.createMontagerFolder);
+  const { createFolder } = useMontagerFolders();
 
   const handleCreate = async () => {
     if (!folderName.trim()) {
@@ -39,20 +32,11 @@ export function CreateMontagerFolderButton({
 
     setIsCreating(true);
     try {
-      const result = await createFolderAction({ folderName: folderName.trim() });
-
-      if (result.success) {
-        toast.success(result.message);
-        setOpen(false);
-        setFolderName("");
-        onFolderCreated?.();
-      } else {
-        toast.error(result.message);
-      }
+      await createFolder(folderName.trim());
+      setOpen(false);
+      setFolderName("");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create folder"
-      );
+      // Error already handled in hook with toast
     } finally {
       setIsCreating(false);
     }

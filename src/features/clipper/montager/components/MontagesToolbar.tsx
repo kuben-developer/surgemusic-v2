@@ -1,28 +1,25 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw, Plus, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Plus, Download, Clock } from "lucide-react";
 
 interface MontagesToolbarProps {
   folderName: string;
   onBack: () => void;
-  onRefresh: () => void;
   onCreateConfig: () => void;
   onDownloadAll: () => void;
   totalCount: number;
-  isDownloading?: boolean;
-  downloadProgress?: { current: number; total: number };
+  pendingConfigs: number;
 }
 
 export function MontagesToolbar({
   folderName,
   onBack,
-  onRefresh,
   onCreateConfig,
   onDownloadAll,
   totalCount,
-  isDownloading = false,
-  downloadProgress = { current: 0, total: 0 },
+  pendingConfigs,
 }: MontagesToolbarProps) {
   return (
     <div className="space-y-4 pb-6 border-b">
@@ -37,7 +34,15 @@ export function MontagesToolbar({
           <ArrowLeft className="size-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{folderName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{folderName}</h1>
+            {pendingConfigs > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Clock className="size-3" />
+                {pendingConfigs} pending
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             {totalCount} {totalCount === 1 ? "montage" : "montages"}
           </p>
@@ -50,35 +55,18 @@ export function MontagesToolbar({
           <Button
             variant="outline"
             size="sm"
-            onClick={onRefresh}
-            className="gap-2"
-            disabled={isDownloading}
-          >
-            <RefreshCw className="size-4" />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={onDownloadAll}
             className="gap-2"
-            disabled={totalCount === 0 || isDownloading}
+            disabled={totalCount === 0}
           >
             <Download className="size-4" />
-            <span className="hidden sm:inline">
-              {isDownloading
-                ? `Downloading ${downloadProgress.current}/${downloadProgress.total}`
-                : "Download All"}
-            </span>
-            <span className="sm:hidden">
-              {isDownloading ? `${downloadProgress.current}/${downloadProgress.total}` : "Download"}
-            </span>
+            <span className="hidden sm:inline">Download All</span>
+            <span className="sm:hidden">Download</span>
           </Button>
           <Button
             size="sm"
             onClick={onCreateConfig}
             className="gap-2"
-            disabled={isDownloading}
           >
             <Plus className="size-4" />
             <span className="hidden sm:inline">Create Config</span>

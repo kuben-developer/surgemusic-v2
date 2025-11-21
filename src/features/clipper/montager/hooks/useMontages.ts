@@ -1,42 +1,40 @@
 "use client";
 
-import { useAction } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { useEffect, useState, useCallback } from "react";
-import type { Montage } from "../../shared/types/common.types";
+import { toast } from "sonner";
+import type { MontagerFolderId, MontagerVideoId } from "../../shared/types/common.types";
 
-export function useMontages(folderName: string | null) {
-  const listMontagesAction = useAction(api.app.montager.listMontages);
-  const [montages, setMontages] = useState<Montage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+export function useMontages(folderId: MontagerFolderId | null) {
+  const videos = useQuery(
+    api.app.montagerDb.getVideos,
+    folderId ? { folderId } : "skip"
+  );
+  const configs = useQuery(
+    api.app.montagerDb.getConfigs,
+    folderId ? { folderId } : "skip"
+  );
+  const deleteVideoMutation = useMutation(api.app.montagerDb.deleteVideo);
 
-  const fetchMontages = useCallback(async () => {
-    if (!folderName) {
-      setMontages([]);
-      return;
-    }
+  const isLoading = videos === undefined || configs === undefined;
+  const pendingConfigs = configs?.filter((c) => !c.isProcessed) ?? [];
 
+  const deleteVideo = async (videoId: MontagerVideoId) => {
     try {
-      setIsLoading(true);
-      setError(null);
-      const result = await listMontagesAction({ folderName });
-      setMontages(result);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch montages"));
-    } finally {
-      setIsLoading(false);
+      await deleteVideoMutation({ videoId });
+      toast.success("Video deleted successfully");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete video";
+      toast.error(message);
+      throw error;
     }
-  }, [folderName, listMontagesAction]);
-
-  useEffect(() => {
-    fetchMontages();
-  }, [fetchMontages]);
+  };
 
   return {
-    montages,
+    videos: videos ?? [],
+    configs: configs ?? [],
+    pendingConfigs,
     isLoading,
-    error,
-    refetch: fetchMontages,
+    deleteVideo,
   };
 }

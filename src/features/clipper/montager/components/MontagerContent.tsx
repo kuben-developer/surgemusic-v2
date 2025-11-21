@@ -1,19 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
 import { ClipperHeader } from "../../shared/components/ClipperHeader";
 import { MontagerFolderTable } from "./MontagerFolderTable";
 import { CreateMontagerFolderButton } from "./CreateMontagerFolderButton";
-import { MontagesToolbar } from "./MontagesToolbar";
-import { MontagesGrid } from "./MontagesGrid";
-import { MontageConfigDialog } from "./MontageConfigDialog";
 import { useMontagerFolders } from "../hooks/useMontagerFolders";
-import { useMontages } from "../hooks/useMontages";
-import { useMontageUrls } from "../hooks/useMontageUrls";
-import { useDownloadAllMontages } from "../hooks/useDownloadAllMontages";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -25,31 +16,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { MontagerFolderId } from "../../shared/types/common.types";
+
+interface FolderToDelete {
+  id: MontagerFolderId;
+  name: string;
+}
 
 export function MontagerContent() {
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
-  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<FolderToDelete | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { folders, isLoading: foldersLoading, refetch: refetchFolders } = useMontagerFolders();
-  const { montages, isLoading: montagesLoading, refetch: refetchMontages } = useMontages(selectedFolder);
-  const { montages: montagesWithUrls, loadedCount, totalCount, progress } = useMontageUrls(montages);
-  const { downloadAll, isDownloading, progress: downloadProgress } = useDownloadAllMontages();
+  const { folders, isLoading: foldersLoading, deleteFolder } = useMontagerFolders();
 
-  const deleteFolderAction = useAction(api.app.montager.deleteMontagerFolder);
-
-  const handleFolderSelect = (folderName: string) => {
-    setSelectedFolder(folderName);
-  };
-
-  const handleBackToFolders = () => {
-    setSelectedFolder(null);
-    refetchFolders();
-  };
-
-  const handleDeleteFolderClick = (folderName: string) => {
-    setFolderToDelete(folderName);
+  const handleDeleteFolderClick = (folderId: MontagerFolderId, folderName: string) => {
+    setFolderToDelete({ id: folderId, name: folderName });
   };
 
   const handleDeleteFolderConfirm = async () => {
@@ -57,37 +38,12 @@ export function MontagerContent() {
 
     setIsDeleting(true);
     try {
-      const result = await deleteFolderAction({ folderName: folderToDelete });
-      if (result.success) {
-        toast.success(result.message);
-        setFolderToDelete(null);
-        refetchFolders();
-      } else {
-        toast.error(result.message);
-      }
+      await deleteFolder(folderToDelete.id);
+      setFolderToDelete(null);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete folder"
-      );
+      // Error already handled in hook with toast
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleConfigSuccess = () => {
-    refetchMontages();
-  };
-
-  const handleDownloadAll = async () => {
-    if (!selectedFolder || montagesWithUrls.length === 0) return;
-
-    try {
-      await downloadAll(montagesWithUrls, selectedFolder);
-      toast.success(`Successfully downloaded ${montagesWithUrls.length} montages`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to download montages"
-      );
     }
   };
 
@@ -101,61 +57,19 @@ export function MontagerContent() {
 
   return (
     <div className="space-y-8">
-      {!selectedFolder ? (
-        // Folder View
-        <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <ClipperHeader
-              title="Montager"
-              description="Create video montages by combining clips from your clipper folders"
-            />
-            <CreateMontagerFolderButton onFolderCreated={refetchFolders} />
-          </div>
-          <MontagerFolderTable
-            folders={folders}
-            onSelectFolder={handleFolderSelect}
-            onDeleteFolder={handleDeleteFolderClick}
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <ClipperHeader
+            title="Montager"
+            description="Create video montages by combining clips from your clipper folders"
           />
+          <CreateMontagerFolderButton />
         </div>
-      ) : (
-        // Montages View
-        <div className="space-y-6">
-          <MontagesToolbar
-            folderName={selectedFolder}
-            onBack={handleBackToFolders}
-            onRefresh={refetchMontages}
-            onCreateConfig={() => setIsConfigDialogOpen(true)}
-            onDownloadAll={handleDownloadAll}
-            totalCount={totalCount}
-            isDownloading={isDownloading}
-            downloadProgress={downloadProgress}
-          />
-
-          {/* Montages Grid */}
-          {montagesLoading ? (
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <Loader2 className="size-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <MontagesGrid
-              montages={montagesWithUrls}
-              loadedCount={loadedCount}
-              totalCount={totalCount}
-              progress={progress}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Config Creation Dialog */}
-      {selectedFolder && (
-        <MontageConfigDialog
-          open={isConfigDialogOpen}
-          onOpenChange={setIsConfigDialogOpen}
-          folderName={selectedFolder}
-          onSuccess={handleConfigSuccess}
+        <MontagerFolderTable
+          folders={folders}
+          onDeleteFolder={handleDeleteFolderClick}
         />
-      )}
+      </div>
 
       {/* Delete Folder Confirmation Dialog */}
       <AlertDialog
@@ -166,7 +80,7 @@ export function MontagerContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Folder</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{folderToDelete}"? This will permanently
+              Are you sure you want to delete &quot;{folderToDelete?.name}&quot;? This will permanently
               delete all montages and configurations in this folder. This action cannot
               be undone.
             </AlertDialogDescription>

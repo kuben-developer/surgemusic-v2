@@ -25,6 +25,7 @@ import type * as app_files from "../app/files.js";
 import type * as app_generatedVideos from "../app/generatedVideos.js";
 import type * as app_insertTiktokPosts from "../app/insertTiktokPosts.js";
 import type * as app_montager from "../app/montager.js";
+import type * as app_montagerDb from "../app/montagerDb.js";
 import type * as app_tiktok from "../app/tiktok.js";
 import type * as app_transcription from "../app/transcription.js";
 import type * as app_users from "../app/users.js";
@@ -33,6 +34,7 @@ import type * as http from "../http.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_generatedVideos from "../webhooks/generatedVideos.js";
+import type * as webhooks_montager from "../webhooks/montager.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
 /**
@@ -56,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   "app/generatedVideos": typeof app_generatedVideos;
   "app/insertTiktokPosts": typeof app_insertTiktokPosts;
   "app/montager": typeof app_montager;
+  "app/montagerDb": typeof app_montagerDb;
   "app/tiktok": typeof app_tiktok;
   "app/transcription": typeof app_transcription;
   "app/users": typeof app_users;
@@ -64,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/clipper": typeof webhooks_clipper;
   "webhooks/generatedVideos": typeof webhooks_generatedVideos;
+  "webhooks/montager": typeof webhooks_montager;
   "webhooks/test": typeof webhooks_test;
 }>;
 export declare const api: FilterApi<

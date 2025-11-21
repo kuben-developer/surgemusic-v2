@@ -3,6 +3,7 @@ import { clerkWebhook } from "./webhooks/clerk";
 import { testWebhook } from "./webhooks/test";
 import { getPendingVideos, updateGeneratedVideos } from "./webhooks/generatedVideos";
 import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/clipper";
+import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/montager";
 
 const http = httpRouter();
 
@@ -51,6 +52,20 @@ http.route({
   path: "/api/clipper/update",
   method: "POST",
   handler: updateClipperVideoOutputs,
+});
+
+// Montager API - Get pending configs with randomly selected clips
+http.route({
+  path: "/api/montager/pending",
+  method: "GET",
+  handler: getPendingMontagerConfigs,
+});
+
+// Montager API - Update with generated montage videos
+http.route({
+  path: "/api/montager/update",
+  method: "POST",
+  handler: updateMontagerVideos,
 });
 
 export default http;

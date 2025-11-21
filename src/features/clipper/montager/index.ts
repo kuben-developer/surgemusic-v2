@@ -1,10 +1,13 @@
+// Pages
+export { MontagerFolderDetailPage } from "./MontagerFolderDetailPage";
+
 // Components
 export { MontagerContent } from "./components/MontagerContent";
 export { MontagerFolderTable } from "./components/MontagerFolderTable";
 export { CreateMontagerFolderButton } from "./components/CreateMontagerFolderButton";
 export { MontageConfigDialog } from "./components/MontageConfigDialog";
 export { MontagesGrid } from "./components/MontagesGrid";
-export { MontageCard } from "./components/MontageCard";
+export { MontageVideoCard } from "./components/MontageVideoCard";
 export { MontagesToolbar } from "./components/MontagesToolbar";
 
 // Hooks

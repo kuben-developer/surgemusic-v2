@@ -227,5 +227,29 @@ export default defineSchema({
     })),
   })
     .index("by_clipperFolderId", ["clipperFolderId"])
-    .index("by_inputVideoName", ["inputVideoName"])
+    .index("by_inputVideoName", ["inputVideoName"]),
+
+  montagerFolders: defineTable({
+    userId: v.id('users'),
+    folderName: v.string(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_folderName", ["folderName"]),
+
+  montageConfigs: defineTable({
+    montagerFolderId: v.id('montagerFolders'),
+    clipperFolderIds: v.array(v.id('clipperFolders')),  // Source folders for clips
+    numberOfMontages: v.number(),
+    isProcessed: v.boolean(),
+  })
+    .index("by_montagerFolderId", ["montagerFolderId"])
+    .index("by_isProcessed", ["isProcessed"]),
+
+  montagerVideos: defineTable({
+    montagerFolderId: v.id('montagerFolders'),
+    videoUrl: v.string(),
+    thumbnailUrl: v.string(),
+  })
+    .index("by_montagerFolderId", ["montagerFolderId"])
+    .index("by_videoUrl", ["videoUrl"]),
 })

@@ -14,16 +14,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { useClipperFolders } from "../../clipper/hooks/useClipperFolders";
+import { useFolders } from "../../list/hooks/useFolders";
 import { useMontageCreation } from "../hooks/useMontageCreation";
 import { CLIPS_PER_MONTAGE, MAX_MONTAGES_PER_REQUEST } from "../constants/montager.constants";
 import { Loader2, Film, FolderOpen } from "lucide-react";
+import type { MontagerFolderId, ClipperFolderId } from "../../shared/types/common.types";
 
 interface MontageConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  folderId: MontagerFolderId;
   folderName: string;
-  onSuccess?: () => void;
 }
 
 type Step = "select-folders" | "set-count" | "confirm";
@@ -31,38 +32,36 @@ type Step = "select-folders" | "set-count" | "confirm";
 export function MontageConfigDialog({
   open,
   onOpenChange,
+  folderId,
   folderName,
-  onSuccess,
 }: MontageConfigDialogProps) {
   const [step, setStep] = useState<Step>("select-folders");
-  const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<ClipperFolderId[]>([]);
   const [numberOfMontages, setNumberOfMontages] = useState("1");
-  const [configName, setConfigName] = useState("");
 
-  const { folders, isLoading: foldersLoading } = useClipperFolders();
+  const { folders, isLoading: foldersLoading } = useFolders();
   const { createMontageConfig, isCreating } = useMontageCreation();
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setStep("select-folders");
-      setSelectedFolders([]);
+      setSelectedFolderIds([]);
       setNumberOfMontages("1");
-      setConfigName("");
     }
   }, [open]);
 
-  const handleToggleFolder = (folderName: string) => {
-    setSelectedFolders((prev) =>
-      prev.includes(folderName)
-        ? prev.filter((f) => f !== folderName)
-        : [...prev, folderName]
+  const handleToggleFolder = (folderId: ClipperFolderId) => {
+    setSelectedFolderIds((prev) =>
+      prev.includes(folderId)
+        ? prev.filter((f) => f !== folderId)
+        : [...prev, folderId]
     );
   };
 
   const handleNext = () => {
     if (step === "select-folders") {
-      if (selectedFolders.length === 0) {
+      if (selectedFolderIds.length === 0) {
         toast.error("Please select at least one clipper folder");
         return;
       }
@@ -77,8 +76,6 @@ export function MontageConfigDialog({
         toast.error(`Maximum ${MAX_MONTAGES_PER_REQUEST} montages per request`);
         return;
       }
-      // Auto-generate config name with timestamp
-      setConfigName(`config_${Date.now()}`);
       setStep("confirm");
     }
   };
@@ -95,24 +92,22 @@ export function MontageConfigDialog({
     try {
       const count = parseInt(numberOfMontages, 10);
 
-      const result = await createMontageConfig({
-        folderName,
-        configName,
-        selectedClipperFolders: selectedFolders,
+      await createMontageConfig({
+        folderId,
+        clipperFolderIds: selectedFolderIds,
         numberOfMontages: count,
       });
 
-      toast.success(
-        `Successfully created configuration for ${result.montagesCreated} ${result.montagesCreated === 1 ? 'montage' : 'montages'}. Processing will complete in a few minutes.`
-      );
       onOpenChange(false);
-      onSuccess?.();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create configuration"
-      );
+      // Error already handled in hook with toast
     }
   };
+
+  // Get selected folder names for display
+  const selectedFolderNames = folders
+    ?.filter((f) => selectedFolderIds.includes(f._id))
+    .map((f) => f.folderName) ?? [];
 
   const renderStepContent = () => {
     switch (step) {
@@ -130,7 +125,7 @@ export function MontageConfigDialog({
               <div className="flex justify-center py-8">
                 <Loader2 className="size-8 animate-spin text-primary" />
               </div>
-            ) : folders.length === 0 ? (
+            ) : !folders || folders.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                 <FolderOpen className="mb-2 size-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
@@ -141,19 +136,19 @@ export function MontageConfigDialog({
               <div className="max-h-[300px] space-y-2 overflow-y-auto rounded-lg border p-4">
                 {folders.map((folder) => (
                   <div
-                    key={folder.name}
+                    key={folder._id}
                     className="flex items-center space-x-3 rounded-md p-2 hover:bg-muted"
                   >
                     <Checkbox
-                      id={folder.name}
-                      checked={selectedFolders.includes(folder.name)}
-                      onCheckedChange={() => handleToggleFolder(folder.name)}
+                      id={folder._id}
+                      checked={selectedFolderIds.includes(folder._id)}
+                      onCheckedChange={() => handleToggleFolder(folder._id)}
                     />
                     <label
-                      htmlFor={folder.name}
+                      htmlFor={folder._id}
                       className="flex flex-1 cursor-pointer items-center justify-between text-sm"
                     >
-                      <span className="font-medium">{folder.name}</span>
+                      <span className="font-medium">{folder.folderName}</span>
                       <span className="text-muted-foreground">
                         {folder.clipCount} clips
                       </span>
@@ -163,11 +158,11 @@ export function MontageConfigDialog({
               </div>
             )}
 
-            {selectedFolders.length > 0 && (
+            {selectedFolderIds.length > 0 && (
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-sm">
-                  <span className="font-medium">{selectedFolders.length}</span>{" "}
-                  {selectedFolders.length === 1 ? "folder" : "folders"} selected
+                  <span className="font-medium">{selectedFolderIds.length}</span>{" "}
+                  {selectedFolderIds.length === 1 ? "folder" : "folders"} selected
                 </p>
               </div>
             )}
@@ -200,7 +195,7 @@ export function MontageConfigDialog({
               </div>
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>
-                  Selected folders: <span className="font-medium">{selectedFolders.join(", ")}</span>
+                  Selected folders: <span className="font-medium">{selectedFolderNames.join(", ")}</span>
                 </p>
                 <p>
                   Requested montages:{" "}
@@ -227,7 +222,7 @@ export function MontageConfigDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Source folders:</span>
-                  <span className="font-medium">{selectedFolders.length}</span>
+                  <span className="font-medium">{selectedFolderIds.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Montages to create:</span>
@@ -243,8 +238,8 @@ export function MontageConfigDialog({
             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
               <p className="font-medium mb-1">What happens next?</p>
               <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Configuration file will be uploaded to S3</li>
-                <li>Backend will randomly select clips from chosen folders</li>
+                <li>Configuration will be saved to database</li>
+                <li>External system will randomly select clips from chosen folders</li>
                 <li>Montages will be created and uploaded within a few minutes</li>
                 <li>Check back here to view your completed montages</li>
               </ol>
