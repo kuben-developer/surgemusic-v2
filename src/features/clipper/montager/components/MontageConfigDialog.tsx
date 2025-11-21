@@ -114,13 +114,6 @@ export function MontageConfigDialog({
       case "select-folders":
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Clipper Folders</Label>
-              <p className="text-sm text-muted-foreground">
-                Choose which clipper folders to pull clips from
-              </p>
-            </div>
-
             {foldersLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="size-8 animate-spin text-primary" />
@@ -214,7 +207,7 @@ export function MontageConfigDialog({
         return (
           <div className="space-y-4">
             <div className="rounded-lg border p-4 space-y-3">
-              <h4 className="font-medium">Configuration Summary</h4>
+              <h4 className="font-medium">Summary</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Target folder:</span>
@@ -238,8 +231,8 @@ export function MontageConfigDialog({
             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
               <p className="font-medium mb-1">What happens next?</p>
               <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Configuration will be saved to database</li>
-                <li>External system will randomly select clips from chosen folders</li>
+                <li>Your request will be queued for processing</li>
+                <li>Clips will be randomly selected from chosen folders</li>
                 <li>Montages will be created and uploaded within a few minutes</li>
                 <li>Check back here to view your completed montages</li>
               </ol>
@@ -254,7 +247,7 @@ export function MontageConfigDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            Create Montage Configuration
+            Create Montages
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               (Step {step === "select-folders" ? "1" : step === "set-count" ? "2" : "3"} of 3)
             </span>
@@ -265,7 +258,7 @@ export function MontageConfigDialog({
             {step === "set-count" &&
               "Specify how many montages to create"}
             {step === "confirm" &&
-              "Review and confirm your configuration"}
+              "Review and confirm your selection"}
           </DialogDescription>
         </DialogHeader>
 
@@ -292,7 +285,7 @@ export function MontageConfigDialog({
                   Creating...
                 </>
               ) : (
-                "Create Configuration"
+                "Create Montages"
               )}
             </Button>
           )}

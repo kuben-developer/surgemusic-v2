@@ -69,7 +69,7 @@ export function MontagesToolbar({
             className="gap-2"
           >
             <Plus className="size-4" />
-            <span className="hidden sm:inline">Create Config</span>
+            <span className="hidden sm:inline">Create Montages</span>
             <span className="sm:hidden">Create</span>
           </Button>
         </div>
