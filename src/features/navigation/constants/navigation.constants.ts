@@ -7,7 +7,8 @@ import {
   Link2,
   CreditCard,
   Scissors,
-  Sparkles
+  Sparkles,
+  Film,
 } from "lucide-react"
 import type { NavSection } from "../types/navigation.types"
 
@@ -67,9 +68,14 @@ export const navigationData: { navMain: NavSection[] } = {
         //   icon: LayoutGrid,
         // },
         {
-          title: "Clipper & Montager",
+          title: "Clipper",
           url: "/clipper",
           icon: Scissors,
+        },
+        {
+          title: "Montager",
+          url: "/montager",
+          icon: Film,
         },
         // {
         //   title: "Pricing",

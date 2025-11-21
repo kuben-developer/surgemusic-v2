@@ -51,8 +51,9 @@ export function MontagesToolbar({
 
       {/* Action bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:justify-between">
+        <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={onDownloadAll}
@@ -62,7 +63,7 @@ export function MontagesToolbar({
             <Download className="size-4" />
             <span className="hidden sm:inline">Download All</span>
             <span className="sm:hidden">Download</span>
-          </Button>
+          </Button> */}
           <Button
             size="sm"
             onClick={onCreateConfig}

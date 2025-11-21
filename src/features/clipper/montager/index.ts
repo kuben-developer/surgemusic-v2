@@ -1,4 +1,5 @@
 // Pages
+export { default as MontagerPage } from "./MontagerPage";
 export { MontagerFolderDetailPage } from "./MontagerFolderDetailPage";
 
 // Components

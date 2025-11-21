@@ -25,7 +25,7 @@ export function MontagerFolderDetailPage() {
   const { videos, pendingConfigs, isLoading } = useMontages(folderId);
 
   const handleBack = () => {
-    router.push("/clipper?tab=montager");
+    router.push("/montager");
   };
 
   const handleDownloadAll = async () => {

@@ -5,6 +5,7 @@ export { ClipsPage } from "./ClipsPage";
 
 // Components - Folders & Videos
 export { CreateFolderDialog } from "./components/CreateFolderDialog";
+export { ClipperFolderTable } from "./components/ClipperFolderTable";
 export { FolderGrid } from "./components/FolderGrid";
 export { UploadVideoDialog } from "./components/UploadVideoDialog";
 export { VideoGrid } from "./components/VideoGrid";
