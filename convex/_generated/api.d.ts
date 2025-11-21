@@ -33,6 +33,7 @@ import type * as http from "../http.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_montager from "../webhooks/montager.js";
+import type * as webhooks_montagerVideos from "../webhooks/montagerVideos.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
 /**
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/clipper": typeof webhooks_clipper;
   "webhooks/montager": typeof webhooks_montager;
+  "webhooks/montagerVideos": typeof webhooks_montagerVideos;
   "webhooks/test": typeof webhooks_test;
 }>;
 export declare const api: FilterApi<

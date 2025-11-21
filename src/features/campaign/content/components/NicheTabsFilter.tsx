@@ -147,6 +147,7 @@ export function NicheTabsFilter({
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           airtableRecordIds={unassignedEmptyRecordIds}
+          campaignId={campaignId}
           categoryName={categoryName}
           nicheName={selectedNiche}
           onSuccess={onVideosAdded}

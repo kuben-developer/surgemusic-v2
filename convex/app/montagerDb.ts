@@ -378,13 +378,14 @@ export const deleteVideo = mutation({
 
 /**
  * Assign montager videos to Airtable records
- * Updates first N pending videos with overlay style and airtable record IDs
+ * Updates first N pending videos with overlay style, airtable record IDs, and campaign ID
  */
 export const assignVideosToAirtable = mutation({
   args: {
     folderId: v.id("montagerFolders"),
     overlayStyle: v.string(),
     airtableRecordIds: v.array(v.string()),
+    campaignId: v.string(), // Airtable campaign ID for fetching assets
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -434,6 +435,7 @@ export const assignVideosToAirtable = mutation({
           status: "ready_for_processing",
           overlayStyle: args.overlayStyle,
           airtableRecordId: airtableRecordId,
+          campaignId: args.campaignId,
         });
         updatedIds.push(video._id);
       }
@@ -625,6 +627,111 @@ export const getPendingConfigsInternal = internalQuery({
     );
 
     return results;
+  },
+});
+
+/**
+ * Internal query to get all videos ready for processing (with overlay)
+ * Used by the external API endpoint GET /api/montager-videos/pending
+ * Includes campaign assets (audioUrl, srtUrl) and captions for overlay processing
+ */
+export const getPendingVideosForProcessingInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    // Get all videos with status "ready_for_processing"
+    const videos = await ctx.db
+      .query("montagerVideos")
+      .filter((q) => q.eq(q.field("status"), "ready_for_processing"))
+      .collect();
+
+    // Group videos by campaignId to batch fetch campaign data
+    const campaignIds = [...new Set(videos.map((v) => v.campaignId).filter(Boolean))] as string[];
+
+    // Fetch campaign assets for all campaigns
+    const campaignAssetsMap = new Map<string, { audioUrl?: string; srtUrl?: string }>();
+    for (const campaignId of campaignIds) {
+      const assets = await ctx.db
+        .query("campaignAssets")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .first();
+
+      if (assets) {
+        campaignAssetsMap.set(campaignId, {
+          audioUrl: assets.audioUrl,
+          srtUrl: assets.srtUrl,
+        });
+      }
+    }
+
+    // Fetch captions for all campaigns
+    const campaignCaptionsMap = new Map<string, string[]>();
+    for (const campaignId of campaignIds) {
+      const captions = await ctx.db
+        .query("captions")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      campaignCaptionsMap.set(
+        campaignId,
+        captions.map((c) => c.text)
+      );
+    }
+
+    return videos.map((video) => {
+      const campaignId = video.campaignId;
+      const assets = campaignId ? campaignAssetsMap.get(campaignId) : undefined;
+      const captions = campaignId ? campaignCaptionsMap.get(campaignId) : undefined;
+
+      return {
+        videoId: video._id,
+        videoUrl: video.videoUrl,
+        thumbnailUrl: video.thumbnailUrl,
+        overlayStyle: video.overlayStyle,
+        airtableRecordId: video.airtableRecordId,
+        campaignId: video.campaignId,
+        // Campaign assets
+        audioUrl: assets?.audioUrl,
+        srtUrl: assets?.srtUrl,
+        // Captions
+        captions: captions ?? [],
+      };
+    });
+  },
+});
+
+/**
+ * Internal mutation to update processed video URL and status
+ * Used by the external API endpoint POST /api/montager-videos/update
+ */
+export const updateProcessedVideoExternal = internalMutation({
+  args: {
+    videoId: v.id("montagerVideos"),
+    processedVideoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Verify video exists
+    const video = await ctx.db.get(args.videoId);
+    if (!video) {
+      throw new Error(`Video not found: ${args.videoId}`);
+    }
+
+    // Only allow updating videos that are ready_for_processing
+    if (video.status !== "ready_for_processing") {
+      throw new Error(
+        `Video ${args.videoId} is not ready for processing. Current status: ${video.status}`
+      );
+    }
+
+    // Update the video with processed URL and status
+    await ctx.db.patch(args.videoId, {
+      processedVideoUrl: args.processedVideoUrl,
+      status: "processed",
+    });
+
+    return {
+      success: true,
+      videoId: args.videoId,
+    };
   },
 });
 

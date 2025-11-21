@@ -245,6 +245,7 @@ export default defineSchema({
     ),
     overlayStyle: v.optional(v.string()),
     airtableRecordId: v.optional(v.string()),
+    campaignId: v.optional(v.string()), // Airtable campaign ID for fetching assets
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])

@@ -20,6 +20,7 @@ interface MontagerVideoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   airtableRecordIds: string[];
+  campaignId: string;
   categoryName: string;
   nicheName: string;
   onSuccess?: () => void;
@@ -29,6 +30,7 @@ export function MontagerVideoDialog({
   open,
   onOpenChange,
   airtableRecordIds,
+  campaignId,
   categoryName,
   nicheName,
   onSuccess,
@@ -48,6 +50,7 @@ export function MontagerVideoDialog({
     handleSubmit,
   } = useMontagerVideoAddition({
     airtableRecordIds,
+    campaignId,
     onSuccess: () => {
       onSuccess?.();
       onOpenChange(false);

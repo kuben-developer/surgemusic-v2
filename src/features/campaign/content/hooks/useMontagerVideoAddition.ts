@@ -13,11 +13,13 @@ export type DialogStep = "folder" | "overlay" | "confirm";
 
 interface UseMontagerVideoAdditionProps {
   airtableRecordIds: string[];
+  campaignId: string;
   onSuccess?: () => void;
 }
 
 export function useMontagerVideoAddition({
   airtableRecordIds,
+  campaignId,
   onSuccess,
 }: UseMontagerVideoAdditionProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -93,6 +95,7 @@ export function useMontagerVideoAddition({
         folderId: selectedFolder._id as Id<"montagerFolders">,
         overlayStyle: selectedStyle,
         airtableRecordIds,
+        campaignId,
       });
 
       if (result.success) {

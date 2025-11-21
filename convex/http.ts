@@ -3,6 +3,7 @@ import { clerkWebhook } from "./webhooks/clerk";
 import { testWebhook } from "./webhooks/test";
 import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/clipper";
 import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/montager";
+import { getPendingVideosForProcessing, updateProcessedVideos } from "./webhooks/montagerVideos";
 
 const http = httpRouter();
 
@@ -51,6 +52,20 @@ http.route({
   path: "/api/montager/update",
   method: "POST",
   handler: updateMontagerVideos,
+});
+
+// Montager Videos API - Get videos ready for overlay processing
+http.route({
+  path: "/api/montager-videos/pending",
+  method: "GET",
+  handler: getPendingVideosForProcessing,
+});
+
+// Montager Videos API - Update videos with processed (overlay) URLs
+http.route({
+  path: "/api/montager-videos/update",
+  method: "POST",
+  handler: updateProcessedVideos,
 });
 
 export default http;
