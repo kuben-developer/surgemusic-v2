@@ -9,8 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, FolderOpen, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderOpen, Loader2, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OverlayStyleSelector } from "./OverlayStyleSelector";
 import { useMontagerVideoAddition } from "../hooks/useMontagerVideoAddition";
@@ -41,10 +42,13 @@ export function MontagerVideoDialog({
     selectedStyle,
     isLoading,
     videosNeeded,
+    videosToAssign,
+    maxVideosToAssign,
     folders,
     foldersLoading,
     setSelectedFolder,
     setSelectedStyle,
+    setVideosToAssign,
     handleNextStep,
     handlePreviousStep,
     handleSubmit,
@@ -80,11 +84,11 @@ export function MontagerVideoDialog({
   const getStepDescription = () => {
     switch (currentStep) {
       case "folder":
-        return `Select a folder with at least ${videosNeeded} video${videosNeeded === 1 ? "" : "s"}`;
+        return `Select a folder with available videos (need up to ${videosNeeded})`;
       case "overlay":
         return "Choose the visual style for video processing";
       case "confirm":
-        return "Review your selections before assigning videos";
+        return "Review your selections and adjust video count if needed";
       default:
         return "";
     }
@@ -116,19 +120,20 @@ export function MontagerVideoDialog({
                 <div className="max-h-[400px] space-y-2 overflow-y-auto rounded-lg border p-3">
                   {folders.map((folder: MontagerFolder) => {
                     const isSelected = selectedFolder?._id === folder._id;
-                    const hasEnough = folder.videoCount >= videosNeeded;
+                    const hasVideos = folder.videoCount >= 1;
+                    const hasEnoughForAll = folder.videoCount >= videosNeeded;
 
                     return (
                       <button
                         key={folder._id}
                         type="button"
-                        onClick={() => hasEnough && setSelectedFolder(folder)}
-                        disabled={!hasEnough}
+                        onClick={() => hasVideos && setSelectedFolder(folder)}
+                        disabled={!hasVideos}
                         className={cn(
                           "w-full rounded-md border-2 p-3 text-left transition-all hover:bg-accent",
                           isSelected && "border-primary bg-accent",
                           !isSelected && "border-border",
-                          !hasEnough && "cursor-not-allowed opacity-50"
+                          !hasVideos && "cursor-not-allowed opacity-50"
                         )}
                       >
                         <div className="flex items-center justify-between">
@@ -153,11 +158,15 @@ export function MontagerVideoDialog({
                               </div>
                             </div>
                           </div>
-                          {!hasEnough && (
+                          {!hasVideos ? (
                             <span className="text-xs text-destructive font-medium">
-                              Not enough videos
+                              No videos
                             </span>
-                          )}
+                          ) : !hasEnoughForAll ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                              Partial ({folder.videoCount}/{videosNeeded})
+                            </span>
+                          ) : null}
                         </div>
                       </button>
                     );
@@ -204,12 +213,44 @@ export function MontagerVideoDialog({
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Videos to Assign</div>
-                  <div className="font-medium">{videosNeeded}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setVideosToAssign(videosToAssign - 1)}
+                      disabled={videosToAssign <= 1}
+                    >
+                      <Minus className="size-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={maxVideosToAssign}
+                      value={videosToAssign}
+                      onChange={(e) => setVideosToAssign(parseInt(e.target.value) || 1)}
+                      className="w-20 text-center h-8"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setVideosToAssign(videosToAssign + 1)}
+                      disabled={videosToAssign >= maxVideosToAssign}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      / {maxVideosToAssign} available
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-100">
-                <strong>Note:</strong> {videosNeeded} video{videosNeeded === 1 ? "" : "s"} will
+                <strong>Note:</strong> {videosToAssign} video{videosToAssign === 1 ? "" : "s"} will
                 be assigned to the selected Airtable records and marked for processing with the
                 selected overlay style.
               </div>
