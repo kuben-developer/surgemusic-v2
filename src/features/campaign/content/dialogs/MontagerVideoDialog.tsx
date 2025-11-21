@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -17,71 +15,44 @@ import { cn } from "@/lib/utils";
 import { OverlayStyleSelector } from "./OverlayStyleSelector";
 import { useMontagerVideoAddition } from "../hooks/useMontagerVideoAddition";
 import type { MontagerFolder } from "../../shared/types/campaign.types";
-import { formatDistanceToNow } from "date-fns";
 
 interface MontagerVideoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  campaignId: string;
+  airtableRecordIds: string[];
   categoryName: string;
   nicheName: string;
-  videosNeeded: number;
   onSuccess?: () => void;
 }
 
 export function MontagerVideoDialog({
   open,
   onOpenChange,
-  campaignId,
+  airtableRecordIds,
   categoryName,
   nicheName,
-  videosNeeded,
   onSuccess,
 }: MontagerVideoDialogProps) {
-  const [folders, setFolders] = useState<MontagerFolder[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
-
   const {
     currentStep,
     selectedFolder,
     selectedStyle,
     isLoading,
+    videosNeeded,
+    folders,
+    foldersLoading,
     setSelectedFolder,
     setSelectedStyle,
     handleNextStep,
     handlePreviousStep,
     handleSubmit,
-    listFolders,
   } = useMontagerVideoAddition({
-    campaignId,
-    categoryName,
-    nicheName,
-    videosNeeded,
+    airtableRecordIds,
     onSuccess: () => {
       onSuccess?.();
       onOpenChange(false);
     },
   });
-
-  const loadFolders = useCallback(async () => {
-    setLoadingFolders(true);
-    try {
-      const result = await listFolders({});
-      setFolders(result);
-    } catch (error) {
-      console.error("Error loading folders:", error);
-      toast.error("Failed to load folders. Please try again.");
-    } finally {
-      setLoadingFolders(false);
-    }
-  }, [listFolders]);
-
-  // Load folders when dialog opens
-  useEffect(() => {
-    if (open && currentStep === "folder") {
-      loadFolders();
-    }
-  }, [open, currentStep, loadFolders]);
 
   const canProceed = () => {
     if (currentStep === "folder") return selectedFolder !== null;
@@ -110,7 +81,7 @@ export function MontagerVideoDialog({
       case "overlay":
         return "Choose the visual style for video processing";
       case "confirm":
-        return "Review your selections before adding videos";
+        return "Review your selections before assigning videos";
       default:
         return "";
     }
@@ -128,7 +99,7 @@ export function MontagerVideoDialog({
           {/* Step 1: Select Folder */}
           {currentStep === "folder" && (
             <div className="space-y-3">
-              {loadingFolders ? (
+              {foldersLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={i} className="h-16 w-full" />
@@ -140,13 +111,13 @@ export function MontagerVideoDialog({
                 </div>
               ) : (
                 <div className="max-h-[400px] space-y-2 overflow-y-auto rounded-lg border p-3">
-                  {folders.map((folder) => {
-                    const isSelected = selectedFolder?.name === folder.name;
-                    const hasEnough = folder.montageCount >= videosNeeded;
+                  {folders.map((folder: MontagerFolder) => {
+                    const isSelected = selectedFolder?._id === folder._id;
+                    const hasEnough = folder.videoCount >= videosNeeded;
 
                     return (
                       <button
-                        key={folder.name}
+                        key={folder._id}
                         type="button"
                         onClick={() => hasEnough && setSelectedFolder(folder)}
                         disabled={!hasEnough}
@@ -173,12 +144,9 @@ export function MontagerVideoDialog({
                               />
                             </div>
                             <div>
-                              <div className="font-medium">{folder.name}</div>
+                              <div className="font-medium">{folder.folderName}</div>
                               <div className="text-sm text-muted-foreground">
-                                {folder.montageCount} video{folder.montageCount === 1 ? "" : "s"} •{" "}
-                                {formatDistanceToNow(new Date(folder.lastModified), {
-                                  addSuffix: true,
-                                })}
+                                {folder.videoCount} pending video{folder.videoCount === 1 ? "" : "s"}
                               </div>
                             </div>
                           </div>
@@ -196,8 +164,8 @@ export function MontagerVideoDialog({
 
               {selectedFolder && (
                 <div className="rounded-lg bg-muted p-3 text-sm">
-                  <span className="font-medium">{selectedFolder.name}</span> selected
-                  ({selectedFolder.montageCount} videos available)
+                  <span className="font-medium">{selectedFolder.folderName}</span> selected
+                  ({selectedFolder.videoCount} videos available)
                 </div>
               )}
             </div>
@@ -216,10 +184,6 @@ export function MontagerVideoDialog({
             <div className="space-y-4">
               <div className="rounded-lg border p-4 space-y-3">
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Campaign</div>
-                  <div className="font-medium">{campaignId}</div>
-                </div>
-                <div>
                   <div className="text-sm text-muted-foreground mb-1">Category</div>
                   <div className="font-medium">{categoryName}</div>
                 </div>
@@ -229,22 +193,22 @@ export function MontagerVideoDialog({
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Montager Folder</div>
-                  <div className="font-medium">{selectedFolder?.name}</div>
+                  <div className="font-medium">{selectedFolder?.folderName}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Overlay Style</div>
                   <div className="font-medium">{selectedStyle}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Videos to Add</div>
+                  <div className="text-sm text-muted-foreground mb-1">Videos to Assign</div>
                   <div className="font-medium">{videosNeeded}</div>
                 </div>
               </div>
 
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-100">
                 <strong>Note:</strong> {videosNeeded} video{videosNeeded === 1 ? "" : "s"} will
-                be randomly selected from the folder and added to the generated videos table.
-                An external service will process them with the selected overlay style.
+                be assigned to the selected Airtable records and marked for processing with the
+                selected overlay style.
               </div>
             </div>
           )}
@@ -282,10 +246,10 @@ export function MontagerVideoDialog({
                 {isLoading ? (
                   <>
                     <Loader2 className="size-4 mr-2 animate-spin" />
-                    Adding Videos...
+                    Assigning Videos...
                   </>
                 ) : (
-                  "Add Videos"
+                  "Assign Videos"
                 )}
               </Button>
             )}

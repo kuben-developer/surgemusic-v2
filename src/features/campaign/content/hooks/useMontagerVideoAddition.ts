@@ -1,31 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import type { OverlayStyle } from "../constants/overlay-styles.constants";
-import {
-  selectRandomVideos,
-  validateVideoCount,
-} from "../utils/video-selection.utils";
+import { validateVideoCount } from "../utils/video-selection.utils";
 import type { MontagerFolder } from "../../shared/types/campaign.types";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
 export type DialogStep = "folder" | "overlay" | "confirm";
 
 interface UseMontagerVideoAdditionProps {
-  campaignId: string;
-  categoryName: string;
-  nicheName: string;
-  videosNeeded: number;
+  airtableRecordIds: string[];
   onSuccess?: () => void;
 }
 
 export function useMontagerVideoAddition({
-  campaignId,
-  categoryName,
-  nicheName,
-  videosNeeded,
+  airtableRecordIds,
   onSuccess,
 }: UseMontagerVideoAdditionProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,10 +26,11 @@ export function useMontagerVideoAddition({
   const [selectedStyle, setSelectedStyle] = useState<OverlayStyle | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Convex actions and mutations
-  const listFolders = useAction(api.app.montager.listMontagerFolders);
-  const getVideos = useAction(api.app.montager.getMontagerVideos);
-  const addVideos = useMutation(api.app.generatedVideos.addMontagerVideosToGenerated);
+  const videosNeeded = airtableRecordIds.length;
+
+  // Use Convex query for folders (database-based, not S3)
+  const folders = useQuery(api.app.montagerDb.getFolders);
+  const assignVideos = useMutation(api.app.montagerDb.assignVideosToAirtable);
 
   const openDialog = () => {
     setIsOpen(true);
@@ -55,7 +48,7 @@ export function useMontagerVideoAddition({
 
   const handleSelectFolder = async (folder: MontagerFolder) => {
     // Validate folder has enough videos
-    const validation = validateVideoCount(folder.montageCount, videosNeeded);
+    const validation = validateVideoCount(folder.videoCount, videosNeeded);
 
     if (!validation.isValid) {
       toast.error(validation.message);
@@ -87,44 +80,31 @@ export function useMontagerVideoAddition({
       return;
     }
 
+    if (airtableRecordIds.length === 0) {
+      toast.error("No videos to assign");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // 1. Get all videos from the selected folder
-      const allVideos = await getVideos({ folderName: selectedFolder.name });
-
-      // 2. Randomly select required number of videos
-      const selectedVideos = selectRandomVideos(allVideos, videosNeeded);
-
-      if (selectedVideos.length < videosNeeded) {
-        toast.error(`Only ${selectedVideos.length} videos available, but ${videosNeeded} needed`);
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. Add videos to generatedVideos table
-      const result = await addVideos({
-        campaignId,
-        categoryName,
-        nicheName,
+      // Assign videos from montager folder to airtable records
+      const result = await assignVideos({
+        folderId: selectedFolder._id as Id<"montagerFolders">,
         overlayStyle: selectedStyle,
-        videos: selectedVideos.map((v) => ({
-          key: v.key,
-          url: v.url,
-          filename: v.filename,
-        })),
+        airtableRecordIds,
       });
 
       if (result.success) {
-        toast.success(`Successfully added ${result.count} videos from montager`);
+        toast.success(`Successfully assigned ${result.count} videos for processing`);
         closeDialog();
         onSuccess?.();
       } else {
-        toast.error("Failed to add videos");
+        toast.error("Failed to assign videos");
       }
     } catch (error) {
-      console.error("Error adding montager videos:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to add videos");
+      console.error("Error assigning montager videos:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to assign videos");
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +116,9 @@ export function useMontagerVideoAddition({
     selectedFolder,
     selectedStyle,
     isLoading,
+    videosNeeded,
+    folders: folders ?? [],
+    foldersLoading: folders === undefined,
     openDialog,
     closeDialog,
     setSelectedFolder: handleSelectFolder,
@@ -143,6 +126,5 @@ export function useMontagerVideoAddition({
     handleNextStep,
     handlePreviousStep,
     handleSubmit,
-    listFolders,
   };
 }

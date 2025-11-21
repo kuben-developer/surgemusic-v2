@@ -22,7 +22,6 @@ import type * as app_captions from "../app/captions.js";
 import type * as app_clipperDb from "../app/clipperDb.js";
 import type * as app_clipperS3 from "../app/clipperS3.js";
 import type * as app_files from "../app/files.js";
-import type * as app_generatedVideos from "../app/generatedVideos.js";
 import type * as app_insertTiktokPosts from "../app/insertTiktokPosts.js";
 import type * as app_montager from "../app/montager.js";
 import type * as app_montagerDb from "../app/montagerDb.js";
@@ -33,7 +32,6 @@ import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_clipper from "../webhooks/clipper.js";
-import type * as webhooks_generatedVideos from "../webhooks/generatedVideos.js";
 import type * as webhooks_montager from "../webhooks/montager.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
@@ -55,7 +53,6 @@ declare const fullApi: ApiFromModules<{
   "app/clipperDb": typeof app_clipperDb;
   "app/clipperS3": typeof app_clipperS3;
   "app/files": typeof app_files;
-  "app/generatedVideos": typeof app_generatedVideos;
   "app/insertTiktokPosts": typeof app_insertTiktokPosts;
   "app/montager": typeof app_montager;
   "app/montagerDb": typeof app_montagerDb;
@@ -66,7 +63,6 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/clipper": typeof webhooks_clipper;
-  "webhooks/generatedVideos": typeof webhooks_generatedVideos;
   "webhooks/montager": typeof webhooks_montager;
   "webhooks/test": typeof webhooks_test;
 }>;

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { FolderPlus } from "lucide-react";
-import type { NicheStats } from "../../shared/types/campaign.types";
+import type { NicheStats, AirtableContent } from "../../shared/types/campaign.types";
 import { MontagerVideoDialog } from "../dialogs/MontagerVideoDialog";
 import { MissingAssetsDialog } from "../dialogs/MissingAssetsDialog";
 
@@ -18,6 +18,7 @@ interface NicheTabsFilterProps {
   totalCount: number;
   campaignId: string;
   categoryName: string;
+  content: AirtableContent[];
   onVideosAdded?: () => void;
 }
 
@@ -29,6 +30,7 @@ export function NicheTabsFilter({
   totalCount,
   campaignId,
   categoryName,
+  content,
   onVideosAdded,
 }: NicheTabsFilterProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -39,15 +41,33 @@ export function NicheTabsFilter({
     campaignId,
   });
 
+  // Get all airtable record IDs that already have montager videos assigned
+  const assignedRecordIds = useQuery(api.app.montagerDb.getAssignedAirtableRecordIds);
+  const assignedSet = useMemo(
+    () => new Set(assignedRecordIds ?? []),
+    [assignedRecordIds]
+  );
+
   // Get selected niche stats
   const selectedNicheStats = niches.find((n) => n.niche === selectedNiche);
-  const isNicheIncomplete =
-    selectedNiche !== "all" &&
-    selectedNicheStats &&
-    selectedNicheStats.withUrlCount < selectedNicheStats.totalCount;
-  const videosNeeded = selectedNicheStats
-    ? selectedNicheStats.totalCount - selectedNicheStats.withUrlCount
-    : 0;
+
+  // Get the IDs of empty Airtable records that don't have montager videos assigned yet
+  const unassignedEmptyRecordIds = useMemo(() => {
+    if (selectedNiche === "all") return [];
+
+    return content
+      .filter(
+        (record) =>
+          record.video_category === categoryName &&
+          record.account_niche === selectedNiche &&
+          !record.video_url &&
+          !assignedSet.has(record.id)
+      )
+      .map((record) => record.id);
+  }, [content, categoryName, selectedNiche, assignedSet]);
+
+  const videosNeeded = unassignedEmptyRecordIds.length;
+  const hasUnassignedVideos = videosNeeded > 0;
 
   const handleAddFromMontager = () => {
     // Check if validation data is loaded
@@ -94,13 +114,13 @@ export function NicheTabsFilter({
           </TabsList>
         </Tabs>
 
-        {/* Add from Montager button - only shows for incomplete niches */}
-        {isNicheIncomplete && (
+        {/* Add from Montager button - only shows when there are unassigned videos */}
+        {selectedNiche !== "all" && hasUnassignedVideos && (
           <Button
             size="sm"
             variant="outline"
             onClick={handleAddFromMontager}
-            disabled={!validation}
+            disabled={!validation || assignedRecordIds === undefined}
             className="shrink-0"
           >
             <FolderPlus className="size-4 mr-2" />
@@ -122,14 +142,13 @@ export function NicheTabsFilter({
       )}
 
       {/* Montager Video Dialog */}
-      {isNicheIncomplete && (
+      {hasUnassignedVideos && (
         <MontagerVideoDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          campaignId={campaignId}
+          airtableRecordIds={unassignedEmptyRecordIds}
           categoryName={categoryName}
           nicheName={selectedNiche}
-          videosNeeded={videosNeeded}
           onSuccess={onVideosAdded}
         />
       )}

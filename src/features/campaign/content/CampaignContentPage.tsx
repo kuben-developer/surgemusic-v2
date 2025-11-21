@@ -1,12 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
-import { useGeneratedVideos } from "./hooks/useGeneratedVideos";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
 import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
@@ -33,14 +34,7 @@ export function CampaignContentPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("categories");
-  const [videoView, setVideoView] = useState<VideoView>("airtable");
-
-  // Fetch generated videos for ready-to-publish view (only when category is selected)
-  const { videos: generatedVideos, isLoading: isLoadingGenerated, error: generatedVideosError } = useGeneratedVideos({
-    campaignId: campaignRecordId,
-    categoryName: selectedCategory || "",
-    nicheName: selectedNiche !== "all" ? selectedNiche : undefined,
-  });
+  const [videoView, setVideoView] = useState<VideoView>("published");
 
   // Calculate category stats
   const categoryStats = useMemo(() => {
@@ -60,27 +54,56 @@ export function CampaignContentPage() {
     return filterByCategoryAndNiche(data.content, selectedCategory, selectedNiche);
   }, [data?.content, selectedCategory, selectedNiche]);
 
+  // Get all airtable record IDs for the current category/niche (for querying montager videos)
+  const categoryNicheRecordIds = useMemo(() => {
+    if (!data?.content || !selectedCategory) return [];
+
+    return data.content
+      .filter((record) => {
+        const matchesCategory = record.video_category === selectedCategory;
+        const matchesNiche = selectedNiche === "all" || record.account_niche === selectedNiche;
+        return matchesCategory && matchesNiche;
+      })
+      .map((record) => record.id);
+  }, [data?.content, selectedCategory, selectedNiche]);
+
+  // Query montager videos for the Ready to Publish tab
+  const montagerVideosData = useQuery(
+    api.app.montagerDb.getMontagerVideosByAirtableRecordIds,
+    categoryNicheRecordIds.length > 0
+      ? { airtableRecordIds: categoryNicheRecordIds }
+      : "skip"
+  );
+
   // Calculate stats for selected category (not affected by niche filter)
   const categoryVideoStats = useMemo(() => {
     if (!data?.content || !selectedCategory) return { withUrl: 0, total: 0 };
     return countVideosWithUrls(data.content, selectedCategory, null);
   }, [data?.content, selectedCategory]);
 
+  // Count published videos (with video_url)
+  const publishedCount = useMemo(() => {
+    return filteredVideos.filter((v) => v.video_url).length;
+  }, [filteredVideos]);
+
+  // Count processing and processed videos
+  const processingCount = montagerVideosData?.processing?.length ?? 0;
+  const processedCount = montagerVideosData?.processed?.length ?? 0;
+
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
     setSelectedNiche("all"); // Reset niche filter when changing category
-    setVideoView("airtable"); // Reset to airtable view when changing category
+    setVideoView("published"); // Reset to published view
   };
 
   const handleBack = () => {
     setSelectedCategory(null);
     setSelectedNiche("all");
-    setVideoView("airtable");
+    setVideoView("published");
   };
 
   const handleVideosAdded = () => {
-    // Videos added successfully - the useGeneratedVideos hook will automatically refetch
-    // No need to manually refresh, Convex handles real-time updates
+    // Videos assigned successfully - Convex handles real-time updates
   };
 
   if (isLoading) {
@@ -184,6 +207,7 @@ export function CampaignContentPage() {
               totalCount={categoryVideoStats.total}
               campaignId={campaignRecordId}
               categoryName={selectedCategory}
+              content={data.content}
               onVideosAdded={handleVideosAdded}
             />
 
@@ -191,17 +215,19 @@ export function CampaignContentPage() {
             <ViewToggle
               view={videoView}
               onViewChange={setVideoView}
-              readyCount={generatedVideos.length}
+              publishedCount={publishedCount}
+              processingCount={processingCount}
+              processedCount={processedCount}
             />
 
-            {/* Conditional Video Grid */}
-            {videoView === "airtable" ? (
+            {/* Conditional Video Content */}
+            {videoView === "published" ? (
               <VideoGrid videos={filteredVideos} />
             ) : (
               <ReadyToPublishGrid
-                videos={generatedVideos}
-                isLoading={isLoadingGenerated}
-                error={generatedVideosError}
+                processingVideos={montagerVideosData?.processing ?? []}
+                processedVideos={montagerVideosData?.processed ?? []}
+                isLoading={montagerVideosData === undefined}
               />
             )}
           </div>

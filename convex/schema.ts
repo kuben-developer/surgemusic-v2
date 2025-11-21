@@ -192,20 +192,6 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_campaignId", ["campaignId"]),
 
-  generatedVideos: defineTable({
-    generatedVideoId: v.string(), // "{campaignId}-{categoryName}-{nicheName}"
-    campaignId: v.string(),
-    categoryName: v.string(),
-    nicheName: v.string(),
-    overlayStyle: v.string(),
-    videoUrl: v.string(),
-    generatedVideoUrl: v.optional(v.string()),
-    sentToAirtable: v.boolean(),
-  })
-    .index("by_generatedVideoId", ["generatedVideoId"])
-    .index("by_generatedVideoUrl_sentToAirtable", ["generatedVideoUrl", "sentToAirtable"])
-    .index("by_campaign_category", ["campaignId", "categoryName", "sentToAirtable"]),
-
   clipperFolders: defineTable({
     userId: v.id('users'),
     folderName: v.string(),
@@ -249,12 +235,18 @@ export default defineSchema({
     montagerFolderId: v.id('montagerFolders'),
     videoUrl: v.string(),
     thumbnailUrl: v.string(),
-    isUsed: v.boolean(),
-    isPublished: v.boolean(),
+    processedVideoUrl: v.optional(v.string()),
+
+    status: v.union(
+      v.literal("pending"),
+      v.literal("ready_for_processing"),
+      v.literal("processed"),
+      v.literal("published"),
+    ),
+    overlayStyle: v.optional(v.string()),
     airtableRecordId: v.optional(v.string()),
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
-    .index("by_montagerFolderId_isUsed", ["montagerFolderId", "isUsed"])
-    .index("by_videoUrl", ["videoUrl"])
+    .index("by_montagerFolderId_status", ["montagerFolderId", "status"])
     .index("by_airtableRecordId", ["airtableRecordId"]),
 })

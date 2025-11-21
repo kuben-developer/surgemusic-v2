@@ -42,7 +42,9 @@ export interface MontagerVideo {
 }
 
 export interface MontagerFolder {
-  name: string;
-  montageCount: number;
-  lastModified: number;
+  _id: string;
+  folderName: string;
+  videoCount: number;
+  configCount: number;
+  pendingConfigs: number;
 }

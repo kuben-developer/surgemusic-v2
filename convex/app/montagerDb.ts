@@ -115,7 +115,7 @@ export const getVideos = query({
 
     const videos = await ctx.db
       .query("montagerVideos")
-      .withIndex("by_montagerFolderId_isUsed", (q) => q.eq("montagerFolderId", args.folderId).eq("isUsed", false))
+      .withIndex("by_montagerFolderId_status", (q) => q.eq("montagerFolderId", args.folderId).eq("status", "pending"))
       .collect();
 
     return videos;
@@ -370,6 +370,175 @@ export const deleteVideo = mutation({
   },
 });
 
+/**
+ * Assign montager videos to Airtable records
+ * Updates first N pending videos with overlay style and airtable record IDs
+ */
+export const assignVideosToAirtable = mutation({
+  args: {
+    folderId: v.id("montagerFolders"),
+    overlayStyle: v.string(),
+    airtableRecordIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Verify folder belongs to user
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder || folder.userId !== user._id) {
+      throw new Error("Folder not found");
+    }
+
+    const count = args.airtableRecordIds.length;
+
+    // Get first N pending videos from the folder
+    const pendingVideos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_montagerFolderId_status", (q) =>
+        q.eq("montagerFolderId", args.folderId).eq("status", "pending")
+      )
+      .take(count);
+
+    if (pendingVideos.length < count) {
+      throw new Error(
+        `Not enough pending videos in folder. Need ${count}, found ${pendingVideos.length}`
+      );
+    }
+
+    // Update each video with the corresponding airtable record ID
+    const updatedIds = [];
+    for (let i = 0; i < count; i++) {
+      const video = pendingVideos[i];
+      const airtableRecordId = args.airtableRecordIds[i];
+
+      if (video && airtableRecordId) {
+        await ctx.db.patch(video._id, {
+          status: "ready_for_processing",
+          overlayStyle: args.overlayStyle,
+          airtableRecordId: airtableRecordId,
+        });
+        updatedIds.push(video._id);
+      }
+    }
+
+    return {
+      success: true,
+      count: updatedIds.length,
+      ids: updatedIds,
+    };
+  },
+});
+
+/**
+ * Get count of pending videos in a folder
+ */
+export const getPendingVideoCount = query({
+  args: {
+    folderId: v.id("montagerFolders"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return 0;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return 0;
+    }
+
+    // Verify folder belongs to user
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder || folder.userId !== user._id) {
+      return 0;
+    }
+
+    const videos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_montagerFolderId_status", (q) =>
+        q.eq("montagerFolderId", args.folderId).eq("status", "pending")
+      )
+      .collect();
+
+    return videos.length;
+  },
+});
+
+/**
+ * Get all airtableRecordIds that have been assigned to montager videos
+ * Used to filter out records that already have videos assigned
+ */
+export const getAssignedAirtableRecordIds = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get all montagerVideos that have an airtableRecordId (not pending)
+    const allVideos = await ctx.db
+      .query("montagerVideos")
+      .collect();
+
+    // Filter for videos that have an airtableRecordId assigned
+    const assignedIds = allVideos
+      .filter((video) => video.airtableRecordId && video.status !== "pending")
+      .map((video) => video.airtableRecordId as string);
+
+    return assignedIds;
+  },
+});
+
+/**
+ * Get montager videos by their airtableRecordIds
+ * Used to display videos in the Ready to Publish tab
+ */
+export const getMontagerVideosByAirtableRecordIds = query({
+  args: {
+    airtableRecordIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.airtableRecordIds.length === 0) {
+      return { processing: [], processed: [] };
+    }
+
+    // Query videos for each airtableRecordId
+    const videos = await Promise.all(
+      args.airtableRecordIds.map(async (recordId) => {
+        const video = await ctx.db
+          .query("montagerVideos")
+          .withIndex("by_airtableRecordId", (q) => q.eq("airtableRecordId", recordId))
+          .first();
+        return video;
+      })
+    );
+
+    // Filter out nulls and group by status
+    const validVideos = videos.filter((v) => v !== null);
+
+    const processing = validVideos.filter(
+      (v) => v.status === "ready_for_processing"
+    );
+    const processed = validVideos.filter(
+      (v) => v.status === "processed"
+    );
+
+    return { processing, processed };
+  },
+});
+
 // =====================================================
 // INTERNAL API FUNCTIONS (for HTTP endpoints)
 // =====================================================
@@ -481,8 +650,7 @@ export const updateVideosExternal = internalMutation({
         montagerFolderId: config.montagerFolderId,
         videoUrl: video.videoUrl,
         thumbnailUrl: video.thumbnailUrl,
-        isUsed: false,
-        isPublished: false,
+        status: "pending",
       });
       insertedIds.push(videoId);
     }
