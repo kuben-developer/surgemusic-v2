@@ -29,9 +29,12 @@ export const getFolders = query({
     // Get video counts and config status for each folder
     const foldersWithCounts = await Promise.all(
       folders.map(async (folder) => {
-        const videos = await ctx.db
+        // Only count pending videos (available to assign)
+        const pendingVideos = await ctx.db
           .query("montagerVideos")
-          .withIndex("by_montagerFolderId", (q) => q.eq("montagerFolderId", folder._id))
+          .withIndex("by_montagerFolderId_status", (q) =>
+            q.eq("montagerFolderId", folder._id).eq("status", "pending")
+          )
           .collect();
 
         const configs = await ctx.db
@@ -43,7 +46,7 @@ export const getFolders = query({
 
         return {
           ...folder,
-          videoCount: videos.length,
+          videoCount: pendingVideos.length,
           configCount: configs.length,
           pendingConfigs,
         };
@@ -243,10 +246,13 @@ export const deleteFolderDb = mutation({
       await ctx.db.delete(config._id);
     }
 
-    // Delete all videos in the folder
+    // Only delete videos with status "pending" (unassigned videos)
+    // Keep videos that have been assigned to airtable records
     const videos = await ctx.db
       .query("montagerVideos")
-      .withIndex("by_montagerFolderId", (q) => q.eq("montagerFolderId", args.folderId))
+      .withIndex("by_montagerFolderId_status", (q) =>
+        q.eq("montagerFolderId", args.folderId).eq("status", "pending")
+      )
       .collect();
 
     for (const video of videos) {
