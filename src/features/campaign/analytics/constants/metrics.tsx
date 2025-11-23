@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart2, Eye, Heart, MessageSquare, Share2, Bookmark } from "lucide-react";
+import { BarChart2, Eye, Heart, MessageSquare, Share2 } from "lucide-react";
 
 // KPI Metric configurations for the KPIMetrics component
 export interface KPIMetricConfig {
@@ -18,7 +18,6 @@ export interface KPIMetricData {
     likes: number;
     comments: number;
     shares: number;
-    saves: number;
   };
 }
 
@@ -62,14 +61,6 @@ export const KPI_METRICS: KPIMetricConfig[] = [
     bgColor: "bg-blue-100 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
     getValue: (data) => data.totals.shares.toLocaleString(),
-  },
-  {
-    key: "saves",
-    label: "Saves",
-    icon: <Bookmark className="h-4 w-4" />,
-    bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
-    iconColor: "text-yellow-600 dark:text-yellow-400",
-    getValue: (data) => data.totals.saves.toLocaleString(),
   },
 ];
 

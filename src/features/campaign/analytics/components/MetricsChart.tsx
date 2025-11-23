@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Eye, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { Eye, Heart, MessageCircle, Share2 } from "lucide-react";
 import { chartVariants } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
 
@@ -15,7 +15,6 @@ interface MetricsChartProps {
     likes: number;
     comments: number;
     shares: number;
-    saves: number;
   }>;
   activeMetric: MetricType;
   onActiveMetricChange: (metric: MetricType) => void;
@@ -42,11 +41,6 @@ const METRIC_CONFIG = {
     icon: Share2,
     color: "#A855F7",
   },
-  saves: {
-    label: "Saves",
-    icon: Bookmark,
-    color: "#EAB308",
-  },
 } as const;
 
 export function MetricsChart({
@@ -70,7 +64,7 @@ export function MetricsChart({
 
         {/* Metric Tabs */}
         <Tabs value={activeMetric} onValueChange={(value) => onActiveMetricChange(value as MetricType)}>
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="views">
               <Eye className="h-4 w-4 mr-1.5" />
               Views
@@ -86,10 +80,6 @@ export function MetricsChart({
             <TabsTrigger value="shares">
               <Share2 className="h-4 w-4 mr-1.5" />
               Shares
-            </TabsTrigger>
-            <TabsTrigger value="saves">
-              <Bookmark className="h-4 w-4 mr-1.5" />
-              Saves
             </TabsTrigger>
           </TabsList>
         </Tabs>

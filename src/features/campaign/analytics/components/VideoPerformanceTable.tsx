@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Eye, Heart, MessageCircle, Share2, Bookmark, ExternalLink } from "lucide-react";
+import { Eye, Heart, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { useState } from "react";
 
 interface VideoMetric {
@@ -15,7 +15,6 @@ interface VideoMetric {
   likes: number;
   comments: number;
   shares: number;
-  saves: number;
 }
 
 interface VideoPerformanceTableProps {
@@ -121,10 +120,6 @@ export function VideoPerformanceTable({ videoMetrics }: VideoPerformanceTablePro
                 <div className="flex items-center gap-1">
                   <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>{video.comments.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>{video.saves.toLocaleString()}</span>
                 </div>
               </div>
             </div>

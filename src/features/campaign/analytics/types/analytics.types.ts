@@ -6,7 +6,6 @@ export interface CampaignAnalyticsData {
     likes: number;
     comments: number;
     shares: number;
-    saves: number;
   };
   dailyData: Array<{
     date: string;
@@ -14,7 +13,6 @@ export interface CampaignAnalyticsData {
     likes: number;
     comments: number;
     shares: number;
-    saves: number;
   }>;
   videoMetrics: Array<{
     postId: string;
@@ -26,7 +24,6 @@ export interface CampaignAnalyticsData {
     likes: number;
     comments: number;
     shares: number;
-    saves: number;
   }>;
   lastUpdatedAt: number;
   campaignMetadata: {
@@ -42,4 +39,4 @@ export interface DateFilter {
   endDate: Date;
 }
 
-export type MetricType = 'views' | 'likes' | 'comments' | 'shares' | 'saves';
+export type MetricType = 'views' | 'likes' | 'comments' | 'shares';
