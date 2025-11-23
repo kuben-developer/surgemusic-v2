@@ -144,7 +144,7 @@ export const getCampaigns = action({
         const records = await fetchRecords(
             AIRTABLE_CAMPAIGN_TABLE_ID,
             '{Status} = "Active"',
-            ["campaign_id", "Artist / Song", "Status"]
+            ["campaign", "client_id", "Status"]
         );
 
         const outputData: CampaignOutput[] = [];
@@ -152,13 +152,13 @@ export const getCampaigns = action({
         for (const record of records) {
             const output: CampaignOutput = {
                 id: record.id,
-                campaign_id: record.fields["campaign_id"] as string,
+                campaign_id: record.fields["campaign"] as string,
                 artist: "",
                 song: "",
             };
 
             // Fetch artist and song details from related table
-            const artistSongIds = record.fields["Artist / Song"] as string[] | undefined;
+            const artistSongIds = record.fields["client_id"] as string[] | undefined;
             if (artistSongIds?.[0]) {
                 const artistRecord = await fetchRecordById(AIRTABLE_ARTIST_TABLE_ID, artistSongIds[0]);
                 if (artistRecord) {
@@ -195,15 +195,15 @@ export const getCampaignContent = action({
             throw new Error("Campaign not found");
         }
 
-        const campaignId = campaign.fields["campaign_id"] as string;
+        const campaignId = campaign.fields["campaign"] as string;
         if (!campaignId) {
-            throw new Error("Campaign has no campaign_id");
+            throw new Error("Campaign has no campaign field");
         }
 
         // Fetch artist and song details from related table
         let artist = "";
         let song = "";
-        const artistSongIds = campaign.fields["Artist / Song"] as string[] | undefined;
+        const artistSongIds = campaign.fields["client_id"] as string[] | undefined;
         if (artistSongIds?.[0]) {
             const artistRecord = await fetchRecordById(AIRTABLE_ARTIST_TABLE_ID, artistSongIds[0]);
             if (artistRecord) {

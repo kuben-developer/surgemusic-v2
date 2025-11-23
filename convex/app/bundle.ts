@@ -401,7 +401,7 @@ export const refreshTiktokStatsByCampaign = action({
       console.log(`[refreshTiktokStats] Found ${existingPostIdsSet.size} total existing posts in database`);
 
       // Filter out posts to skip BEFORE batching (optimization!)
-      const contentsToProcess = contents.filter((content: { postId: string; campaignId: string; }) => !postsToSkipSet.has(content.postId));
+      const contentsToProcess = contents.filter((content: { postId: string; campaignId: string; }) => !postsToSkipSet.has(content.postId)).slice(0, 500);
       console.log(`[refreshTiktokStats] Filtered to ${contentsToProcess.length} contents to process (skipped ${contents.length - contentsToProcess.length} already tracked posts)`);
 
       // Collect all successful data for bulk operations
