@@ -82,7 +82,7 @@ export function VideoPerformanceTable({ videoMetrics }: VideoPerformanceTablePro
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">Video {video.videoId}</h4>
+                <h4 className="font-medium truncate">{video.videoId}</h4>
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">
                     {new Date(video.postedAt * 1000).toLocaleDateString('en-US', {
@@ -105,20 +105,20 @@ export function VideoPerformanceTable({ videoMetrics }: VideoPerformanceTablePro
                 </div>
               </div>
               <div className="flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1 min-w-[60px]">
+                  <Eye className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                   <span>{video.views.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Heart className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1 min-w-[60px]">
+                  <Heart className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                   <span>{video.likes.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Share2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1 min-w-[60px]">
+                  <Share2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                   <span>{video.shares.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1 min-w-[60px]">
+                  <MessageCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                   <span>{video.comments.toLocaleString()}</span>
                 </div>
               </div>
