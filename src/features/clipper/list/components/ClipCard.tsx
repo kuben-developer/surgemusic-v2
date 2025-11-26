@@ -1,25 +1,35 @@
 "use client";
 
+import { memo, useRef, useState, useCallback } from "react";
 import { Sparkles, Sun, Play, Pause } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { ClipWithIndex } from "../types/clipper.types";
-import { useRef, useState } from "react";
 
 interface ClipCardProps {
   clip: ClipWithIndex;
   isSelected: boolean;
-  onToggleSelection: () => void;
+  onToggleSelection: (index: number) => void;
+  onThumbnailLoad?: () => void;
 }
 
-export function ClipCard({
+export const ClipCard = memo(function ClipCard({
   clip,
   isSelected,
   onToggleSelection,
+  onThumbnailLoad,
 }: ClipCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false);
+
+  const handleThumbnailLoad = useCallback(() => {
+    if (!thumbnailLoaded) {
+      setThumbnailLoaded(true);
+      onThumbnailLoad?.();
+    }
+  }, [thumbnailLoaded, onThumbnailLoad]);
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -52,20 +62,24 @@ export function ClipCard({
   const clarityQuality = getQualityLabel(clip.clarity, 'clarity');
   const brightnessQuality = getQualityLabel(clip.brightness, 'brightness');
 
+  const handleToggle = useCallback(() => {
+    onToggleSelection(clip.index);
+  }, [onToggleSelection, clip.index]);
+
   return (
     <Card
       className={cn(
         "group relative transition-all hover:shadow-lg hover:bg-muted/50 cursor-pointer",
         isSelected && "ring-2 ring-primary"
       )}
-      onClick={onToggleSelection}
+      onClick={handleToggle}
     >
       <CardContent className="p-3">
         {/* Checkbox */}
         <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10">
           <Checkbox
             checked={isSelected}
-            onCheckedChange={onToggleSelection}
+            onCheckedChange={handleToggle}
             className="size-6 sm:size-5 bg-white shadow-md"
             onClick={(e) => e.stopPropagation()}
           />
@@ -73,6 +87,15 @@ export function ClipCard({
 
         {/* Thumbnail/Video Player - Vertical TikTok Style */}
         <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden mb-2">
+          {/* Hidden img to track thumbnail load */}
+          <img
+            src={clip.thumbnailUrl}
+            alt=""
+            className="hidden"
+            onLoad={handleThumbnailLoad}
+            onError={handleThumbnailLoad}
+          />
+
           {/* Clip number badge */}
           <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded">
             #{clip.clipNumber}
@@ -133,4 +156,4 @@ export function ClipCard({
       </CardContent>
     </Card>
   );
-}
+});

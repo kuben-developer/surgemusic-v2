@@ -15,6 +15,7 @@ export { VideoCard } from "./components/VideoCard";
 export { ClipsToolbar } from "./components/ClipsToolbar";
 export { ClipsGrid } from "./components/ClipsGrid";
 export { ClipCard } from "./components/ClipCard";
+export { ClipsPagination } from "./components/ClipsPagination";
 export { SortToggleButtons } from "./components/SortToggleButtons";
 
 // Hooks - Folders & Videos
@@ -26,9 +27,14 @@ export { useVideoUpload } from "./hooks/useVideoUpload";
 export { useClipsData } from "./hooks/useClipsData";
 export { useClipsSorting } from "./hooks/useClipsSorting";
 export { useClipSelection } from "./hooks/useClipSelection";
+export { useClipsPagination } from "./hooks/useClipsPagination";
+export { useThumbnailPrefetch } from "./hooks/useThumbnailPrefetch";
 
 // Utils
 export { sanitizeInputVideoName } from "./utils/sanitize.utils";
+
+// Constants
+export { CLIPS_PER_PAGE } from "./constants/clips.constants";
 
 // Types
 export * from "./types/clipper.types";

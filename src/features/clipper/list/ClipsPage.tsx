@@ -5,8 +5,10 @@ import { useState } from "react";
 import { useClipsData } from "./hooks/useClipsData";
 import { useClipsSorting } from "./hooks/useClipsSorting";
 import { useClipSelection } from "./hooks/useClipSelection";
+import { useClipsPagination } from "./hooks/useClipsPagination";
 import { ClipsToolbar } from "./components/ClipsToolbar";
 import { ClipsGrid } from "./components/ClipsGrid";
+import { ClipsPagination } from "./components/ClipsPagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Video, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,14 +40,18 @@ export function ClipsPage() {
   );
 
   const { sortedClips, sortOptions, setSortField } = useClipsSorting(clips);
+  const { currentPage, totalPages, paginatedRange, handlePageChange, isPending } =
+    useClipsPagination({ totalItems: sortedClips.length });
   const {
     selectedIndices,
+    selectedSet,
     selectedCount,
     toggleSelection,
     selectAll,
     clearSelection,
     isSelected,
   } = useClipSelection();
+
 
   const handleBack = () => {
     router.push(`/clipper/${folderId}`);
@@ -114,11 +120,21 @@ export function ClipsPage() {
           videoName={video.inputVideoName}
         />
 
-        <ClipsGrid
-          clips={sortedClips}
-          selectedIndices={selectedIndices}
-          onToggleSelection={toggleSelection}
+        <ClipsPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          isPending={isPending}
         />
+
+        <div className={isPending ? "opacity-60 transition-opacity" : ""}>
+          <ClipsGrid
+            allClips={sortedClips}
+            visibleRange={paginatedRange}
+            selectedSet={selectedSet}
+            onToggleSelection={toggleSelection}
+          />
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}

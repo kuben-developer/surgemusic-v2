@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 /**
  * Hook for managing clip selection using indices
  */
 export function useClipSelection() {
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [selectedSet, setSelectedSet] = useState<Set<number>>(new Set());
 
   const toggleSelection = useCallback((index: number) => {
-    setSelectedIndices((prev) => {
+    setSelectedSet((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
         newSet.delete(index);
@@ -21,23 +21,30 @@ export function useClipSelection() {
   }, []);
 
   const selectAll = useCallback((indices: number[]) => {
-    setSelectedIndices(new Set(indices));
+    setSelectedSet(new Set(indices));
   }, []);
 
   const clearSelection = useCallback(() => {
-    setSelectedIndices(new Set());
+    setSelectedSet(new Set());
   }, []);
 
   const isSelected = useCallback(
     (index: number) => {
-      return selectedIndices.has(index);
+      return selectedSet.has(index);
     },
-    [selectedIndices]
+    [selectedSet]
+  );
+
+  // Memoize array conversion to prevent unnecessary re-renders
+  const selectedIndices = useMemo(
+    () => Array.from(selectedSet),
+    [selectedSet]
   );
 
   return {
-    selectedIndices: Array.from(selectedIndices),
-    selectedCount: selectedIndices.size,
+    selectedIndices,
+    selectedSet, // Expose Set for O(1) lookups
+    selectedCount: selectedSet.size,
     toggleSelection,
     selectAll,
     clearSelection,
