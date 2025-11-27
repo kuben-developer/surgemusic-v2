@@ -5,11 +5,12 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import type { OverlayStyle } from "../constants/overlay-styles.constants";
+import type { RenderType } from "../constants/render-types.constants";
 import { validateVideoCount } from "../utils/video-selection.utils";
 import type { MontagerFolder } from "../../shared/types/campaign.types";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
-export type DialogStep = "folder" | "overlay" | "confirm";
+export type DialogStep = "folder" | "overlay" | "renderType" | "confirm";
 
 interface UseMontagerVideoAdditionProps {
   airtableRecordIds: string[];
@@ -26,6 +27,7 @@ export function useMontagerVideoAddition({
   const [currentStep, setCurrentStep] = useState<DialogStep>("folder");
   const [selectedFolder, setSelectedFolder] = useState<MontagerFolder | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<OverlayStyle | null>(null);
+  const [selectedRenderType, setSelectedRenderType] = useState<RenderType>("Both");
   const [isLoading, setIsLoading] = useState(false);
   const [videosToAssign, setVideosToAssignState] = useState<number>(airtableRecordIds.length);
 
@@ -51,6 +53,7 @@ export function useMontagerVideoAddition({
     setCurrentStep("folder");
     setSelectedFolder(null);
     setSelectedStyle(null);
+    setSelectedRenderType("Both");
     setVideosToAssignState(videosNeeded); // Reset to max on open
   };
 
@@ -59,6 +62,7 @@ export function useMontagerVideoAddition({
     setCurrentStep("folder");
     setSelectedFolder(null);
     setSelectedStyle(null);
+    setSelectedRenderType("Both");
     setVideosToAssignState(videosNeeded); // Reset on close
   };
 
@@ -79,6 +83,8 @@ export function useMontagerVideoAddition({
     if (currentStep === "folder" && selectedFolder) {
       setCurrentStep("overlay");
     } else if (currentStep === "overlay" && selectedStyle) {
+      setCurrentStep("renderType");
+    } else if (currentStep === "renderType" && selectedRenderType) {
       setCurrentStep("confirm");
     }
   };
@@ -86,8 +92,10 @@ export function useMontagerVideoAddition({
   const handlePreviousStep = () => {
     if (currentStep === "overlay") {
       setCurrentStep("folder");
-    } else if (currentStep === "confirm") {
+    } else if (currentStep === "renderType") {
       setCurrentStep("overlay");
+    } else if (currentStep === "confirm") {
+      setCurrentStep("renderType");
     }
   };
 
@@ -112,6 +120,7 @@ export function useMontagerVideoAddition({
       const result = await assignVideos({
         folderId: selectedFolder._id as Id<"montagerFolders">,
         overlayStyle: selectedStyle,
+        renderType: selectedRenderType,
         airtableRecordIds: recordsToAssign,
         campaignId,
       });
@@ -136,6 +145,7 @@ export function useMontagerVideoAddition({
     currentStep,
     selectedFolder,
     selectedStyle,
+    selectedRenderType,
     isLoading,
     videosNeeded,
     videosToAssign,
@@ -146,6 +156,7 @@ export function useMontagerVideoAddition({
     closeDialog,
     setSelectedFolder: handleSelectFolder,
     setSelectedStyle,
+    setSelectedRenderType,
     setVideosToAssign,
     handleNextStep,
     handlePreviousStep,

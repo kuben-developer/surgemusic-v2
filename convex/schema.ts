@@ -244,6 +244,7 @@ export default defineSchema({
       v.literal("published"),
     ),
     overlayStyle: v.optional(v.string()),
+    renderType: v.optional(v.string()), // "Both" | "LyricsOnly" | "CaptionOnly"
     airtableRecordId: v.optional(v.string()),
     campaignId: v.optional(v.string()), // Airtable campaign ID for fetching assets
   })

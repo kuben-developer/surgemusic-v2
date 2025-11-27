@@ -384,6 +384,7 @@ export const assignVideosToAirtable = mutation({
   args: {
     folderId: v.id("montagerFolders"),
     overlayStyle: v.string(),
+    renderType: v.optional(v.string()), // "Both" | "LyricsOnly" | "CaptionOnly"
     airtableRecordIds: v.array(v.string()),
     campaignId: v.string(), // Airtable campaign ID for fetching assets
   },
@@ -434,6 +435,7 @@ export const assignVideosToAirtable = mutation({
         await ctx.db.patch(video._id, {
           status: "ready_for_processing",
           overlayStyle: args.overlayStyle,
+          renderType: args.renderType ?? "Both",
           airtableRecordId: airtableRecordId,
           campaignId: args.campaignId,
         });
@@ -687,6 +689,7 @@ export const getPendingVideosForProcessingInternal = internalQuery({
         videoUrl: video.videoUrl,
         thumbnailUrl: video.thumbnailUrl,
         overlayStyle: video.overlayStyle,
+        renderType: video.renderType ?? "Both",
         airtableRecordId: video.airtableRecordId,
         campaignId: video.campaignId,
         // Campaign assets

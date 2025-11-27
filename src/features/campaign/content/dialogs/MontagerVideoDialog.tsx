@@ -14,7 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, FolderOpen, Loader2, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OverlayStyleSelector } from "./OverlayStyleSelector";
+import { RenderTypeSelector } from "./RenderTypeSelector";
 import { useMontagerVideoAddition } from "../hooks/useMontagerVideoAddition";
+import { RENDER_TYPE_OPTIONS } from "../constants/render-types.constants";
 import type { MontagerFolder } from "../../shared/types/campaign.types";
 
 interface MontagerVideoDialogProps {
@@ -40,6 +42,7 @@ export function MontagerVideoDialog({
     currentStep,
     selectedFolder,
     selectedStyle,
+    selectedRenderType,
     isLoading,
     videosNeeded,
     videosToAssign,
@@ -48,6 +51,7 @@ export function MontagerVideoDialog({
     foldersLoading,
     setSelectedFolder,
     setSelectedStyle,
+    setSelectedRenderType,
     setVideosToAssign,
     handleNextStep,
     handlePreviousStep,
@@ -64,6 +68,7 @@ export function MontagerVideoDialog({
   const canProceed = () => {
     if (currentStep === "folder") return selectedFolder !== null;
     if (currentStep === "overlay") return selectedStyle !== null;
+    if (currentStep === "renderType") return selectedRenderType !== null;
     if (currentStep === "confirm") return true;
     return false;
   };
@@ -74,6 +79,8 @@ export function MontagerVideoDialog({
         return "Select Montager Folder";
       case "overlay":
         return "Select Overlay Style";
+      case "renderType":
+        return "Select Render Type";
       case "confirm":
         return "Confirm & Submit";
       default:
@@ -87,6 +94,8 @@ export function MontagerVideoDialog({
         return `Select a folder with available videos (need up to ${videosNeeded})`;
       case "overlay":
         return "Choose the visual style for video processing";
+      case "renderType":
+        return "Choose what content to include in the render";
       case "confirm":
         return "Review your selections and adjust video count if needed";
       default:
@@ -191,7 +200,15 @@ export function MontagerVideoDialog({
             />
           )}
 
-          {/* Step 3: Confirm */}
+          {/* Step 3: Select Render Type */}
+          {currentStep === "renderType" && (
+            <RenderTypeSelector
+              selectedType={selectedRenderType}
+              onSelectType={setSelectedRenderType}
+            />
+          )}
+
+          {/* Step 4: Confirm */}
           {currentStep === "confirm" && (
             <div className="space-y-4">
               <div className="rounded-lg border p-4 space-y-3">
@@ -210,6 +227,12 @@ export function MontagerVideoDialog({
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Overlay Style</div>
                   <div className="font-medium">{selectedStyle}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Render Type</div>
+                  <div className="font-medium">
+                    {RENDER_TYPE_OPTIONS.find((o) => o.value === selectedRenderType)?.label}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Videos to Assign</div>
@@ -260,7 +283,7 @@ export function MontagerVideoDialog({
 
         <DialogFooter className="flex items-center justify-between sm:justify-between">
           <div className="text-sm text-muted-foreground">
-            Step {currentStep === "folder" ? 1 : currentStep === "overlay" ? 2 : 3} of 3
+            Step {currentStep === "folder" ? 1 : currentStep === "overlay" ? 2 : currentStep === "renderType" ? 3 : 4} of 4
           </div>
           <div className="flex gap-2">
             {currentStep !== "folder" && (
