@@ -739,6 +739,72 @@ export const updateProcessedVideoExternal = internalMutation({
 });
 
 /**
+ * Unassign videos from Airtable records and return them to pending status
+ * Used when users want to regenerate videos with different content
+ */
+export const unassignVideosFromAirtable = mutation({
+  args: {
+    videoIds: v.array(v.id("montagerVideos")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    if (args.videoIds.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    let unassignedCount = 0;
+
+    for (const videoId of args.videoIds) {
+      const video = await ctx.db.get(videoId);
+      if (!video) {
+        continue;
+      }
+
+      // Verify user has access via folder ownership
+      const folder = await ctx.db.get(video.montagerFolderId);
+      if (!folder || folder.userId !== user._id) {
+        continue;
+      }
+
+      // Only unassign processed videos
+      if (video.status !== "processed") {
+        continue;
+      }
+
+      // Reset video to pending status
+      await ctx.db.patch(videoId, {
+        status: "pending",
+        overlayStyle: undefined,
+        renderType: undefined,
+        airtableRecordId: undefined,
+        campaignId: undefined,
+        processedVideoUrl: undefined,
+      });
+
+      unassignedCount++;
+    }
+
+    return {
+      success: true,
+      count: unassignedCount,
+    };
+  },
+});
+
+/**
  * Internal mutation to add videos and mark config as processed
  * Used by the external API endpoint POST /api/montager/update
  */

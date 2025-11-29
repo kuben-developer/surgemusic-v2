@@ -3,9 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle, Upload, Video } from "lucide-react";
+import { Clock, CheckCircle, Upload, Video, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useVideoSelection } from "../hooks/useVideoSelection";
+import { UnassignVideosDialog } from "../dialogs/UnassignVideosDialog";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 type MontagerVideo = Doc<"montagerVideos">;
@@ -22,6 +26,19 @@ export function ReadyToPublishGrid({
   isLoading,
 }: ReadyToPublishGridProps) {
   const totalCount = processingVideos.length + processedVideos.length;
+  const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+
+  const {
+    selectedIds,
+    selectedCount,
+    hasSelection,
+    allSelected,
+    isSelected,
+    toggleSelection,
+    selectAll,
+    deselectAll,
+    clearSelection,
+  } = useVideoSelection(processedVideos);
 
   if (isLoading) {
     return (
@@ -53,19 +70,51 @@ export function ReadyToPublishGrid({
       {processedVideos.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="size-4 text-green-500" />
-              <h3 className="font-medium">Ready to Publish ({processedVideos.length})</h3>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    selectAll();
+                  } else {
+                    deselectAll();
+                  }
+                }}
+                aria-label="Select all videos"
+              />
+              <div className="flex items-center gap-2">
+                <CheckCircle className="size-4 text-green-500" />
+                <h3 className="font-medium">
+                  Ready to Publish ({processedVideos.length})
+                  {hasSelection && (
+                    <span className="text-muted-foreground font-normal">
+                      {" "}- {selectedCount} selected
+                    </span>
+                  )}
+                </h3>
+              </div>
             </div>
-            <Button
-              size="sm"
-              onClick={() => {
-                toast.info("Publish to Airtable feature coming soon!");
-              }}
-            >
-              <Upload className="size-4 mr-2" />
-              Publish All to Airtable
-            </Button>
+            <div className="flex items-center gap-2">
+              {hasSelection && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setUnassignDialogOpen(true)}
+                >
+                  <Trash2 className="size-4 mr-2" />
+                  Unassign ({selectedCount})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => {
+                  toast.info("Publish to Airtable feature coming soon!");
+                }}
+              >
+                <Upload className="size-4 mr-2" />
+                Publish All to Airtable
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {processedVideos.map((video) => (
@@ -73,11 +122,22 @@ export function ReadyToPublishGrid({
                 key={video._id}
                 video={video}
                 status="processed"
+                selectable
+                isSelected={isSelected(video._id)}
+                onToggleSelect={() => toggleSelection(video._id)}
               />
             ))}
           </div>
         </div>
       )}
+
+      {/* Unassign Confirmation Dialog */}
+      <UnassignVideosDialog
+        open={unassignDialogOpen}
+        onOpenChange={setUnassignDialogOpen}
+        selectedVideoIds={selectedIds}
+        onSuccess={clearSelection}
+      />
 
       {/* Processing Section (at bottom) */}
       {processingVideos.length > 0 && (
@@ -104,9 +164,18 @@ export function ReadyToPublishGrid({
 interface ReadyToPublishVideoCardProps {
   video: MontagerVideo;
   status: "processing" | "processed";
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-function ReadyToPublishVideoCard({ video, status }: ReadyToPublishVideoCardProps) {
+function ReadyToPublishVideoCard({
+  video,
+  status,
+  selectable = false,
+  isSelected = false,
+  onToggleSelect,
+}: ReadyToPublishVideoCardProps) {
   const [isInView, setIsInView] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -138,10 +207,28 @@ function ReadyToPublishVideoCard({ video, status }: ReadyToPublishVideoCardProps
   return (
     <div
       ref={containerRef}
-      className="group relative aspect-[9/16] rounded-lg overflow-hidden bg-muted border"
+      className={cn(
+        "group relative aspect-[9/16] rounded-lg overflow-hidden bg-muted border transition-all",
+        isSelected && "ring-2 ring-primary border-primary"
+      )}
     >
+      {/* Selection Checkbox */}
+      {selectable && (
+        <div
+          className="absolute top-2 left-2 z-20"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect?.()}
+            className="bg-background/80 backdrop-blur-sm"
+            aria-label={`Select video ${video._id}`}
+          />
+        </div>
+      )}
+
       {/* Status Badge */}
-      <div className="absolute top-2 left-2 z-10">
+      <div className={cn("absolute top-2 z-10", selectable ? "left-8" : "left-2")}>
         {status === "processing" ? (
           <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
             <Clock className="size-3 mr-1" />
