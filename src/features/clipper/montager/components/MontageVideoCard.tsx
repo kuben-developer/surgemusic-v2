@@ -35,11 +35,17 @@ export function MontageVideoCard({ video }: MontageVideoCardProps) {
         <CardContent className="p-0">
           {/* Thumbnail */}
           <div className="relative aspect-[9/16] bg-muted">
-            {video.thumbnailUrl ? (
+            {video.thumbnailUrl && video.thumbnailUrl !== "manual_upload" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={video.thumbnailUrl}
                 alt={filename}
+                className="h-full w-full object-cover"
+              />
+            ) : video.thumbnailUrl === "manual_upload" ? (
+              <video
+                src={video.videoUrl}
+                muted
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -70,16 +76,16 @@ export function MontageVideoCard({ video }: MontageVideoCardProps) {
 
       {/* Video Player Dialog */}
       <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="truncate">{filename}</DialogTitle>
           </DialogHeader>
-          <div className="aspect-[9/16] bg-black">
+          <div className="flex-1 min-h-0 bg-black flex items-center justify-center">
             <video
               src={video.videoUrl}
               controls
               autoPlay
-              className="h-full w-full"
+              className="max-h-[calc(90vh-8rem)] max-w-full object-contain"
             />
           </div>
         </DialogContent>

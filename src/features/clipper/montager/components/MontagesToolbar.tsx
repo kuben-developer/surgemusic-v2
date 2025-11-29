@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Download, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Clock, Upload } from "lucide-react";
 
 interface MontagesToolbarProps {
   folderName: string;
   onBack: () => void;
   onCreateConfig: () => void;
+  onUpload: () => void;
   onDownloadAll: () => void;
   totalCount: number;
   pendingConfigs: number;
@@ -17,6 +18,7 @@ export function MontagesToolbar({
   folderName,
   onBack,
   onCreateConfig,
+  onUpload,
   onDownloadAll,
   totalCount,
   pendingConfigs,
@@ -64,6 +66,15 @@ export function MontagesToolbar({
             <span className="hidden sm:inline">Download All</span>
             <span className="sm:hidden">Download</span>
           </Button> */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onUpload}
+            className="gap-2"
+          >
+            <Upload className="size-4" />
+            <span className="hidden sm:inline">Upload</span>
+          </Button>
           <Button
             size="sm"
             onClick={onCreateConfig}

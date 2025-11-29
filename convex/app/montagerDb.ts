@@ -509,7 +509,7 @@ export const getAssignedAirtableRecordIds = query({
     // Filter for videos that have an airtableRecordId assigned
     const assignedIds = allVideos
       .filter((video) => video.airtableRecordId && video.status !== "pending")
-      .map((video) => video.airtableRecordId as string);
+      .map((video) => video.airtableRecordId!);
 
     return assignedIds;
   },
@@ -948,6 +948,64 @@ export const bulkCreateDirectUploadVideos = mutation({
       console.warn(
         `Only ${createdIds.length} of ${videoUrls.length} videos were assigned due to already-assigned records`
       );
+    }
+
+    return {
+      success: true,
+      count: createdIds.length,
+      ids: createdIds,
+    };
+  },
+});
+
+/**
+ * Upload videos directly to a montager folder
+ * Used for manually uploading already-created montages
+ */
+export const uploadVideosToFolder = mutation({
+  args: {
+    folderId: v.id("montagerFolders"),
+    videoUrls: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Verify folder belongs to user
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder || folder.userId !== user._id) {
+      throw new Error("Folder not found");
+    }
+
+    const { folderId, videoUrls } = args;
+
+    if (videoUrls.length === 0) {
+      return { success: true, count: 0, ids: [] };
+    }
+
+    const createdIds = [];
+    for (const videoUrl of videoUrls) {
+      if (!videoUrl) continue;
+
+      const videoId = await ctx.db.insert("montagerVideos", {
+        montagerFolderId: folderId,
+        videoUrl: videoUrl,
+        thumbnailUrl: "manual_upload", // Placeholder for manually uploaded videos
+        status: "pending",
+      });
+
+      createdIds.push(videoId);
     }
 
     return {

@@ -76,9 +76,15 @@ export interface MontagerFolderDb {
 export interface MontagerVideoDb {
   _id: MontagerVideoId;
   _creationTime: number;
-  montagerFolderId: MontagerFolderId;
+  montagerFolderId?: MontagerFolderId;
   videoUrl: string;
   thumbnailUrl: string;
+  processedVideoUrl?: string;
+  status: "pending" | "ready_for_processing" | "processed" | "published";
+  overlayStyle?: string;
+  renderType?: string;
+  airtableRecordId?: string;
+  campaignId?: string;
 }
 
 export interface MontageConfigDb {

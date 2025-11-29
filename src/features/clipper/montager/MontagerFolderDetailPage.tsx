@@ -6,9 +6,10 @@ import { useMontages } from "./hooks/useMontages";
 import { MontagesToolbar } from "./components/MontagesToolbar";
 import { MontagesGrid } from "./components/MontagesGrid";
 import { MontageConfigDialog } from "./components/MontageConfigDialog";
+import { MontagerUploadDialog } from "./components/MontagerUploadDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Folder, Loader2 } from "lucide-react";
+import { Folder } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { useQuery } from "convex/react";
@@ -20,6 +21,7 @@ export function MontagerFolderDetailPage() {
   const folderId = params.folderId as Id<"montagerFolders">;
 
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 
   const folder = useQuery(api.app.montagerDb.getFolder, { folderId });
   const { videos, pendingConfigs, isLoading } = useMontages(folderId);
@@ -83,6 +85,7 @@ export function MontagerFolderDetailPage() {
           folderName={folder.folderName}
           onBack={handleBack}
           onCreateConfig={() => setIsConfigDialogOpen(true)}
+          onUpload={() => setIsUploadDialogOpen(true)}
           onDownloadAll={handleDownloadAll}
           totalCount={videos.length}
           pendingConfigs={pendingConfigs.length}
@@ -97,6 +100,13 @@ export function MontagerFolderDetailPage() {
           onOpenChange={setIsConfigDialogOpen}
           folderId={folderId}
           folderName={folder.folderName}
+        />
+
+        {/* Upload Dialog */}
+        <MontagerUploadDialog
+          open={isUploadDialogOpen}
+          onOpenChange={setIsUploadDialogOpen}
+          folderId={folderId}
         />
       </div>
     </div>
