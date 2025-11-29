@@ -232,7 +232,7 @@ export default defineSchema({
     .index("by_isProcessed", ["isProcessed"]),
 
   montagerVideos: defineTable({
-    montagerFolderId: v.id('montagerFolders'),
+    montagerFolderId: v.optional(v.id('montagerFolders')),
     videoUrl: v.string(),
     thumbnailUrl: v.string(),
     processedVideoUrl: v.optional(v.string()),

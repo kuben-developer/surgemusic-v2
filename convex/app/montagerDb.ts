@@ -360,15 +360,19 @@ export const deleteVideo = mutation({
       throw new Error("Unauthorized");
     }
 
-    // Get video and verify ownership via folder
+    // Get video and verify ownership
     const video = await ctx.db.get(args.videoId);
     if (!video) {
       throw new Error("Video not found");
     }
 
-    const folder = await ctx.db.get(video.montagerFolderId);
-    if (!folder || folder.userId !== user._id) {
-      throw new Error("Unauthorized");
+    // For videos with a folder, verify via folder ownership
+    // For direct uploads (no folder), any authenticated user can delete
+    if (video.montagerFolderId) {
+      const folder = await ctx.db.get(video.montagerFolderId);
+      if (!folder || folder.userId !== user._id) {
+        throw new Error("Unauthorized");
+      }
     }
 
     await ctx.db.delete(args.videoId);
@@ -773,14 +777,25 @@ export const unassignVideosFromAirtable = mutation({
         continue;
       }
 
-      // Verify user has access via folder ownership
-      const folder = await ctx.db.get(video.montagerFolderId);
-      if (!folder || folder.userId !== user._id) {
-        continue;
+      // For videos with a folder, verify via folder ownership
+      // For direct uploads (no folder), any authenticated user can unassign
+      if (video.montagerFolderId) {
+        const folder = await ctx.db.get(video.montagerFolderId);
+        if (!folder || folder.userId !== user._id) {
+          continue;
+        }
       }
 
       // Only unassign processed videos
       if (video.status !== "processed") {
+        continue;
+      }
+
+      // For direct uploads, delete the video instead of resetting to pending
+      // (they have no folder to return to)
+      if (!video.montagerFolderId) {
+        await ctx.db.delete(videoId);
+        unassignedCount++;
         continue;
       }
 
@@ -846,6 +861,99 @@ export const updateVideosExternal = internalMutation({
       success: true,
       configId: args.configId,
       videosAdded: insertedIds.length,
+    };
+  },
+});
+
+/**
+ * Bulk create montager videos from direct uploads
+ * Creates videos in "processed" state directly for Ready to Publish
+ * Randomly assigns videos to provided Airtable record IDs
+ */
+export const bulkCreateDirectUploadVideos = mutation({
+  args: {
+    videoUrls: v.array(v.string()),
+    campaignId: v.string(),
+    unassignedRecordIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    const { videoUrls, unassignedRecordIds, campaignId } = args;
+
+    if (videoUrls.length === 0) {
+      return { success: true, count: 0, ids: [] };
+    }
+
+    if (videoUrls.length > unassignedRecordIds.length) {
+      throw new Error(
+        `Not enough unassigned Airtable records. Have ${unassignedRecordIds.length}, need ${videoUrls.length}`
+      );
+    }
+
+    // Shuffle record IDs for random assignment
+    const shuffledRecordIds = [...unassignedRecordIds].sort(() => Math.random() - 0.5);
+
+    const createdIds = [];
+    let videoIndex = 0;
+
+    for (const airtableRecordId of shuffledRecordIds) {
+      if (videoIndex >= videoUrls.length) break;
+
+      // Check if this airtableRecordId is already assigned to prevent duplicates
+      const existingVideo = await ctx.db
+        .query("montagerVideos")
+        .withIndex("by_airtableRecordId", (q) => q.eq("airtableRecordId", airtableRecordId))
+        .first();
+
+      if (existingVideo) {
+        // Skip this record ID, it's already assigned
+        continue;
+      }
+
+      const videoUrl = videoUrls[videoIndex];
+      if (!videoUrl) {
+        videoIndex++;
+        continue;
+      }
+
+      const videoId = await ctx.db.insert("montagerVideos", {
+        montagerFolderId: undefined, // Direct upload - no folder
+        videoUrl: videoUrl,
+        thumbnailUrl: "direct_upload", // Placeholder
+        processedVideoUrl: videoUrl, // Already processed
+        status: "processed",
+        airtableRecordId: airtableRecordId,
+        campaignId: campaignId,
+      });
+
+      createdIds.push(videoId);
+      videoIndex++;
+    }
+
+    // Warn if not all videos were assigned due to duplicates
+    if (createdIds.length < videoUrls.length) {
+      console.warn(
+        `Only ${createdIds.length} of ${videoUrls.length} videos were assigned due to already-assigned records`
+      );
+    }
+
+    return {
+      success: true,
+      count: createdIds.length,
+      ids: createdIds,
     };
   },
 });

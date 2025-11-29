@@ -90,6 +90,28 @@ export function CampaignContentPage() {
   const processingCount = montagerVideosData?.processing?.length ?? 0;
   const processedCount = montagerVideosData?.processed?.length ?? 0;
 
+  // Calculate unassigned record IDs for bulk upload
+  // Records that: 1) don't have a video_url, 2) are not already assigned to montager videos
+  const unassignedRecordIds = useMemo(() => {
+    if (!data?.content || !selectedCategory) return [];
+
+    // Get IDs of records that already have montager videos assigned
+    const assignedRecordIds = new Set([
+      ...(montagerVideosData?.processing?.map((v) => v.airtableRecordId) ?? []),
+      ...(montagerVideosData?.processed?.map((v) => v.airtableRecordId) ?? []),
+    ]);
+
+    return data.content
+      .filter((record) => {
+        const matchesCategory = record.video_category === selectedCategory;
+        const matchesNiche = selectedNiche === "all" || record.account_niche === selectedNiche;
+        const hasNoVideo = !record.video_url;
+        const notAssigned = !assignedRecordIds.has(record.id);
+        return matchesCategory && matchesNiche && hasNoVideo && notAssigned;
+      })
+      .map((record) => record.id);
+  }, [data?.content, selectedCategory, selectedNiche, montagerVideosData]);
+
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
     setSelectedNiche("all"); // Reset niche filter when changing category
@@ -228,6 +250,9 @@ export function CampaignContentPage() {
                 processingVideos={montagerVideosData?.processing ?? []}
                 processedVideos={montagerVideosData?.processed ?? []}
                 isLoading={montagerVideosData === undefined}
+                campaignId={campaignRecordId}
+                unassignedRecordIds={unassignedRecordIds}
+                onVideosAdded={handleVideosAdded}
               />
             )}
           </div>

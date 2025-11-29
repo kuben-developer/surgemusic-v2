@@ -21,6 +21,7 @@ import type * as app_campaignValidation from "../app/campaignValidation.js";
 import type * as app_captions from "../app/captions.js";
 import type * as app_clipperDb from "../app/clipperDb.js";
 import type * as app_clipperS3 from "../app/clipperS3.js";
+import type * as app_directUploadS3 from "../app/directUploadS3.js";
 import type * as app_files from "../app/files.js";
 import type * as app_insertTiktokPosts from "../app/insertTiktokPosts.js";
 import type * as app_montager from "../app/montager.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "app/captions": typeof app_captions;
   "app/clipperDb": typeof app_clipperDb;
   "app/clipperS3": typeof app_clipperS3;
+  "app/directUploadS3": typeof app_directUploadS3;
   "app/files": typeof app_files;
   "app/insertTiktokPosts": typeof app_insertTiktokPosts;
   "app/montager": typeof app_montager;

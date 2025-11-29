@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle, Upload, Video, Trash2 } from "lucide-react";
+import { Clock, CheckCircle, Upload, Video, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVideoSelection } from "../hooks/useVideoSelection";
 import { UnassignVideosDialog } from "../dialogs/UnassignVideosDialog";
+import { BulkUploadDialog } from "../dialogs/BulkUploadDialog";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 type MontagerVideo = Doc<"montagerVideos">;
@@ -18,15 +19,23 @@ interface ReadyToPublishGridProps {
   processingVideos: MontagerVideo[];
   processedVideos: MontagerVideo[];
   isLoading: boolean;
+  campaignId: string;
+  unassignedRecordIds: string[];
+  onVideosAdded?: () => void;
 }
 
 export function ReadyToPublishGrid({
   processingVideos,
   processedVideos,
   isLoading,
+  campaignId,
+  unassignedRecordIds,
+  onVideosAdded,
 }: ReadyToPublishGridProps) {
   const totalCount = processingVideos.length + processedVideos.length;
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const availableSlots = unassignedRecordIds.length;
 
   const {
     selectedIds,
@@ -54,13 +63,31 @@ export function ReadyToPublishGrid({
 
   if (totalCount === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground border rounded-lg">
-        <Video className="size-12 mx-auto mb-3 opacity-30" />
-        <h3 className="text-base font-semibold mb-1">No Videos Ready</h3>
-        <p className="text-sm">
-          Add videos from Montager to see them here for processing.
-        </p>
-      </div>
+      <>
+        <div className="text-center py-16 text-muted-foreground border rounded-lg">
+          <Video className="size-12 mx-auto mb-3 opacity-30" />
+          <h3 className="text-base font-semibold mb-1">No Videos Ready</h3>
+          <p className="text-sm mb-4">
+            Add videos from Montager or upload directly to see them here.
+          </p>
+          {availableSlots > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              <Plus className="size-4 mr-2" />
+              Upload Videos ({availableSlots} slots available)
+            </Button>
+          )}
+        </div>
+        <BulkUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          campaignId={campaignId}
+          unassignedRecordIds={unassignedRecordIds}
+          onSuccess={onVideosAdded}
+        />
+      </>
     );
   }
 
@@ -95,6 +122,16 @@ export function ReadyToPublishGrid({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {availableSlots > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setUploadDialogOpen(true)}
+                >
+                  <Plus className="size-4 mr-2" />
+                  Upload ({availableSlots})
+                </Button>
+              )}
               {hasSelection && (
                 <Button
                   size="sm"
@@ -137,6 +174,15 @@ export function ReadyToPublishGrid({
         onOpenChange={setUnassignDialogOpen}
         selectedVideoIds={selectedIds}
         onSuccess={clearSelection}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        campaignId={campaignId}
+        unassignedRecordIds={unassignedRecordIds}
+        onSuccess={onVideosAdded}
       />
 
       {/* Processing Section (at bottom) */}
