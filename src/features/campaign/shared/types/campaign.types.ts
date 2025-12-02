@@ -3,6 +3,7 @@ export interface AirtableCampaign {
   campaign_id: string;
   artist: string;
   song: string;
+  status: string;
 }
 
 export interface AirtableContent {

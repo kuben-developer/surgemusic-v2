@@ -1,14 +1,35 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CampaignTable } from "./components/CampaignTable";
 import { useCampaignList } from "./hooks/useCampaignList";
 import { AlertCircle } from "lucide-react";
 
+const STATUS_TABS = [
+  { value: "Active", label: "Active" },
+  { value: "Planned", label: "Planned" },
+  { value: "Done", label: "Done" },
+] as const;
+
 export function CampaignListPage() {
   const router = useRouter();
   const { campaigns, isLoading, error } = useCampaignList();
+
+  const campaignsByStatus = useMemo(() => {
+    if (!campaigns) return {};
+    return campaigns.reduce(
+      (acc, campaign) => {
+        const status = campaign.status || "Unknown";
+        if (!acc[status]) acc[status] = [];
+        acc[status].push(campaign);
+        return acc;
+      },
+      {} as Record<string, typeof campaigns>
+    );
+  }, [campaigns]);
 
   const handleSelectCampaign = (campaignId: string) => {
     router.push(`/campaign/${campaignId}`);
@@ -57,11 +78,31 @@ export function CampaignListPage() {
           </p>
         </div>
 
-        {/* Table */}
-        <CampaignTable
-          campaigns={campaigns || []}
-          onSelectCampaign={handleSelectCampaign}
-        />
+        {/* Tabs */}
+        <Tabs defaultValue="Active">
+          <TabsList>
+            {STATUS_TABS.map((tab) => {
+              const count = campaignsByStatus[tab.value]?.length || 0;
+              return (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                  <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-2 py-0.5 text-xs">
+                    {count}
+                  </span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {STATUS_TABS.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value}>
+              <CampaignTable
+                campaigns={campaignsByStatus[tab.value] || []}
+                onSelectCampaign={handleSelectCampaign}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </div>
   );

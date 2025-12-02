@@ -28,6 +28,7 @@ interface CampaignOutput {
     campaign_id: string;
     artist: string;
     song: string;
+    status: string;
 }
 
 interface ContentItem {
@@ -143,7 +144,7 @@ export const getCampaigns = action({
     handler: async (): Promise<CampaignOutput[]> => {
         const records = await fetchRecords(
             AIRTABLE_CAMPAIGN_TABLE_ID,
-            '{Status} = "Active"',
+            undefined,
             ["campaign", "client_id", "Status"]
         );
 
@@ -155,6 +156,7 @@ export const getCampaigns = action({
                 campaign_id: record.fields["campaign"] as string,
                 artist: "",
                 song: "",
+                status: (record.fields["Status"] as string) || "Unknown",
             };
 
             // Fetch artist and song details from related table

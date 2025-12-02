@@ -26,7 +26,7 @@ export function CampaignTable({ campaigns, onSelectCampaign }: CampaignTableProp
       <div className="text-center py-16 text-muted-foreground border rounded-lg">
         <Music className="size-12 mx-auto mb-3 opacity-30" />
         <h3 className="text-base font-semibold mb-1">No Campaigns Found</h3>
-        <p className="text-sm">No active campaigns available in Airtable.</p>
+        <p className="text-sm">No campaigns found in this category.</p>
       </div>
     );
   }
