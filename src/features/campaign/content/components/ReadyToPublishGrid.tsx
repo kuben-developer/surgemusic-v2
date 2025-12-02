@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useAction } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle, Upload, Video, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, CheckCircle, Upload, Video, Trash2, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVideoSelection } from "../hooks/useVideoSelection";
 import { UnassignVideosDialog } from "../dialogs/UnassignVideosDialog";
 import { BulkUploadDialog } from "../dialogs/BulkUploadDialog";
+import { api } from "../../../../../convex/_generated/api";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 
 const VIDEOS_PER_PAGE = 8;
@@ -37,7 +39,11 @@ export function ReadyToPublishGrid({
   const totalCount = processingVideos.length + processedVideos.length;
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const availableSlots = unassignedRecordIds.length;
+
+  // Airtable publish action
+  const publishToAirtable = useAction(api.app.montagerDb.publishVideosToAirtable);
 
   // Pagination state
   const [processedPage, setProcessedPage] = useState(1);
@@ -177,12 +183,50 @@ export function ReadyToPublishGrid({
               )}
               <Button
                 size="sm"
-                onClick={() => {
-                  toast.info("Publish to Airtable feature coming soon!");
+                onClick={async () => {
+                  // Determine which videos to publish
+                  const videosToPublish = hasSelection
+                    ? processedVideos.filter((v) => selectedIds.has(v._id))
+                    : processedVideos;
+
+                  if (videosToPublish.length === 0) {
+                    toast.error("No videos to publish");
+                    return;
+                  }
+
+                  setIsPublishing(true);
+                  try {
+                    const result = await publishToAirtable({
+                      videoIds: videosToPublish.map((v) => v._id),
+                    });
+
+                    if (result.published > 0) {
+                      toast.success(`Published ${result.published} video${result.published > 1 ? "s" : ""} to Airtable`);
+                    }
+                    if (result.failed > 0) {
+                      toast.warning(`${result.failed} video${result.failed > 1 ? "s" : ""} failed to publish`);
+                    }
+                    if (result.skipped > 0) {
+                      toast.info(`${result.skipped} video${result.skipped > 1 ? "s" : ""} skipped (no Airtable record)`);
+                    }
+                    clearSelection();
+                  } catch (error) {
+                    console.error("Failed to publish videos:", error);
+                    toast.error("Failed to publish videos to Airtable");
+                  } finally {
+                    setIsPublishing(false);
+                  }
                 }}
+                disabled={isPublishing || processedVideos.length === 0}
               >
-                <Upload className="size-4 mr-2" />
-                Publish All to Airtable
+                {isPublishing ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="size-4 mr-2" />
+                )}
+                {hasSelection
+                  ? `Publish Selected (${selectedCount})`
+                  : "Publish All to Airtable"}
               </Button>
             </div>
           </div>

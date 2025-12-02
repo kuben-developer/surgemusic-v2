@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 /**
  * Get all montager folders for the current user
@@ -1161,6 +1162,174 @@ export const uploadVideosToFolder = mutation({
       success: true,
       count: createdIds.length,
       ids: createdIds,
+    };
+  },
+});
+
+// =====================================================
+// AIRTABLE PUBLISH FUNCTIONS
+// =====================================================
+
+/**
+ * Internal query to get videos by their IDs
+ * Used by publishVideosToAirtable action
+ */
+export const getVideosByIds = internalQuery({
+  args: {
+    videoIds: v.array(v.id("montagerVideos")),
+  },
+  handler: async (ctx, args) => {
+    const videos = await Promise.all(
+      args.videoIds.map(async (videoId) => {
+        const video = await ctx.db.get(videoId);
+        return video;
+      })
+    );
+    return videos.filter((v) => v !== null);
+  },
+});
+
+/**
+ * Internal mutation to mark videos as published
+ * Used by publishVideosToAirtable action after successful Airtable update
+ */
+export const markVideosAsPublished = internalMutation({
+  args: {
+    videoIds: v.array(v.id("montagerVideos")),
+  },
+  handler: async (ctx, args) => {
+    let updatedCount = 0;
+    for (const videoId of args.videoIds) {
+      const video = await ctx.db.get(videoId);
+      if (video && video.status === "processed") {
+        await ctx.db.patch(videoId, { status: "published" });
+        updatedCount++;
+      }
+    }
+    return { updatedCount };
+  },
+});
+
+// Airtable configuration
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "";
+const AIRTABLE_CONTENT_TABLE_ID = "tbleqHUKb7il998rO";
+
+/**
+ * Helper function to update an Airtable record with video URL and status
+ */
+async function updateAirtableRecord(
+  recordId: string,
+  videoUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}/${recordId}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          video_url: videoUrl,
+          status: "done",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Airtable update failed for ${recordId}: ${response.status} - ${errorText}`);
+      return { success: false, error: `${response.status}: ${errorText}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Error updating Airtable record ${recordId}:`, error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Publish processed videos to Airtable
+ * Updates video_url and status fields in Airtable Content table
+ * Then marks videos as "published" in local database
+ */
+export const publishVideosToAirtable = action({
+  args: {
+    videoIds: v.array(v.id("montagerVideos")),
+  },
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    published: number;
+    failed: number;
+    skipped: number;
+  }> => {
+    if (args.videoIds.length === 0) {
+      return { success: true, published: 0, failed: 0, skipped: 0 };
+    }
+
+    // Fetch videos from database
+    const videos = await ctx.runQuery(internal.app.montagerDb.getVideosByIds, {
+      videoIds: args.videoIds,
+    });
+
+    let published = 0;
+    let failed = 0;
+    let skipped = 0;
+    const publishedVideoIds: typeof args.videoIds = [];
+
+    // Process each video
+    for (const video of videos) {
+      // Skip videos without airtableRecordId
+      if (!video.airtableRecordId) {
+        console.log(`Skipping video ${video._id} - no airtableRecordId`);
+        skipped++;
+        continue;
+      }
+
+      // Skip videos that are not in "processed" status
+      if (video.status !== "processed") {
+        console.log(`Skipping video ${video._id} - status is ${video.status}, not processed`);
+        skipped++;
+        continue;
+      }
+
+      // Use processedVideoUrl if available, otherwise fall back to videoUrl
+      const videoUrl = video.processedVideoUrl || video.videoUrl;
+
+      // Update Airtable record
+      const result = await updateAirtableRecord(video.airtableRecordId, videoUrl);
+
+      if (result.success) {
+        published++;
+        publishedVideoIds.push(video._id);
+        console.log(`✓ Published video ${video._id} to Airtable record ${video.airtableRecordId}`);
+      } else {
+        failed++;
+        console.error(`✗ Failed to publish video ${video._id}: ${result.error}`);
+      }
+
+      // Rate limiting: wait 100ms between requests
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Mark successfully published videos as "published" in local database
+    if (publishedVideoIds.length > 0) {
+      await ctx.runMutation(internal.app.montagerDb.markVideosAsPublished, {
+        videoIds: publishedVideoIds,
+      });
+    }
+
+    console.log(`Publish complete: ${published} published, ${failed} failed, ${skipped} skipped`);
+
+    return {
+      success: failed === 0,
+      published,
+      failed,
+      skipped,
     };
   },
 });
