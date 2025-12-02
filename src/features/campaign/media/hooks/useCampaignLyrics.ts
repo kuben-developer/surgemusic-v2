@@ -5,7 +5,7 @@ import { useAction, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import { initializeEmptyLyrics, parseSRT } from "@/utils/srt-converter.utils";
-import { generateWordLevelSRT, generateEstimatedSRT, convertSRTToFile } from "@/utils/srt-generator.utils";
+import { generateSRTFromTimedLyrics, convertSRTToFile } from "@/utils/srt-generator.utils";
 import { parseWordLevelDataFromSRT } from "@/utils/srt-parser.utils";
 import { useConvexUpload } from "@/hooks/useConvexUpload";
 import type { LyricLine, WordData, LyricWithWords } from "../types/media.types";
@@ -92,17 +92,8 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
       let srtFileId = undefined;
       let srtUrl = undefined;
 
-      // Generate and upload SRT file
-      let srtContent: string;
-
-      if (wordsData && wordsData.length > 0) {
-        // Generate word-level SRT from transcription data
-        srtContent = generateWordLevelSRT(wordsData);
-      } else {
-        // Generate estimated SRT from lyrics text
-        const lyricsText = editedLyrics.map((line) => line.text).join(" ");
-        srtContent = generateEstimatedSRT(lyricsText);
-      }
+      // Generate SRT from edited lyrics (respects per-second timing from editor)
+      const srtContent = generateSRTFromTimedLyrics(editedLyrics);
 
       // Convert to File and upload
       const srtFile = convertSRTToFile(srtContent, `campaign-${campaignId}.srt`);
@@ -133,10 +124,15 @@ export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
   };
 
   /**
-   * Open lyrics editor manually (for manual entry)
+   * Open lyrics editor manually (for manual entry or editing existing lyrics)
+   * @param existingLyrics - Optional saved lyrics from database to edit
    */
-  const openLyricsEditor = () => {
-    if (lyrics.length === 0) {
+  const openLyricsEditor = (existingLyrics?: LyricLine[]) => {
+    if (existingLyrics && existingLyrics.length > 0) {
+      // Use saved lyrics from database
+      setLyrics(existingLyrics);
+    } else if (lyrics.length === 0) {
+      // Initialize empty lyrics for manual entry
       setLyrics(initializeEmptyLyrics(15));
     }
     setShowLyricsEditor(true);

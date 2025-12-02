@@ -1,4 +1,4 @@
-import type { WordData } from "@/features/campaign/media/types/media.types";
+import type { WordData, LyricLine } from "@/features/campaign/media/types/media.types";
 
 /**
  * Convert seconds to SRT timestamp format (HH:MM:SS,mmm)
@@ -81,4 +81,41 @@ export function generateEstimatedSRT(lyrics: string): string {
 export function convertSRTToFile(srtContent: string, filename: string): File {
   const blob = new Blob([srtContent], { type: "text/plain" });
   return new File([blob], filename, { type: "text/plain" });
+}
+
+/**
+ * Generate SRT content from timed lyrics array
+ * Each lyric line has a timestamp (0-14 seconds) and text
+ * Words within each second are distributed evenly for smooth subtitle display
+ * @param lyrics - Array of lyric lines with timestamp and text
+ * @returns SRT formatted string with per-word timestamps
+ */
+export function generateSRTFromTimedLyrics(lyrics: LyricLine[]): string {
+  const srtLines: string[] = [];
+  let sequenceNumber = 1;
+
+  for (const line of lyrics) {
+    if (!line.text.trim()) continue; // Skip empty lines
+
+    const words = line.text.split(/\s+/).filter((w) => w.length > 0);
+    if (words.length === 0) continue;
+
+    const secondStart = line.timestamp;
+    const durationPerWord = 1 / words.length; // Distribute within 1 second
+
+    words.forEach((word, wordIndex) => {
+      const startTime = secondStart + wordIndex * durationPerWord;
+      const endTime = startTime + durationPerWord;
+
+      srtLines.push(`${sequenceNumber}`);
+      srtLines.push(
+        `${formatSRTTimestamp(startTime)} --> ${formatSRTTimestamp(endTime)}`
+      );
+      srtLines.push(word);
+      srtLines.push(""); // blank line separator
+      sequenceNumber++;
+    });
+  }
+
+  return srtLines.join("\n");
 }

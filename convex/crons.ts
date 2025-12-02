@@ -25,7 +25,7 @@ crons.cron(
 
 crons.interval(
     "calculateCampaignAnalytics",
-    { minutes: 15 }, // Every 15 minute
+    { minutes: 120 }, // Every 2 hours
     internal.app.analytics.calculateCampaignAnalytics,
     {}
 );

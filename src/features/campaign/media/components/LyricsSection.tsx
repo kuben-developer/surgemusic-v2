@@ -84,7 +84,8 @@ export function LyricsSection({
         </div>
 
         <LyricsEditor
-          initialLyrics={lyrics}
+          key={Date.now()}
+          initialLyrics={lyrics.length > 0 ? lyrics : savedLyrics}
           onSave={handleSaveLyrics}
           onCancel={closeLyricsEditor}
           audioBase64={audioBase64}
@@ -103,7 +104,7 @@ export function LyricsSection({
 
         <div className="flex gap-2">
           {hasLyrics && (
-            <Button variant="outline" size="sm" onClick={openLyricsEditor}>
+            <Button variant="outline" size="sm" onClick={() => openLyricsEditor(savedLyrics)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Lyrics
             </Button>
@@ -196,7 +197,7 @@ export function LyricsSection({
                   <Upload className="h-4 w-4 mr-2" />
                   Upload SRT
                 </Button>
-                <Button size="sm" onClick={openLyricsEditor}>
+                <Button size="sm" onClick={() => openLyricsEditor(savedLyrics)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Manually
                 </Button>

@@ -24,6 +24,13 @@ export function LyricsEditor({
   const [isEditing, setIsEditing] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
 
+  // Sync lyrics state when initialLyrics prop changes
+  useEffect(() => {
+    if (initialLyrics && initialLyrics.length > 0) {
+      setLyrics(initialLyrics)
+    }
+  }, [initialLyrics])
+
   useEffect(() => {
     const audio = document.querySelector('audio') as HTMLAudioElement
     if (audio) {
