@@ -250,5 +250,6 @@ export default defineSchema({
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])
-    .index("by_airtableRecordId", ["airtableRecordId"]),
+    .index("by_airtableRecordId", ["airtableRecordId"])
+    .index("by_campaignId", ["campaignId"]),
 })

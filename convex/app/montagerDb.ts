@@ -820,6 +820,81 @@ export const unassignVideosFromAirtable = mutation({
 });
 
 /**
+ * Unassign all videos for a specific campaign ID
+ * Used when users want to regenerate all videos for a campaign
+ */
+export const unassignVideosByCampaignId = mutation({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    const videos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+
+    if (videos.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    let unassignedCount = 0;
+
+    for (const video of videos) {
+      // For videos with a folder, verify via folder ownership
+      if (video.montagerFolderId) {
+        const folder = await ctx.db.get(video.montagerFolderId);
+        if (!folder || folder.userId !== user._id) {
+          continue;
+        }
+      }
+
+      // Only unassign processed videos
+      if (video.status !== "processed") {
+        continue;
+      }
+
+      // For direct uploads (no folder), delete the video
+      if (!video.montagerFolderId) {
+        await ctx.db.delete(video._id);
+        unassignedCount++;
+        continue;
+      }
+
+      // Reset video to pending status
+      await ctx.db.patch(video._id, {
+        status: "pending",
+        overlayStyle: undefined,
+        renderType: undefined,
+        airtableRecordId: undefined,
+        campaignId: undefined,
+        processedVideoUrl: undefined,
+      });
+
+      unassignedCount++;
+    }
+
+    return {
+      success: true,
+      count: unassignedCount,
+    };
+  },
+});
+
+/**
  * Internal mutation to add videos and mark config as processed
  * Used by the external API endpoint POST /api/montager/update
  */
