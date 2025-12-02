@@ -895,6 +895,80 @@ export const unassignVideosByCampaignId = mutation({
 });
 
 /**
+ * Cancel all processing videos for a specific campaign ID
+ * Used when users want to cancel videos that are still being processed
+ */
+export const cancelProcessingVideosByCampaignId = mutation({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    const videos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+
+    if (videos.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    let cancelledCount = 0;
+
+    for (const video of videos) {
+      // For videos with a folder, verify via folder ownership
+      if (video.montagerFolderId) {
+        const folder = await ctx.db.get(video.montagerFolderId);
+        if (!folder || folder.userId !== user._id) {
+          continue;
+        }
+      }
+
+      // Only cancel processing videos (ready_for_processing status)
+      if (video.status !== "ready_for_processing") {
+        continue;
+      }
+
+      // For direct uploads (no folder), delete the video
+      if (!video.montagerFolderId) {
+        await ctx.db.delete(video._id);
+        cancelledCount++;
+        continue;
+      }
+
+      // Reset video to pending status
+      await ctx.db.patch(video._id, {
+        status: "pending",
+        overlayStyle: undefined,
+        renderType: undefined,
+        airtableRecordId: undefined,
+        campaignId: undefined,
+      });
+
+      cancelledCount++;
+    }
+
+    return {
+      success: true,
+      count: cancelledCount,
+    };
+  },
+});
+
+/**
  * Internal mutation to add videos and mark config as processed
  * Used by the external API endpoint POST /api/montager/update
  */

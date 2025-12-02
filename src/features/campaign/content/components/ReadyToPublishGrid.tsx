@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle, Upload, Video, Trash2, Plus } from "lucide-react";
+import { Clock, CheckCircle, Upload, Video, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVideoSelection } from "../hooks/useVideoSelection";
 import { UnassignVideosDialog } from "../dialogs/UnassignVideosDialog";
 import { BulkUploadDialog } from "../dialogs/BulkUploadDialog";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
+
+const VIDEOS_PER_PAGE = 8;
 
 type MontagerVideo = Doc<"montagerVideos">;
 
@@ -36,6 +38,37 @@ export function ReadyToPublishGrid({
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const availableSlots = unassignedRecordIds.length;
+
+  // Pagination state
+  const [processedPage, setProcessedPage] = useState(1);
+  const [processingPage, setProcessingPage] = useState(1);
+
+  // Calculate pagination for processed videos
+  const processedTotalPages = Math.ceil(processedVideos.length / VIDEOS_PER_PAGE);
+  const paginatedProcessedVideos = useMemo(() => {
+    const start = (processedPage - 1) * VIDEOS_PER_PAGE;
+    return processedVideos.slice(start, start + VIDEOS_PER_PAGE);
+  }, [processedVideos, processedPage]);
+
+  // Calculate pagination for processing videos
+  const processingTotalPages = Math.ceil(processingVideos.length / VIDEOS_PER_PAGE);
+  const paginatedProcessingVideos = useMemo(() => {
+    const start = (processingPage - 1) * VIDEOS_PER_PAGE;
+    return processingVideos.slice(start, start + VIDEOS_PER_PAGE);
+  }, [processingVideos, processingPage]);
+
+  // Reset page if it exceeds total pages (e.g., after unassigning videos)
+  useEffect(() => {
+    if (processedPage > processedTotalPages && processedTotalPages > 0) {
+      setProcessedPage(processedTotalPages);
+    }
+  }, [processedPage, processedTotalPages]);
+
+  useEffect(() => {
+    if (processingPage > processingTotalPages && processingTotalPages > 0) {
+      setProcessingPage(processingTotalPages);
+    }
+  }, [processingPage, processingTotalPages]);
 
   const {
     selectedIds,
@@ -153,8 +186,32 @@ export function ReadyToPublishGrid({
               </Button>
             </div>
           </div>
+          {/* Pagination Controls */}
+          {processedTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setProcessedPage((p) => Math.max(1, p - 1))}
+                disabled={processedPage === 1}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                Page {processedPage} of {processedTotalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setProcessedPage((p) => Math.min(processedTotalPages, p + 1))}
+                disabled={processedPage === processedTotalPages}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {processedVideos.map((video) => (
+            {paginatedProcessedVideos.map((video) => (
               <ReadyToPublishVideoCard
                 key={video._id}
                 video={video}
@@ -188,12 +245,38 @@ export function ReadyToPublishGrid({
       {/* Processing Section (at bottom) */}
       {processingVideos.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Clock className="size-4 text-amber-500" />
-            <h3 className="font-medium">Processing ({processingVideos.length})</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-amber-500" />
+              <h3 className="font-medium">Processing ({processingVideos.length})</h3>
+            </div>
           </div>
+          {/* Pagination Controls */}
+          {processingTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setProcessingPage((p) => Math.max(1, p - 1))}
+                disabled={processingPage === 1}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                Page {processingPage} of {processingTotalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setProcessingPage((p) => Math.min(processingTotalPages, p + 1))}
+                disabled={processingPage === processingTotalPages}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {processingVideos.map((video) => (
+            {paginatedProcessingVideos.map((video) => (
               <ReadyToPublishVideoCard
                 key={video._id}
                 video={video}
