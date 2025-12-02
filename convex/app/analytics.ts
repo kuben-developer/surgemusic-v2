@@ -589,6 +589,64 @@ export const getCampaignAnalytics = query({
   },
 });
 
+/**
+ * Get all campaigns with their analytics data
+ *
+ * Fetches all campaigns from the campaignAnalytics table with totals and sparkline data.
+ * Used for the analytics overview page.
+ *
+ * @returns Array of campaigns with analytics data including:
+ * - Campaign metadata (id, name, artist, song)
+ * - Totals (posts, views, likes, comments, shares)
+ * - Last 14 days of daily snapshots for sparkline charts
+ */
+export const getAllCampaignsWithAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const allAnalytics = await ctx.db.query("campaignAnalytics").collect();
+
+    // Get today's date for sparkline range calculation
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return allAnalytics.map((analytics) => {
+      // Get last 14 days of daily snapshots for sparkline
+      const sortedDates = Object.keys(analytics.dailySnapshots)
+        .map((date) => ({ date, parsed: parseDate(date) }))
+        .sort((a, b) => a.parsed.getTime() - b.parsed.getTime())
+        .slice(-14); // Last 14 days
+
+      const sparklineData = sortedDates.map(({ date }) => {
+        const snapshot = analytics.dailySnapshots[date];
+        return {
+          date,
+          views: snapshot?.totalViews ?? 0,
+          likes: snapshot?.totalLikes ?? 0,
+          comments: snapshot?.totalComments ?? 0,
+          shares: snapshot?.totalShares ?? 0,
+        };
+      });
+
+      return {
+        campaignId: analytics.campaignId,
+        campaignName: analytics.campaignName,
+        artist: analytics.artist,
+        song: analytics.song,
+        totals: {
+          posts: analytics.totalPosts,
+          views: analytics.totalViews,
+          likes: analytics.totalLikes,
+          comments: analytics.totalComments,
+          shares: analytics.totalShares,
+          saves: analytics.totalSaves,
+        },
+        sparklineData,
+        lastUpdatedAt: analytics._creationTime,
+      };
+    });
+  },
+});
+
 export const getTopVideosByPostDate = query({
   args: {
     campaignId: v.string(),

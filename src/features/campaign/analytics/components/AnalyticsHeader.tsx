@@ -19,6 +19,7 @@ interface AnalyticsHeaderProps {
   lastUpdatedAt?: number;
   onDateFilterChange: (value: DateFilter | null) => void;
   isPublic?: boolean;
+  hideBackButton?: boolean;
 }
 
 export function AnalyticsHeader({
@@ -27,7 +28,8 @@ export function AnalyticsHeader({
   postCountsByDate,
   lastUpdatedAt,
   onDateFilterChange,
-  isPublic = false
+  isPublic = false,
+  hideBackButton = false,
 }: AnalyticsHeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
     dateFilter ? { from: dateFilter.startDate, to: dateFilter.endDate } : undefined
@@ -112,7 +114,7 @@ export function AnalyticsHeader({
       )}
 
       <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {!isPublic && (
+        {!isPublic && !hideBackButton && (
           <div className="flex items-center gap-2">
             <Link href={`/campaign/${campaignId}`}>
               <Button variant="ghost" size="icon" className="rounded-full">

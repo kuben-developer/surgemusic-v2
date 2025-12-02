@@ -15,9 +15,10 @@ import type { MetricType } from "../types/analytics.types";
 
 interface AnalyticsClientProps {
   campaignId: string;
+  hideBackButton?: boolean;
 }
 
-export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
+export function AnalyticsClient({ campaignId, hideBackButton = false }: AnalyticsClientProps) {
   const { userId } = useAuth();
   const isPublic = !userId;
 
@@ -73,6 +74,7 @@ export function AnalyticsClient({ campaignId }: AnalyticsClientProps) {
         lastUpdatedAt={analyticsData.lastUpdatedAt}
         onDateFilterChange={changeDateFilter}
         isPublic={isPublic}
+        hideBackButton={hideBackButton}
       />
 
       <motion.div

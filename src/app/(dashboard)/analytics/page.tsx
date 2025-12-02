@@ -1,13 +1,5 @@
-import { AnalyticsContainer } from '@/features/analytics';
+import { AnalyticsPage } from "@/features/analytics-page";
 
 export default function MainAnalyticsPage() {
-  return (
-    <AnalyticsContainer
-      type="main"
-      title="Analytics Overview"
-      showCampaignSelector={true}
-      showCommentsSection={true}
-      showExportButton={true}
-    />
-  );
+  return <AnalyticsPage />;
 } 

@@ -77,6 +77,11 @@ export const navigationData: { navMain: NavSection[] } = {
           url: "/montager",
           icon: Film,
         },
+        {
+          title: "Analytics",
+          url: "/analytics",
+          icon: BarChart3,
+        },
         // {
         //   title: "Pricing",
         //   url: "/pricing",
