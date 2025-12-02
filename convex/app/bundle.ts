@@ -127,27 +127,57 @@ export const getExistingPostedVideos = internalQuery({
   },
 });
 
-// Get posts to skip (older than 7 days OR updated within last 6 hours) - used to skip API calls
+// Get posts to skip based on tiered monitoring schedule:
+// - 0-30 days: monitor daily (skip if updated within 12 hours)
+// - 30-90 days: monitor every 3 days
+// - 90-180 days: monitor weekly
+// - 180+ days: monitor monthly
 export const getPostsToSkip = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    // Calculate timestamps
-    const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000); // 7 days ago (seconds)
-    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000; // 6 hours ago (milliseconds)
-
-    // Get ALL posts for this campaign
     const allPosts = await ctx.db
       .query("bundleSocialPostedVideos")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    // Filter posts to skip:
-    // 1. Posts older than 7 days (no need to track old content)
-    // 2. Posts updated within last 6 hours (recently refreshed, save API calls)
+    const now = Date.now();
+    const nowSeconds = Math.floor(now / 1000);
+
+    // Time constants in seconds (for post age calculation)
+    const DAY_SECONDS = 24 * 60 * 60;
+    const DAYS_30 = 30 * DAY_SECONDS;
+    const DAYS_90 = 90 * DAY_SECONDS;
+    const DAYS_180 = 180 * DAY_SECONDS;
+
+    // Monitoring intervals in milliseconds (for update recency check)
+    const HOURS_12 = 12 * 60 * 60 * 1000;
+    const DAYS_3_MS = 3 * 24 * 60 * 60 * 1000;
+    const DAYS_7_MS = 7 * 24 * 60 * 60 * 1000;
+    const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
+
     const postsToSkip = allPosts.filter(post => {
-      const isOld = post.postedAt < sevenDaysAgo;
-      const recentlyUpdated = post.updatedAt > sixHoursAgo;
-      return isOld || recentlyUpdated;
+      const postAgeSeconds = nowSeconds - post.postedAt;
+      const timeSinceUpdate = now - post.updatedAt;
+
+      // Determine required update interval based on post age
+      let requiredInterval: number;
+
+      if (postAgeSeconds <= DAYS_30) {
+        // 0-30 days: monitor daily, skip if updated within 12 hours
+        requiredInterval = HOURS_12;
+      } else if (postAgeSeconds <= DAYS_90) {
+        // 30-90 days: monitor every 3 days
+        requiredInterval = DAYS_3_MS;
+      } else if (postAgeSeconds <= DAYS_180) {
+        // 90-180 days: monitor weekly
+        requiredInterval = DAYS_7_MS;
+      } else {
+        // 180+ days: monitor monthly
+        requiredInterval = DAYS_30_MS;
+      }
+
+      // Skip if updated within the required interval
+      return timeSinceUpdate < requiredInterval;
     });
 
     // Return just the postIds for efficient Set creation
@@ -367,9 +397,11 @@ export const bulkUpdatePostedVideoStats = internalMutation({
 // ============================================================================
 
 // Refresh TikTok stats for a single campaign - Worker (processes one campaign)
-// Skips API calls for:
-// 1. Videos posted more than 7 days ago (old content)
-// 2. Videos updated within the last 6 hours (recently refreshed)
+// Skips API calls based on tiered monitoring schedule:
+// - 0-30 days: monitor daily (skip if updated within 12 hours)
+// - 30-90 days: monitor every 3 days
+// - 90-180 days: monitor weekly
+// - 180+ days: monitor monthly
 export const refreshTiktokStatsByCampaign = action({
   args: {
     campaignId: v.string(),
@@ -389,11 +421,11 @@ export const refreshTiktokStatsByCampaign = action({
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const contents = allContents.filter((content: { postId: string; campaignId: string; }) => uuidRegex.test(content.postId));
 
-      // Fetch posts to skip (older than 7 days OR updated within 6 hours) ONCE for this campaign
+      // Fetch posts to skip based on tiered monitoring schedule
       // We'll skip Bundle Social API calls for these to save API requests
       const postsToSkipIds = await ctx.runQuery(internal.app.bundle.getPostsToSkip, { campaignId });
       const postsToSkipSet = new Set(postsToSkipIds);
-      console.log(`[refreshTiktokStats] Found ${postsToSkipSet.size} posts to skip (old posts + recently updated within 6 hours) - will save ${postsToSkipSet.size} API calls`);
+      console.log(`[refreshTiktokStats] Found ${postsToSkipSet.size} posts to skip (based on tiered monitoring schedule) - will save ${postsToSkipSet.size} API calls`);
 
       // Also fetch ALL existing posted videos to check if we should insert or update
       const existingPostIds = await ctx.runQuery(internal.app.bundle.getExistingPostedVideos, { campaignId });
@@ -446,12 +478,12 @@ export const refreshTiktokStatsByCampaign = action({
             return {
               postId: content.postId,
               success: false,
-              error: 'Post skipped (old OR recently updated within 6 hours) - saved API call',
+              error: 'Post skipped (tiered monitoring schedule) - saved API call',
               skipped: true,
             };
           }
 
-          // Fetch data from Bundle Social (only for new posts or posts less than 7 days old)
+          // Fetch data from Bundle Social (only for posts not skipped by tiered monitoring)
           const bundleData = await fetchBundleSocialPost(content.postId);
 
           if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
@@ -613,7 +645,7 @@ export const refreshTiktokStatsByCampaign = action({
       const postNotFoundCount = results.filter(r => r.error?.includes("Post not found")).length;
       const skippedCount = results.filter(r => r.error?.includes("skipped")).length;
 
-      console.log(`Refresh TikTok stats for campaign ${campaignId}: ${updatedCount} posts refreshed (${postsToInsert.length} new, ${postsToUpdate.length} updated), ${skippedCount} skipped (old OR recently updated) - saved ${skippedCount} API calls, ${errorCount} errors (${postNotFoundCount} post not found) in ${totalTime}ms`);
+      console.log(`Refresh TikTok stats for campaign ${campaignId}: ${updatedCount} posts refreshed (${postsToInsert.length} new, ${postsToUpdate.length} updated), ${skippedCount} skipped (tiered schedule) - saved ${skippedCount} API calls, ${errorCount} errors (${postNotFoundCount} post not found) in ${totalTime}ms`);
     } catch (error) {
       console.error(`Error refreshing TikTok stats for campaign ${campaignId}:`, error);
       throw error;
@@ -623,7 +655,7 @@ export const refreshTiktokStatsByCampaign = action({
 
 // Refresh TikTok stats - Orchestrator
 // Schedules refresh jobs for each campaign
-// Skips: old posts (>7 days) and recently updated posts (<6 hours) to save API calls
+// Uses tiered monitoring: daily for new posts, less frequently for older posts
 export const refreshTiktokStats = internalAction({
   args: {},
   handler: async (ctx) => {
