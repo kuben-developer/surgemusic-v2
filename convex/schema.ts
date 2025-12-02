@@ -53,19 +53,19 @@ export default defineSchema({
     lyrics: v.optional(v.array(v.object({
       timestamp: v.number(),
       text: v.string(),
-    }))),
+    }))), //deprecated
     wordsData: v.optional(v.array(v.object({
       text: v.string(),
       start: v.number(),
       end: v.number(),
       type: v.string(),
       logprob: v.optional(v.number()),
-    }))),
+    }))), //deprecated
     lyricsWithWords: v.optional(v.array(v.object({
       timestamp: v.number(),
       text: v.string(),
       wordIndices: v.array(v.number()),
-    }))),
+    }))), //deprecated
   })
     .index("by_campaignId", ["campaignId"]),
 

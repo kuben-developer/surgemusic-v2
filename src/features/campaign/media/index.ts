@@ -12,10 +12,4 @@ export { useCampaignLyrics } from "./hooks/useCampaignLyrics";
 export { useCampaignCaptions } from "./hooks/useCampaignCaptions";
 
 // Types
-export type {
-  LyricLine,
-  WordData,
-  LyricWithWords,
-  CampaignMediaData,
-  Caption,
-} from "./types/media.types";
+export type { CampaignMediaData, Caption } from "./types/media.types";

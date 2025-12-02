@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery } from "../_generated/server";
 
 /**
- * Get media data (audio and lyrics) for a campaign
+ * Get media data (audio and SRT) for a campaign
  */
 export const getMediaData = query({
   args: {
@@ -24,15 +24,12 @@ export const getMediaData = query({
       srtFileId: assets.srtFileId,
       srtUrl: assets.srtUrl,
       hasLyrics: assets.hasLyrics ?? false,
-      lyrics: assets.lyrics,
-      wordsData: assets.wordsData,
-      lyricsWithWords: assets.lyricsWithWords,
     };
   },
 });
 
 /**
- * Update audio and lyrics for a campaign
+ * Update audio and SRT for a campaign
  */
 export const updateAudioAndLyrics = mutation({
   args: {
@@ -42,34 +39,6 @@ export const updateAudioAndLyrics = mutation({
     srtFileId: v.optional(v.id("_storage")),
     srtUrl: v.optional(v.string()),
     hasLyrics: v.optional(v.boolean()),
-    lyrics: v.optional(
-      v.array(
-        v.object({
-          timestamp: v.number(),
-          text: v.string(),
-        })
-      )
-    ),
-    wordsData: v.optional(
-      v.array(
-        v.object({
-          text: v.string(),
-          start: v.number(),
-          end: v.number(),
-          type: v.string(),
-          logprob: v.optional(v.number()),
-        })
-      )
-    ),
-    lyricsWithWords: v.optional(
-      v.array(
-        v.object({
-          timestamp: v.number(),
-          text: v.string(),
-          wordIndices: v.array(v.number()),
-        })
-      )
-    ),
   },
   handler: async (ctx, args) => {
     const { campaignId, ...updateData } = args;
@@ -96,7 +65,7 @@ export const updateAudioAndLyrics = mutation({
 });
 
 /**
- * Remove audio and lyrics from a campaign
+ * Remove audio and SRT from a campaign
  */
 export const removeAudioAndLyrics = mutation({
   args: {
@@ -120,42 +89,16 @@ export const removeAudioAndLyrics = mutation({
 });
 
 /**
- * Update only lyrics data (used after transcription/editing)
+ * Update only SRT data (used after SRT upload)
  */
 export const updateLyrics = mutation({
   args: {
     campaignId: v.string(),
     srtFileId: v.optional(v.id("_storage")),
     srtUrl: v.optional(v.string()),
-    lyrics: v.array(
-      v.object({
-        timestamp: v.number(),
-        text: v.string(),
-      })
-    ),
-    wordsData: v.optional(
-      v.array(
-        v.object({
-          text: v.string(),
-          start: v.number(),
-          end: v.number(),
-          type: v.string(),
-          logprob: v.optional(v.number()),
-        })
-      )
-    ),
-    lyricsWithWords: v.optional(
-      v.array(
-        v.object({
-          timestamp: v.number(),
-          text: v.string(),
-          wordIndices: v.array(v.number()),
-        })
-      )
-    ),
   },
   handler: async (ctx, args) => {
-    const { campaignId, ...lyricsData } = args;
+    const { campaignId, ...srtData } = args;
 
     const assets = await ctx.db
       .query("campaignAssets")
@@ -163,12 +106,46 @@ export const updateLyrics = mutation({
       .first();
 
     if (!assets) {
-      return { success: false, error: "Campaign assets not found" };
+      // Create new assets record if it doesn't exist
+      await ctx.db.insert("campaignAssets", {
+        campaignId,
+        hasLyrics: true,
+        ...srtData,
+      });
+      return { success: true, created: true };
     }
 
     await ctx.db.patch(assets._id, {
       hasLyrics: true,
-      ...lyricsData,
+      ...srtData,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Remove only SRT data from a campaign (keeps audio intact)
+ */
+export const removeLyrics = mutation({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const assets = await ctx.db
+      .query("campaignAssets")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .first();
+
+    if (!assets) {
+      return { success: false, error: "Campaign assets not found" };
+    }
+
+    // Clear only SRT related fields, keep audio intact
+    await ctx.db.patch(assets._id, {
+      hasLyrics: false,
+      srtFileId: undefined,
+      srtUrl: undefined,
     });
 
     return { success: true };

@@ -3,43 +3,34 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FileText, Loader2, Edit, AlertCircle, Upload } from "lucide-react";
-import { LyricsEditor } from "@/features/campaign-old/create/components/LyricsEditor";
+import { FileText, Loader2, Upload, Trash2 } from "lucide-react";
 import { useCampaignLyrics } from "../hooks/useCampaignLyrics";
-import type { LyricLine } from "../types/media.types";
 
 interface LyricsSectionProps {
   campaignId: string;
-  audioUrl?: string;
-  audioBase64?: string;
-  hasLyrics?: boolean;
-  savedLyrics?: LyricLine[];
+  srtUrl?: string;
+  hasSrt?: boolean;
 }
 
 export function LyricsSection({
   campaignId,
-  audioUrl,
-  audioBase64,
-  hasLyrics = false,
-  savedLyrics = [],
+  srtUrl,
+  hasSrt = false,
 }: LyricsSectionProps) {
   const srtFileInputRef = useRef<HTMLInputElement>(null);
 
   const {
-    lyrics,
-    wordsData,
-    isTranscribing,
-    transcriptionFailed,
-    transcriptionError,
-    showLyricsEditor,
-    handleTranscribe,
-    handleSaveLyrics,
+    isUploading,
+    isRemoving,
+    srtContent,
+    isFetchingSrt,
     handleUploadSRT,
-    openLyricsEditor,
-    closeLyricsEditor,
-  } = useCampaignLyrics(campaignId, audioUrl);
+    handleRemoveSRT,
+  } = useCampaignLyrics(campaignId, srtUrl);
 
-  const handleSRTFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSRTFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -56,44 +47,6 @@ export function LyricsSection({
     }
   };
 
-  // Show message if no audio uploaded yet
-  if (!audioUrl) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-base font-semibold">Lyrics</h3>
-        </div>
-
-        <Card className="p-3 text-center">
-          <p className="text-sm text-muted-foreground">
-            Please upload audio first to transcribe lyrics
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show lyrics editor if open
-  if (showLyricsEditor) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-base font-semibold">Edit Lyrics</h3>
-        </div>
-
-        <LyricsEditor
-          key={Date.now()}
-          initialLyrics={lyrics.length > 0 ? lyrics : savedLyrics}
-          onSave={handleSaveLyrics}
-          onCancel={closeLyricsEditor}
-          audioBase64={audioBase64}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -102,41 +55,25 @@ export function LyricsSection({
           <h3 className="text-base font-semibold">Lyrics</h3>
         </div>
 
-        <div className="flex gap-2">
-          {hasLyrics && (
-            <Button variant="outline" size="sm" onClick={() => openLyricsEditor(savedLyrics)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Lyrics
-            </Button>
-          )}
-
+        {!hasSrt && (
           <Button
             size="sm"
-            onClick={handleTranscribe}
-            disabled={isTranscribing}
+            onClick={() => srtFileInputRef.current?.click()}
+            disabled={isUploading}
           >
-            {isTranscribing ? (
+            {isUploading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Transcribing...
+                Uploading...
               </>
             ) : (
               <>
-                <FileText className="h-4 w-4 mr-2" />
-                {hasLyrics ? "Re-transcribe" : "Transcribe Audio"}
+                <Upload className="h-4 w-4 mr-2" />
+                Upload SRT
               </>
             )}
           </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => srtFileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload SRT
-          </Button>
-        </div>
+        )}
       </div>
 
       <input
@@ -147,70 +84,45 @@ export function LyricsSection({
         onChange={handleSRTFileSelect}
       />
 
-      {hasLyrics && savedLyrics.length > 0 ? (
+      {hasSrt && srtContent ? (
         <Card className="p-4">
           <div className="space-y-3">
-            <div className="max-h-60 overflow-y-auto divide-y divide-border text-sm">
-              {savedLyrics.map((line, index) => (
-                <div key={index} className="flex items-baseline gap-3 py-2 first:pt-0">
-                  <span className="text-muted-foreground shrink-0 w-8 font-mono text-xs">
-                    {index}s
-                  </span>
-                  <span className="text-foreground leading-relaxed">
-                    {line.text || <span className="text-muted-foreground italic">(empty)</span>}
-                  </span>
-                </div>
-              ))}
+            <pre className="max-h-60 overflow-y-auto text-sm font-mono bg-muted/50 p-3 rounded-md whitespace-pre-wrap">
+              {srtContent}
+            </pre>
+            <div className="flex justify-end">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveSRT}
+                disabled={isRemoving}
+              >
+                {isRemoving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </Card>
-      ) : transcriptionFailed ? (
-        <Card className="p-3 border-destructive">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-destructive mb-1">
-                Transcription Failed
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">
-                {transcriptionError ||
-                  "We tried three times but couldn't transcribe the audio. You can retry, upload an SRT file, or edit manually."}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleTranscribe}
-                  disabled={isTranscribing}
-                >
-                  {isTranscribing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    "Retry"
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => srtFileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload SRT
-                </Button>
-                <Button size="sm" onClick={() => openLyricsEditor(savedLyrics)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Manually
-                </Button>
-              </div>
-            </div>
-          </div>
+      ) : hasSrt && isFetchingSrt ? (
+        <Card className="p-4 text-center">
+          <Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">Loading SRT content...</p>
         </Card>
       ) : (
         <Card className="p-4 text-center">
           <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">No lyrics yet</p>
+          <p className="text-sm text-muted-foreground mb-1">No SRT file uploaded</p>
           <p className="text-xs text-muted-foreground">
-            Transcribe audio using ElevenLabs or upload an SRT file
+            Upload an SRT file to add lyrics to your videos
           </p>
         </Card>
       )}

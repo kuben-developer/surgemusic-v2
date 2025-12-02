@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
@@ -14,8 +13,6 @@ interface CampaignMediaSectionProps {
 }
 
 export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) {
-  const [audioBase64, setAudioBase64] = useState<string | undefined>(undefined);
-
   // Fetch media data for this campaign
   const mediaData = useQuery(api.app.campaignAssets.getMediaData, {
     campaignId,
@@ -40,10 +37,8 @@ export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) 
       {/* Lyrics Section */}
       <LyricsSection
         campaignId={campaignId}
-        audioUrl={mediaData?.audioUrl}
-        audioBase64={audioBase64}
-        hasLyrics={mediaData?.hasLyrics}
-        savedLyrics={mediaData?.lyrics}
+        srtUrl={mediaData?.srtUrl}
+        hasSrt={mediaData?.hasLyrics}
       />
 
       <Separator />

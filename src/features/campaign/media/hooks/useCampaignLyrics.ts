@@ -1,211 +1,116 @@
 "use client";
 
-import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useState, useEffect, useCallback } from "react";
+import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
-import { initializeEmptyLyrics, parseSRT } from "@/utils/srt-converter.utils";
-import { generateSRTFromTimedLyrics, convertSRTToFile } from "@/utils/srt-generator.utils";
-import { parseWordLevelDataFromSRT } from "@/utils/srt-parser.utils";
 import { useConvexUpload } from "@/hooks/useConvexUpload";
-import type { LyricLine, WordData, LyricWithWords } from "../types/media.types";
 
-export function useCampaignLyrics(campaignId: string, audioUrl?: string) {
-  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
-  const [wordsData, setWordsData] = useState<WordData[] | undefined>(undefined);
-  const [lyricsWithWords, setLyricsWithWords] = useState<LyricWithWords[] | undefined>(undefined);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcriptionFailed, setTranscriptionFailed] = useState(false);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
-  const [showLyricsEditor, setShowLyricsEditor] = useState(false);
+export function useCampaignLyrics(campaignId: string, srtUrl?: string) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [srtContent, setSrtContent] = useState<string | null>(null);
+  const [isFetchingSrt, setIsFetchingSrt] = useState(false);
 
-  const transcribeAudioAction = useAction(api.app.transcription.transcribeAudio);
   const updateLyricsMutation = useMutation(api.app.campaignAssets.updateLyrics);
+  const removeLyricsMutation = useMutation(api.app.campaignAssets.removeLyrics);
   const { uploadFile } = useConvexUpload();
 
   /**
-   * Transcribe audio using ElevenLabs
+   * Fetch raw SRT content from URL for display
    */
-  const handleTranscribe = async () => {
-    if (!audioUrl) {
-      toast.error("No audio to transcribe");
-      return;
-    }
-
-    setIsTranscribing(true);
-    setTranscriptionFailed(false);
-    setTranscriptionError(null);
-
+  const fetchSrtContent = useCallback(async (url: string) => {
+    setIsFetchingSrt(true);
     try {
-      console.log("Starting transcription for URL:", audioUrl);
-      const result = await transcribeAudioAction({ audioUrl });
-      console.log("Transcription result:", result);
-
-      if (result.success && result.lyrics && result.lyrics.length > 0) {
-        setLyrics(result.lyrics);
-
-        // Save word-level data if available
-        if (result.wordsData) {
-          setWordsData(result.wordsData);
-        }
-        if (result.lyricsWithWords) {
-          setLyricsWithWords(result.lyricsWithWords);
-        }
-
-        setShowLyricsEditor(true);
-        toast.success("Audio transcribed successfully");
-      } else {
-        console.error("Transcription failed:", result.error);
-        setTranscriptionFailed(true);
-        setTranscriptionError(result.error || "Transcription failed.");
-        toast.error("Transcription failed", {
-          description: "We tried three times on the server. You can retry or edit manually.",
-        });
-
-        // Prepare empty lyrics so user can still open the editor manually
-        if (!lyrics || lyrics.length === 0) {
-          setLyrics(initializeEmptyLyrics(15));
-        }
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch SRT file");
       }
+      const text = await response.text();
+      setSrtContent(text);
     } catch (error) {
-      console.error("Transcription error:", error);
-      setTranscriptionFailed(true);
-      setTranscriptionError(error instanceof Error ? error.message : "Unknown error");
-      toast.error("Failed to transcribe audio", {
-        description: "We tried three times on the server. You can retry or edit manually.",
-      });
-
-      // Prepare empty lyrics so user can still open the editor manually
-      if (!lyrics || lyrics.length === 0) {
-        setLyrics(initializeEmptyLyrics(15));
-      }
+      console.error("Error fetching SRT content:", error);
+      setSrtContent(null);
     } finally {
-      setIsTranscribing(false);
+      setIsFetchingSrt(false);
     }
-  };
+  }, []);
 
-  /**
-   * Save edited lyrics to database
-   */
-  const handleSaveLyrics = async (editedLyrics: LyricLine[]) => {
-    try {
-      let srtFileId = undefined;
-      let srtUrl = undefined;
-
-      // Generate SRT from edited lyrics (respects per-second timing from editor)
-      const srtContent = generateSRTFromTimedLyrics(editedLyrics);
-
-      // Convert to File and upload
-      const srtFile = convertSRTToFile(srtContent, `campaign-${campaignId}.srt`);
-      const uploadResult = await uploadFile(srtFile);
-
-      if (uploadResult) {
-        srtFileId = uploadResult.storageId;
-        srtUrl = uploadResult.publicUrl;
-      }
-
-      // Save lyrics and SRT reference to database
-      await updateLyricsMutation({
-        campaignId,
-        lyrics: editedLyrics,
-        wordsData,
-        lyricsWithWords,
-        srtFileId,
-        srtUrl,
-      });
-
-      setLyrics(editedLyrics);
-      toast.success("Lyrics saved successfully");
-      setShowLyricsEditor(false);
-    } catch (error) {
-      toast.error("Failed to save lyrics");
-      throw error;
+  // Fetch SRT content when URL changes
+  useEffect(() => {
+    if (srtUrl) {
+      void fetchSrtContent(srtUrl);
+    } else {
+      setSrtContent(null);
     }
-  };
+  }, [srtUrl, fetchSrtContent]);
 
   /**
-   * Open lyrics editor manually (for manual entry or editing existing lyrics)
-   * @param existingLyrics - Optional saved lyrics from database to edit
-   */
-  const openLyricsEditor = (existingLyrics?: LyricLine[]) => {
-    if (existingLyrics && existingLyrics.length > 0) {
-      // Use saved lyrics from database
-      setLyrics(existingLyrics);
-    } else if (lyrics.length === 0) {
-      // Initialize empty lyrics for manual entry
-      setLyrics(initializeEmptyLyrics(15));
-    }
-    setShowLyricsEditor(true);
-  };
-
-  /**
-   * Close lyrics editor
-   */
-  const closeLyricsEditor = () => {
-    setShowLyricsEditor(false);
-  };
-
-  /**
-   * Upload and parse SRT file
+   * Upload and save SRT file directly to database
    */
   const handleUploadSRT = async (file: File) => {
+    setIsUploading(true);
     try {
       const text = await file.text();
-      const parsedLyrics = parseSRT(text);
 
-      if (parsedLyrics.length === 0) {
+      // Basic validation - check if file has content
+      if (!text.trim()) {
         toast.error("Failed to parse SRT file", {
-          description: "The file appears to be empty or invalid",
+          description: "The file appears to be empty",
         });
         return;
       }
 
-      // Parse word-level data from SRT for precise timing
-      const parsedWordsData = parseWordLevelDataFromSRT(text);
-      if (parsedWordsData.length > 0) {
-        setWordsData(parsedWordsData);
-      }
-
       // Upload the SRT file to storage
       const uploadResult = await uploadFile(file);
-      if (uploadResult) {
-        // Store SRT file reference for later use
-        console.log("SRT file uploaded:", uploadResult.publicUrl);
+      if (!uploadResult) {
+        toast.error("Failed to upload SRT file");
+        return;
       }
 
-      // Normalize to 15 seconds by taking first 15 entries or filling with empty
-      const normalizedLyrics: LyricLine[] = [];
-      for (let i = 0; i < 15; i++) {
-        normalizedLyrics.push({
-          timestamp: i,
-          text: parsedLyrics[i]?.text || "",
-        });
-      }
+      // Save to database
+      await updateLyricsMutation({
+        campaignId,
+        srtFileId: uploadResult.storageId,
+        srtUrl: uploadResult.publicUrl,
+      });
 
-      setLyrics(normalizedLyrics);
-      setShowLyricsEditor(true);
-      toast.success("SRT file loaded successfully");
+      // Update local SRT content for immediate display
+      setSrtContent(text);
+      toast.success("SRT file uploaded successfully");
     } catch (error) {
       console.error("SRT upload error:", error);
       toast.error("Failed to upload SRT file", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  /**
+   * Remove SRT data from campaign
+   */
+  const handleRemoveSRT = async () => {
+    setIsRemoving(true);
+    try {
+      await removeLyricsMutation({ campaignId });
+      setSrtContent(null);
+      toast.success("SRT file removed successfully");
+    } catch (error) {
+      console.error("Remove SRT error:", error);
+      toast.error("Failed to remove SRT file");
+    } finally {
+      setIsRemoving(false);
     }
   };
 
   return {
-    lyrics,
-    wordsData,
-    lyricsWithWords,
-    isTranscribing,
-    transcriptionFailed,
-    transcriptionError,
-    showLyricsEditor,
-    handleTranscribe,
-    handleSaveLyrics,
+    isUploading,
+    isRemoving,
+    srtContent,
+    isFetchingSrt,
     handleUploadSRT,
-    openLyricsEditor,
-    closeLyricsEditor,
-    setLyrics,
+    handleRemoveSRT,
   };
 }
