@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAction } from "convex/react";
+import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,6 +27,7 @@ interface ReadyToPublishGridProps {
   campaignId: string;
   unassignedRecordIds: string[];
   onVideosAdded?: () => void;
+  selectedDateFilter?: string | null;
 }
 
 export function ReadyToPublishGrid({
@@ -35,6 +37,7 @@ export function ReadyToPublishGrid({
   campaignId,
   unassignedRecordIds,
   onVideosAdded,
+  selectedDateFilter = null,
 }: ReadyToPublishGridProps) {
   const totalCount = processingVideos.length + processedVideos.length;
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
@@ -49,19 +52,42 @@ export function ReadyToPublishGrid({
   const [processedPage, setProcessedPage] = useState(1);
   const [processingPage, setProcessingPage] = useState(1);
 
-  // Calculate pagination for processed videos
-  const processedTotalPages = Math.ceil(processedVideos.length / VIDEOS_PER_PAGE);
+  // Filter videos by selected date
+  const filteredProcessingVideos = useMemo(() => {
+    if (selectedDateFilter === null) return processingVideos;
+    if (selectedDateFilter === "unscheduled") {
+      return processingVideos.filter((v) => !v.scheduledDate);
+    }
+    return processingVideos.filter((v) => v.scheduledDate === selectedDateFilter);
+  }, [processingVideos, selectedDateFilter]);
+
+  const filteredProcessedVideos = useMemo(() => {
+    if (selectedDateFilter === null) return processedVideos;
+    if (selectedDateFilter === "unscheduled") {
+      return processedVideos.filter((v) => !v.scheduledDate);
+    }
+    return processedVideos.filter((v) => v.scheduledDate === selectedDateFilter);
+  }, [processedVideos, selectedDateFilter]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setProcessedPage(1);
+    setProcessingPage(1);
+  }, [selectedDateFilter]);
+
+  // Calculate pagination for processed videos (using filtered videos)
+  const processedTotalPages = Math.ceil(filteredProcessedVideos.length / VIDEOS_PER_PAGE);
   const paginatedProcessedVideos = useMemo(() => {
     const start = (processedPage - 1) * VIDEOS_PER_PAGE;
-    return processedVideos.slice(start, start + VIDEOS_PER_PAGE);
-  }, [processedVideos, processedPage]);
+    return filteredProcessedVideos.slice(start, start + VIDEOS_PER_PAGE);
+  }, [filteredProcessedVideos, processedPage]);
 
-  // Calculate pagination for processing videos
-  const processingTotalPages = Math.ceil(processingVideos.length / VIDEOS_PER_PAGE);
+  // Calculate pagination for processing videos (using filtered videos)
+  const processingTotalPages = Math.ceil(filteredProcessingVideos.length / VIDEOS_PER_PAGE);
   const paginatedProcessingVideos = useMemo(() => {
     const start = (processingPage - 1) * VIDEOS_PER_PAGE;
-    return processingVideos.slice(start, start + VIDEOS_PER_PAGE);
-  }, [processingVideos, processingPage]);
+    return filteredProcessingVideos.slice(start, start + VIDEOS_PER_PAGE);
+  }, [filteredProcessingVideos, processingPage]);
 
   // Reset page if it exceeds total pages (e.g., after unassigning videos)
   useEffect(() => {
@@ -86,7 +112,7 @@ export function ReadyToPublishGrid({
     selectAll,
     deselectAll,
     clearSelection,
-  } = useVideoSelection(processedVideos);
+  } = useVideoSelection(filteredProcessedVideos);
 
   if (isLoading) {
     return (
@@ -131,9 +157,9 @@ export function ReadyToPublishGrid({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Ready to Publish Section (at top) */}
-      {processedVideos.length > 0 && (
+      {filteredProcessedVideos.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -151,7 +177,12 @@ export function ReadyToPublishGrid({
               <div className="flex items-center gap-2">
                 <CheckCircle className="size-4 text-green-500" />
                 <h3 className="font-medium">
-                  Ready to Publish ({processedVideos.length})
+                  Ready to Publish ({filteredProcessedVideos.length})
+                  {selectedDateFilter && (
+                    <span className="text-muted-foreground font-normal">
+                      {" "}- {selectedDateFilter === "unscheduled" ? "Unscheduled" : format(parseISO(selectedDateFilter), "MMM d")}
+                    </span>
+                  )}
                   {hasSelection && (
                     <span className="text-muted-foreground font-normal">
                       {" "}- {selectedCount} selected
@@ -186,8 +217,8 @@ export function ReadyToPublishGrid({
                 onClick={async () => {
                   // Determine which videos to publish
                   const videosToPublish = hasSelection
-                    ? processedVideos.filter((v) => selectedIds.has(v._id))
-                    : processedVideos;
+                    ? filteredProcessedVideos.filter((v) => selectedIds.has(v._id))
+                    : filteredProcessedVideos;
 
                   if (videosToPublish.length === 0) {
                     toast.error("No videos to publish");
@@ -217,7 +248,7 @@ export function ReadyToPublishGrid({
                     setIsPublishing(false);
                   }
                 }}
-                disabled={isPublishing || processedVideos.length === 0}
+                disabled={isPublishing || filteredProcessedVideos.length === 0}
               >
                 {isPublishing ? (
                   <Loader2 className="size-4 mr-2 animate-spin" />
@@ -287,12 +318,19 @@ export function ReadyToPublishGrid({
       />
 
       {/* Processing Section (at bottom) */}
-      {processingVideos.length > 0 && (
+      {filteredProcessingVideos.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="size-4 text-amber-500" />
-              <h3 className="font-medium">Processing ({processingVideos.length})</h3>
+              <h3 className="font-medium">
+                Processing ({filteredProcessingVideos.length})
+                {selectedDateFilter && (
+                  <span className="text-muted-foreground font-normal">
+                    {" "}- {selectedDateFilter === "unscheduled" ? "Unscheduled" : format(parseISO(selectedDateFilter), "MMM d")}
+                  </span>
+                )}
+              </h3>
             </div>
           </div>
           {/* Pagination Controls */}
@@ -415,14 +453,22 @@ function ReadyToPublishVideoCard({
         )}
       </div>
 
-      {/* Overlay Style Badge */}
-      {video.overlayStyle && (
-        <div className="absolute top-2 right-2 z-10">
+      {/* Overlay Style & Scheduled Date Badges */}
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+        {video.overlayStyle && (
           <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
             {video.overlayStyle}
           </Badge>
-        </div>
-      )}
+        )}
+        {video.scheduledDate && (
+          <Badge
+            variant="secondary"
+            className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 text-[10px]"
+          >
+            {format(parseISO(video.scheduledDate), "MMM d")}
+          </Badge>
+        )}
+      </div>
 
       {/* Video Content */}
       {isInView ? (
