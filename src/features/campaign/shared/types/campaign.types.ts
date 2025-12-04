@@ -12,6 +12,7 @@ export interface AirtableContent {
   account_niche: string;
   video_category: string;
   api_post_id?: string;
+  date?: string; // ISO format "YYYY-MM-DD"
 }
 
 export interface VideoCategoryStats {

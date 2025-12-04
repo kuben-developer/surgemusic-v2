@@ -247,6 +247,7 @@ export default defineSchema({
     renderType: v.optional(v.string()), // "Both" | "LyricsOnly" | "CaptionOnly"
     airtableRecordId: v.optional(v.string()),
     campaignId: v.optional(v.string()), // Airtable campaign ID for fetching assets
+    scheduledDate: v.optional(v.string()), // ISO date "YYYY-MM-DD" from Airtable
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])

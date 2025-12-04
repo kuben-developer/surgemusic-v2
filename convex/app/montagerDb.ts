@@ -383,14 +383,17 @@ export const deleteVideo = mutation({
 
 /**
  * Assign montager videos to Airtable records
- * Updates first N pending videos with overlay style, airtable record IDs, and campaign ID
+ * Updates first N pending videos with overlay style, airtable record IDs, scheduled dates, and campaign ID
  */
 export const assignVideosToAirtable = mutation({
   args: {
     folderId: v.id("montagerFolders"),
     overlayStyle: v.string(),
     renderType: v.optional(v.string()), // "Both" | "LyricsOnly" | "CaptionOnly"
-    airtableRecordIds: v.array(v.string()),
+    airtableRecords: v.array(v.object({
+      id: v.string(),
+      date: v.optional(v.string()),
+    })),
     campaignId: v.string(), // Airtable campaign ID for fetching assets
   },
   handler: async (ctx, args) => {
@@ -414,7 +417,7 @@ export const assignVideosToAirtable = mutation({
       throw new Error("Folder not found");
     }
 
-    const count = args.airtableRecordIds.length;
+    const count = args.airtableRecords.length;
 
     // Get first N pending videos from the folder
     const pendingVideos = await ctx.db
@@ -430,18 +433,19 @@ export const assignVideosToAirtable = mutation({
       );
     }
 
-    // Update each video with the corresponding airtable record ID
+    // Update each video with the corresponding airtable record ID and scheduled date
     const updatedIds = [];
     for (let i = 0; i < count; i++) {
       const video = pendingVideos[i];
-      const airtableRecordId = args.airtableRecordIds[i];
+      const record = args.airtableRecords[i];
 
-      if (video && airtableRecordId) {
+      if (video && record) {
         await ctx.db.patch(video._id, {
           status: "ready_for_processing",
           overlayStyle: args.overlayStyle,
           renderType: args.renderType ?? "Both",
-          airtableRecordId: airtableRecordId,
+          airtableRecordId: record.id,
+          scheduledDate: record.date,
           campaignId: args.campaignId,
         });
         updatedIds.push(video._id);
@@ -808,6 +812,7 @@ export const unassignVideosFromAirtable = mutation({
         airtableRecordId: undefined,
         campaignId: undefined,
         processedVideoUrl: undefined,
+        scheduledDate: undefined,
       });
 
       unassignedCount++;
@@ -883,6 +888,7 @@ export const unassignVideosByCampaignId = mutation({
         airtableRecordId: undefined,
         campaignId: undefined,
         processedVideoUrl: undefined,
+        scheduledDate: undefined,
       });
 
       unassignedCount++;
@@ -957,6 +963,7 @@ export const cancelProcessingVideosByCampaignId = mutation({
         renderType: undefined,
         airtableRecordId: undefined,
         campaignId: undefined,
+        scheduledDate: undefined,
       });
 
       cancelledCount++;

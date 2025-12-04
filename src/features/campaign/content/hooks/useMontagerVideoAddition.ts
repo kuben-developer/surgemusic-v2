@@ -13,13 +13,13 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 export type DialogStep = "folder" | "overlay" | "renderType" | "confirm";
 
 interface UseMontagerVideoAdditionProps {
-  airtableRecordIds: string[];
+  airtableRecords: { id: string; date?: string }[];
   campaignId: string;
   onSuccess?: () => void;
 }
 
 export function useMontagerVideoAddition({
-  airtableRecordIds,
+  airtableRecords,
   campaignId,
   onSuccess,
 }: UseMontagerVideoAdditionProps) {
@@ -29,9 +29,9 @@ export function useMontagerVideoAddition({
   const [selectedStyle, setSelectedStyle] = useState<OverlayStyle | null>(null);
   const [selectedRenderType, setSelectedRenderType] = useState<RenderType>("Both");
   const [isLoading, setIsLoading] = useState(false);
-  const [videosToAssign, setVideosToAssignState] = useState<number>(airtableRecordIds.length);
+  const [videosToAssign, setVideosToAssignState] = useState<number>(airtableRecords.length);
 
-  const videosNeeded = airtableRecordIds.length;
+  const videosNeeded = airtableRecords.length;
 
   // Calculate max videos that can be assigned (limited by folder capacity and available slots)
   const maxVideosToAssign = selectedFolder
@@ -113,15 +113,15 @@ export function useMontagerVideoAddition({
     setIsLoading(true);
 
     try {
-      // Only assign the selected number of videos
-      const recordsToAssign = airtableRecordIds.slice(0, videosToAssign);
+      // Only assign the selected number of records (already sorted by date)
+      const recordsToAssign = airtableRecords.slice(0, videosToAssign);
 
       // Assign videos from montager folder to airtable records
       const result = await assignVideos({
         folderId: selectedFolder._id as Id<"montagerFolders">,
         overlayStyle: selectedStyle,
         renderType: selectedRenderType,
-        airtableRecordIds: recordsToAssign,
+        airtableRecords: recordsToAssign,
         campaignId,
       });
 

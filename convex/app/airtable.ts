@@ -37,6 +37,7 @@ interface ContentItem {
     account_niche: string;
     video_category: string;
     api_post_id?: string;
+    date?: string; // ISO format "YYYY-MM-DD"
 }
 
 // Helper function to fetch records from Airtable
@@ -228,6 +229,7 @@ export const getCampaignContent = action({
             url.searchParams.append("fields[]", "account_niche");
             url.searchParams.append("fields[]", "video_category");
             url.searchParams.append("fields[]", "api_post_id");
+            url.searchParams.append("fields[]", "date");
 
             if (offset) url.searchParams.append("offset", offset);
 
@@ -252,6 +254,7 @@ export const getCampaignContent = action({
                     account_niche: accountNiche?.[0] || "",
                     video_category: (record.fields["video_category"] as string) || "",
                     api_post_id: apiPostId?.[0] as string | undefined,
+                    date: record.fields["date"] as string | undefined,
                 });
             });
 

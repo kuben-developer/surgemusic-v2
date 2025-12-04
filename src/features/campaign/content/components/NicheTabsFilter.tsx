@@ -51,8 +51,9 @@ export function NicheTabsFilter({
   // Get selected niche stats
   const selectedNicheStats = niches.find((n) => n.niche === selectedNiche);
 
-  // Get the IDs of empty Airtable records that don't have montager videos assigned yet
-  const unassignedEmptyRecordIds = useMemo(() => {
+  // Get the records of empty Airtable records that don't have montager videos assigned yet
+  // Sorted by date ascending (earliest first), records without dates go last
+  const unassignedEmptyRecords = useMemo(() => {
     if (selectedNiche === "all") return [];
 
     return content
@@ -63,10 +64,17 @@ export function NicheTabsFilter({
           !record.video_url &&
           !assignedSet.has(record.id)
       )
-      .map((record) => record.id);
+      .sort((a, b) => {
+        // Sort by date ascending. Records without dates go to the end
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date); // ISO dates sort correctly with string comparison
+      })
+      .map((record) => ({ id: record.id, date: record.date }));
   }, [content, categoryName, selectedNiche, assignedSet]);
 
-  const videosNeeded = unassignedEmptyRecordIds.length;
+  const videosNeeded = unassignedEmptyRecords.length;
   const hasUnassignedVideos = videosNeeded > 0;
 
   const handleAddFromMontager = () => {
@@ -146,7 +154,7 @@ export function NicheTabsFilter({
         <MontagerVideoDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          airtableRecordIds={unassignedEmptyRecordIds}
+          airtableRecords={unassignedEmptyRecords}
           campaignId={campaignId}
           categoryName={categoryName}
           nicheName={selectedNiche}

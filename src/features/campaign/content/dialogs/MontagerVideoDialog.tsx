@@ -22,7 +22,7 @@ import type { MontagerFolder } from "../../shared/types/campaign.types";
 interface MontagerVideoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  airtableRecordIds: string[];
+  airtableRecords: { id: string; date?: string }[];
   campaignId: string;
   categoryName: string;
   nicheName: string;
@@ -32,7 +32,7 @@ interface MontagerVideoDialogProps {
 export function MontagerVideoDialog({
   open,
   onOpenChange,
-  airtableRecordIds,
+  airtableRecords,
   campaignId,
   categoryName,
   nicheName,
@@ -57,7 +57,7 @@ export function MontagerVideoDialog({
     handlePreviousStep,
     handleSubmit,
   } = useMontagerVideoAddition({
-    airtableRecordIds,
+    airtableRecords,
     campaignId,
     onSuccess: () => {
       onSuccess?.();
