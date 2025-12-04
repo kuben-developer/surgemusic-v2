@@ -9,10 +9,11 @@ import { AlertCircle, Calendar, CheckCircle, Clock, FileVideo } from "lucide-rea
 interface DateStat {
   date: string | null; // null for unscheduled/legacy
   total: number;
-  published?: number;
-  ready?: number;
-  processing?: number;
-  needed?: number;
+  needed?: number;      // Red - no video assigned
+  processing?: number;  // Amber - ready_for_processing
+  ready?: number;       // Green - processed
+  scheduled?: number;   // Blue - has video_url, no api_post_id
+  published?: number;   // Purple - has api_post_id
 }
 
 interface DateFilterTabsProps {
@@ -42,12 +43,13 @@ export function DateFilterTabs({
     return dateStats.reduce(
       (acc, stat) => ({
         total: acc.total + stat.total,
-        published: acc.published + (stat.published ?? 0),
-        ready: acc.ready + (stat.ready ?? 0),
-        processing: acc.processing + (stat.processing ?? 0),
         needed: acc.needed + (stat.needed ?? 0),
+        processing: acc.processing + (stat.processing ?? 0),
+        ready: acc.ready + (stat.ready ?? 0),
+        scheduled: acc.scheduled + (stat.scheduled ?? 0),
+        published: acc.published + (stat.published ?? 0),
       }),
-      { total: 0, published: 0, ready: 0, processing: 0, needed: 0 }
+      { total: 0, needed: 0, processing: 0, ready: 0, scheduled: 0, published: 0 }
     );
   }, [dateStats]);
 
@@ -87,10 +89,11 @@ interface DateCardProps {
   onClick: () => void;
   stats: {
     total: number;
-    published?: number;
-    ready?: number;
-    processing?: number;
     needed?: number;
+    processing?: number;
+    ready?: number;
+    scheduled?: number;
+    published?: number;
   };
 }
 
@@ -129,10 +132,10 @@ function DateCard({ date, label, isSelected, onClick, stats }: DateCardProps) {
         isSelected
           ? "border-primary bg-primary/5"
           : isOverdue
-          ? "border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-950/20"
-          : isUnscheduled
-          ? "border-dashed border-muted-foreground/30 bg-muted/30"
-          : "border-border bg-card"
+            ? "border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-950/20"
+            : isUnscheduled
+              ? "border-dashed border-muted-foreground/30 bg-muted/30"
+              : "border-border bg-card"
       )}
     >
       {/* Day Label */}
@@ -142,15 +145,15 @@ function DateCard({ date, label, isSelected, onClick, stats }: DateCardProps) {
           isSelected
             ? "text-primary"
             : isOverdue
-            ? "text-red-600 dark:text-red-400"
-            : "text-muted-foreground"
+              ? "text-red-600 dark:text-red-400"
+              : "text-muted-foreground"
         )}
       >
         {getLabel()}
       </span>
 
       {/* Date */}
-      {dateDisplay && (
+      {dateDisplay ? (
         <span
           className={cn(
             "text-sm font-semibold",
@@ -158,6 +161,10 @@ function DateCard({ date, label, isSelected, onClick, stats }: DateCardProps) {
           )}
         >
           {dateDisplay}
+        </span>
+      ) : (
+        <span className="h-5 font-semibold text-muted-foreground">
+          &#8734;
         </span>
       )}
 
@@ -181,8 +188,14 @@ function DateCard({ date, label, isSelected, onClick, stats }: DateCardProps) {
             {stats.ready}
           </span>
         )}
-        {(stats.published ?? 0) > 0 && (
+        {(stats.scheduled ?? 0) > 0 && (
           <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+            <Calendar className="size-2.5" />
+            {stats.scheduled}
+          </span>
+        )}
+        {(stats.published ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] text-purple-600 dark:text-purple-400">
             <FileVideo className="size-2.5" />
             {stats.published}
           </span>

@@ -6,15 +6,19 @@ import { api } from "../../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft, FolderPlus } from "lucide-react";
 import { useCampaignContent } from "./hooks/useCampaignContent";
+import { MontagerVideoDialog } from "./dialogs/MontagerVideoDialog";
+import { MissingAssetsDialog } from "./dialogs/MissingAssetsDialog";
 import { VideoCategoryTable } from "./components/VideoCategoryTable";
-import { VideoGrid } from "./components/VideoGrid";
 import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
 import { ViewToggle } from "./components/ViewToggle";
 import type { VideoView } from "./components/ViewToggle";
+import { ProcessingGrid } from "./components/ProcessingGrid";
 import { ReadyToPublishGrid } from "./components/ReadyToPublishGrid";
+import { ScheduledGrid } from "./components/ScheduledGrid";
+import { PublishedGrid } from "./components/PublishedGrid";
 import { DateFilterTabs } from "./components/DateFilterTabs";
 import { CampaignMediaSection } from "@/features/campaign/media";
 import { CampaignInfoCard } from "./components/CampaignInfoCard";
@@ -33,10 +37,25 @@ export function CampaignContentPage() {
   const { data, isLoading, error } = useCampaignContent(campaignRecordId);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedNiche, setSelectedNiche] = useState<string>("all");
+  const [selectedNiche, setSelectedNiche] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("categories");
-  const [videoView, setVideoView] = useState<VideoView>("published");
+  const [videoView, setVideoView] = useState<VideoView>("processing");
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
+  const [montagerDialogOpen, setMontagerDialogOpen] = useState(false);
+  const [missingAssetsDialogOpen, setMissingAssetsDialogOpen] = useState(false);
+
+  // Validate campaign assets for Montager
+  const validation = useQuery(
+    api.app.campaignValidation.validateCampaignAssets,
+    selectedCategory ? { campaignId: campaignRecordId } : "skip"
+  );
+
+  // Get all airtable record IDs that already have montager videos assigned
+  const assignedRecordIds = useQuery(api.app.montagerDb.getAssignedAirtableRecordIds);
+  const assignedSet = useMemo(
+    () => new Set(assignedRecordIds ?? []),
+    [assignedRecordIds]
+  );
 
   // Calculate category stats
   const categoryStats = useMemo(() => {
@@ -52,18 +71,18 @@ export function CampaignContentPage() {
 
   // Filter videos by category and niche
   const filteredVideos = useMemo(() => {
-    if (!data?.content || !selectedCategory) return [];
+    if (!data?.content || !selectedCategory || !selectedNiche) return [];
     return filterByCategoryAndNiche(data.content, selectedCategory, selectedNiche);
   }, [data?.content, selectedCategory, selectedNiche]);
 
   // Get all airtable record IDs for the current category/niche (for querying montager videos)
   const categoryNicheRecordIds = useMemo(() => {
-    if (!data?.content || !selectedCategory) return [];
+    if (!data?.content || !selectedCategory || !selectedNiche) return [];
 
     return data.content
       .filter((record) => {
         const matchesCategory = record.video_category === selectedCategory;
-        const matchesNiche = selectedNiche === "all" || record.account_niche === selectedNiche;
+        const matchesNiche = record.account_niche === selectedNiche;
         return matchesCategory && matchesNiche;
       })
       .map((record) => record.id);
@@ -83,19 +102,52 @@ export function CampaignContentPage() {
     return countVideosWithUrls(data.content, selectedCategory, null);
   }, [data?.content, selectedCategory]);
 
-  // Count published videos (with video_url)
-  const publishedCount = useMemo(() => {
-    return filteredVideos.filter((v) => v.video_url).length;
-  }, [filteredVideos]);
+  // Filter montager videos by selected date
+  const dateFilteredProcessingVideos = useMemo(() => {
+    const videos = montagerVideosData?.processing ?? [];
+    if (selectedDateFilter === null) return videos;
+    if (selectedDateFilter === "unscheduled") {
+      return videos.filter((v) => !v.scheduledDate);
+    }
+    return videos.filter((v) => v.scheduledDate === selectedDateFilter);
+  }, [montagerVideosData?.processing, selectedDateFilter]);
 
-  // Count processing and processed videos
-  const processingCount = montagerVideosData?.processing?.length ?? 0;
-  const processedCount = montagerVideosData?.processed?.length ?? 0;
+  const dateFilteredProcessedVideos = useMemo(() => {
+    const videos = montagerVideosData?.processed ?? [];
+    if (selectedDateFilter === null) return videos;
+    if (selectedDateFilter === "unscheduled") {
+      return videos.filter((v) => !v.scheduledDate);
+    }
+    return videos.filter((v) => v.scheduledDate === selectedDateFilter);
+  }, [montagerVideosData?.processed, selectedDateFilter]);
+
+  // Count processing and processed videos (from montager) - filtered by date
+  const processingCount = dateFilteredProcessingVideos.length;
+  const processedCount = dateFilteredProcessedVideos.length;
+
+  // Filter Airtable videos by selected date for counts
+  const dateFilteredAirtableVideos = useMemo(() => {
+    if (selectedDateFilter === null) return filteredVideos;
+    if (selectedDateFilter === "unscheduled") {
+      return filteredVideos.filter((v) => !v.date);
+    }
+    return filteredVideos.filter((v) => v.date === selectedDateFilter);
+  }, [filteredVideos, selectedDateFilter]);
+
+  // Count scheduled videos (has video_url but no api_post_id - from Airtable)
+  const scheduledCount = useMemo(() => {
+    return dateFilteredAirtableVideos.filter((v) => v.video_url && !v.api_post_id).length;
+  }, [dateFilteredAirtableVideos]);
+
+  // Count published videos (has api_post_id - from Airtable)
+  const publishedCount = useMemo(() => {
+    return dateFilteredAirtableVideos.filter((v) => v.api_post_id).length;
+  }, [dateFilteredAirtableVideos]);
 
   // Calculate unassigned record IDs for bulk upload
   // Records that: 1) don't have a video_url, 2) are not already assigned to montager videos
   const unassignedRecordIds = useMemo(() => {
-    if (!data?.content || !selectedCategory) return [];
+    if (!data?.content || !selectedCategory || !selectedNiche) return [];
 
     // Get IDs of records that already have montager videos assigned
     const assignedRecordIds = new Set([
@@ -106,7 +158,7 @@ export function CampaignContentPage() {
     return data.content
       .filter((record) => {
         const matchesCategory = record.video_category === selectedCategory;
-        const matchesNiche = selectedNiche === "all" || record.account_niche === selectedNiche;
+        const matchesNiche = record.account_niche === selectedNiche;
         const hasNoVideo = !record.video_url;
         const notAssigned = !assignedRecordIds.has(record.id);
         return matchesCategory && matchesNiche && hasNoVideo && notAssigned;
@@ -116,7 +168,14 @@ export function CampaignContentPage() {
 
   // Calculate combined date stats from Airtable content and montager videos
   const dateStats = useMemo(() => {
-    const statsMap = new Map<string | null, { total: number; published: number; ready: number; processing: number; needed: number }>();
+    const statsMap = new Map<string | null, {
+      total: number;
+      needed: number;
+      processing: number;
+      ready: number;
+      scheduled: number;
+      published: number;
+    }>();
 
     // Get IDs of records that already have montager videos assigned
     const assignedRecordIds = new Set([
@@ -124,32 +183,38 @@ export function CampaignContentPage() {
       ...(montagerVideosData?.processed?.map((v) => v.airtableRecordId) ?? []),
     ]);
 
-    // Count published content from Airtable (with video_url)
+    // Count Airtable content by status
+    // Skip records assigned to montager - they'll be counted in the montager loops
     filteredVideos.forEach((record) => {
-      if (record.video_url) {
-        const date = record.date ?? null;
-        const current = statsMap.get(date) ?? { total: 0, published: 0, ready: 0, processing: 0, needed: 0 };
-        current.total += 1;
-        current.published += 1;
-        statsMap.set(date, current);
-      }
-    });
+      // Skip records that are assigned to montager videos (they're counted separately)
+      if (assignedRecordIds.has(record.id)) return;
 
-    // Count needed slots (no video_url and not assigned)
-    filteredVideos.forEach((record) => {
-      if (!record.video_url && !assignedRecordIds.has(record.id)) {
-        const date = record.date ?? null;
-        const current = statsMap.get(date) ?? { total: 0, published: 0, ready: 0, processing: 0, needed: 0 };
-        current.total += 1;
+      const date = record.date ?? null;
+      const current = statsMap.get(date) ?? {
+        total: 0, needed: 0, processing: 0, ready: 0, scheduled: 0, published: 0
+      };
+      current.total += 1;
+
+      if (record.api_post_id) {
+        // Published - has api_post_id
+        current.published += 1;
+      } else if (record.video_url) {
+        // Scheduled - has video_url but no api_post_id
+        current.scheduled += 1;
+      } else {
+        // Needed - no video and not assigned to montager
         current.needed += 1;
-        statsMap.set(date, current);
       }
+
+      statsMap.set(date, current);
     });
 
     // Count processing videos from montagerVideos
     (montagerVideosData?.processing ?? []).forEach((video) => {
       const date = video.scheduledDate ?? null;
-      const current = statsMap.get(date) ?? { total: 0, published: 0, ready: 0, processing: 0, needed: 0 };
+      const current = statsMap.get(date) ?? {
+        total: 0, needed: 0, processing: 0, ready: 0, scheduled: 0, published: 0
+      };
       current.total += 1;
       current.processing += 1;
       statsMap.set(date, current);
@@ -158,7 +223,9 @@ export function CampaignContentPage() {
     // Count ready videos from montagerVideos
     (montagerVideosData?.processed ?? []).forEach((video) => {
       const date = video.scheduledDate ?? null;
-      const current = statsMap.get(date) ?? { total: 0, published: 0, ready: 0, processing: 0, needed: 0 };
+      const current = statsMap.get(date) ?? {
+        total: 0, needed: 0, processing: 0, ready: 0, scheduled: 0, published: 0
+      };
       current.total += 1;
       current.ready += 1;
       statsMap.set(date, current);
@@ -170,14 +237,54 @@ export function CampaignContentPage() {
     }));
   }, [filteredVideos, montagerVideosData]);
 
-  // Filter published videos by selected date
-  const dateFilteredVideos = useMemo(() => {
-    if (selectedDateFilter === null) return filteredVideos;
-    if (selectedDateFilter === "unscheduled") {
-      return filteredVideos.filter((v) => !v.date);
+  // Get unassigned empty records for Montager - filtered by selected date
+  // When a specific date is selected: only show records for that date
+  // When "All Dates": use existing logic (earliest dates first)
+  const unassignedEmptyRecords = useMemo(() => {
+    if (!data?.content || !selectedCategory || !selectedNiche) return [];
+
+    let records = data.content
+      .filter(
+        (record) =>
+          record.video_category === selectedCategory &&
+          record.account_niche === selectedNiche &&
+          !record.video_url &&
+          !assignedSet.has(record.id)
+      );
+
+    // Filter by selected date if a specific date is selected
+    if (selectedDateFilter !== null) {
+      if (selectedDateFilter === "unscheduled") {
+        records = records.filter((r) => !r.date);
+      } else {
+        records = records.filter((r) => r.date === selectedDateFilter);
+      }
     }
-    return filteredVideos.filter((v) => v.date === selectedDateFilter);
-  }, [filteredVideos, selectedDateFilter]);
+
+    // Sort by date ascending (earliest first). Records without dates go to the end
+    return records
+      .sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date);
+      })
+      .map((record) => ({ id: record.id, date: record.date }));
+  }, [data?.content, selectedCategory, selectedNiche, assignedSet, selectedDateFilter]);
+
+  const videosNeeded = unassignedEmptyRecords.length;
+  const hasUnassignedVideos = videosNeeded > 0;
+
+  const handleAddFromMontager = () => {
+    if (!validation) return;
+
+    if (!validation.isValid) {
+      setMissingAssetsDialogOpen(true);
+      return;
+    }
+
+    setMontagerDialogOpen(true);
+  };
 
   // Reset date filter when category or niche changes
   useEffect(() => {
@@ -186,15 +293,17 @@ export function CampaignContentPage() {
 
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
-    setSelectedNiche("all"); // Reset niche filter when changing category
-    setVideoView("published"); // Reset to published view
+    // Set to first niche of this category
+    const categoryNiches = calculateNicheStats(data?.content ?? [], category);
+    setSelectedNiche(categoryNiches[0]?.niche ?? "");
+    setVideoView("processing"); // Reset to processing view
     setSelectedDateFilter(null); // Reset date filter
   };
 
   const handleBack = () => {
     setSelectedCategory(null);
-    setSelectedNiche("all");
-    setVideoView("published");
+    setSelectedNiche("");
+    setVideoView("processing");
   };
 
   const handleVideosAdded = () => {
@@ -298,24 +407,9 @@ export function CampaignContentPage() {
               niches={nicheStats}
               selectedNiche={selectedNiche}
               onSelectNiche={setSelectedNiche}
-              totalWithUrl={categoryVideoStats.withUrl}
-              totalCount={categoryVideoStats.total}
-              campaignId={campaignRecordId}
-              categoryName={selectedCategory}
-              content={data.content}
-              onVideosAdded={handleVideosAdded}
             />
 
-            {/* View Toggle */}
-            <ViewToggle
-              view={videoView}
-              onViewChange={setVideoView}
-              publishedCount={publishedCount}
-              processingCount={processingCount}
-              processedCount={processedCount}
-            />
-
-            {/* Date Filter */}
+            {/* Date Filter - Calendar on top */}
             {dateStats.length > 0 && (
               <DateFilterTabs
                 dateStats={dateStats}
@@ -324,18 +418,88 @@ export function CampaignContentPage() {
               />
             )}
 
-            {/* Conditional Video Content */}
-            {videoView === "published" ? (
-              <VideoGrid videos={dateFilteredVideos} />
-            ) : (
-              <ReadyToPublishGrid
+            {/* View Toggle with Add from Montager button */}
+            <div className="flex items-center justify-between gap-4">
+              <ViewToggle
+                view={videoView}
+                onViewChange={setVideoView}
+                processingCount={processingCount}
+                readyCount={processedCount}
+                scheduledCount={scheduledCount}
+                publishedCount={publishedCount}
+              />
+
+              {/* Add from Montager button - only shows when there are unassigned videos */}
+              {hasUnassignedVideos && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAddFromMontager}
+                  disabled={!validation || assignedRecordIds === undefined}
+                  className="shrink-0"
+                >
+                  <FolderPlus className="size-4 mr-2" />
+                  Add {videosNeeded} from Montager
+                  {selectedDateFilter && selectedDateFilter !== "unscheduled" && (
+                    <span className="ml-1 text-muted-foreground">
+                      ({selectedDateFilter})
+                    </span>
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {/* Conditional Video Content - 4-way rendering */}
+            {videoView === "processing" && (
+              <ProcessingGrid
                 processingVideos={montagerVideosData?.processing ?? []}
+                isLoading={montagerVideosData === undefined}
+                selectedDateFilter={selectedDateFilter}
+              />
+            )}
+            {videoView === "ready" && (
+              <ReadyToPublishGrid
                 processedVideos={montagerVideosData?.processed ?? []}
                 isLoading={montagerVideosData === undefined}
                 campaignId={campaignRecordId}
                 unassignedRecordIds={unassignedRecordIds}
                 onVideosAdded={handleVideosAdded}
                 selectedDateFilter={selectedDateFilter}
+              />
+            )}
+            {videoView === "scheduled" && (
+              <ScheduledGrid
+                videos={dateFilteredAirtableVideos.filter((v) => v.video_url && !v.api_post_id)}
+              />
+            )}
+            {videoView === "published" && (
+              <PublishedGrid
+                videos={dateFilteredAirtableVideos.filter((v) => !!v.api_post_id)}
+              />
+            )}
+
+            {/* Missing Assets Warning Dialog */}
+            {validation && !validation.isValid && (
+              <MissingAssetsDialog
+                open={missingAssetsDialogOpen}
+                onOpenChange={setMissingAssetsDialogOpen}
+                missingRequirements={validation.missingRequirements}
+                hasAudioUrl={validation.hasAudioUrl}
+                hasSrtUrl={validation.hasSrtUrl}
+                hasCaptions={validation.hasCaptions}
+              />
+            )}
+
+            {/* Montager Video Dialog */}
+            {hasUnassignedVideos && (
+              <MontagerVideoDialog
+                open={montagerDialogOpen}
+                onOpenChange={setMontagerDialogOpen}
+                airtableRecords={unassignedEmptyRecords}
+                campaignId={campaignRecordId}
+                categoryName={selectedCategory}
+                nicheName={selectedNiche}
+                onSuccess={handleVideosAdded}
               />
             )}
           </div>
