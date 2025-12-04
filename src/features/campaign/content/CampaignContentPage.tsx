@@ -15,10 +15,7 @@ import { VideoStatsHeader } from "./components/VideoStatsHeader";
 import { NicheTabsFilter } from "./components/NicheTabsFilter";
 import { ViewToggle } from "./components/ViewToggle";
 import type { VideoView } from "./components/ViewToggle";
-import { ProcessingGrid } from "./components/ProcessingGrid";
-import { ReadyToPublishGrid } from "./components/ReadyToPublishGrid";
-import { ScheduledGrid } from "./components/ScheduledGrid";
-import { PublishedGrid } from "./components/PublishedGrid";
+import { VideoGrid } from "./components/VideoGrid";
 import { DateFilterTabs } from "./components/DateFilterTabs";
 import { CampaignMediaSection } from "@/features/campaign/media";
 import { CampaignInfoCard } from "./components/CampaignInfoCard";
@@ -463,15 +460,17 @@ export function CampaignContentPage() {
 
             {/* Conditional Video Content - 4-way rendering */}
             {videoView === "processing" && (
-              <ProcessingGrid
-                processingVideos={montagerVideosData?.processing ?? []}
+              <VideoGrid
+                variant="processing"
+                montagerVideos={montagerVideosData?.processing ?? []}
                 isLoading={montagerVideosData === undefined}
                 selectedDateFilter={selectedDateFilter}
               />
             )}
             {videoView === "ready" && (
-              <ReadyToPublishGrid
-                processedVideos={montagerVideosData?.processed ?? []}
+              <VideoGrid
+                variant="ready"
+                montagerVideos={montagerVideosData?.processed ?? []}
                 isLoading={montagerVideosData === undefined}
                 campaignId={campaignRecordId}
                 unassignedRecordIds={unassignedRecordIds}
@@ -480,13 +479,15 @@ export function CampaignContentPage() {
               />
             )}
             {videoView === "scheduled" && (
-              <ScheduledGrid
-                videos={dateFilteredAirtableVideos.filter((v) => v.video_url && !v.api_post_id)}
+              <VideoGrid
+                variant="scheduled"
+                airtableVideos={dateFilteredAirtableVideos.filter((v) => v.video_url && !v.api_post_id)}
               />
             )}
             {videoView === "published" && (
-              <PublishedGrid
-                videos={dateFilteredAirtableVideos.filter((v) => !!v.api_post_id)}
+              <VideoGrid
+                variant="published"
+                airtableVideos={dateFilteredAirtableVideos.filter((v) => !!v.api_post_id)}
               />
             )}
 
