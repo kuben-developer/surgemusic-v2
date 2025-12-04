@@ -146,6 +146,7 @@ export function CampaignContentPage() {
 
   // Calculate unassigned record IDs for bulk upload
   // Records that: 1) don't have a video_url, 2) are not already assigned to montager videos
+  // Also filtered by selected date when a specific date is selected
   const unassignedRecordIds = useMemo(() => {
     if (!data?.content || !selectedCategory || !selectedNiche) return [];
 
@@ -161,10 +162,21 @@ export function CampaignContentPage() {
         const matchesNiche = record.account_niche === selectedNiche;
         const hasNoVideo = !record.video_url;
         const notAssigned = !assignedRecordIds.has(record.id);
-        return matchesCategory && matchesNiche && hasNoVideo && notAssigned;
+
+        // Filter by selected date if a specific date is selected
+        let matchesDate = true;
+        if (selectedDateFilter !== null) {
+          if (selectedDateFilter === "unscheduled") {
+            matchesDate = !record.date;
+          } else {
+            matchesDate = record.date === selectedDateFilter;
+          }
+        }
+
+        return matchesCategory && matchesNiche && hasNoVideo && notAssigned && matchesDate;
       })
       .map((record) => record.id);
-  }, [data?.content, selectedCategory, selectedNiche, montagerVideosData]);
+  }, [data?.content, selectedCategory, selectedNiche, montagerVideosData, selectedDateFilter]);
 
   // Calculate combined date stats from Airtable content and montager videos
   const dateStats = useMemo(() => {

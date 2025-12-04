@@ -164,10 +164,20 @@ function ProcessingVideoCard({ video }: ProcessingVideoCardProps) {
     >
       {/* Status Badge */}
       <div className="absolute top-2 left-2 z-10">
-        <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-          <Clock className="size-3 mr-1" />
-          Processing
-        </Badge>
+        <div className="flex gap-1">
+          <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 flex items-center">
+            <Clock className="size-3 mr-1" />
+            Processing
+          </Badge>
+          {video.scheduledDate && (
+            <Badge
+              variant="secondary"
+              className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 text-[10px]"
+            >
+              {format(parseISO(video.scheduledDate), "MMM d")}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Overlay Style & Scheduled Date Badges */}
@@ -177,29 +187,18 @@ function ProcessingVideoCard({ video }: ProcessingVideoCardProps) {
             {video.overlayStyle}
           </Badge>
         )}
-        {video.scheduledDate && (
-          <Badge
-            variant="secondary"
-            className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 text-[10px]"
-          >
-            {format(parseISO(video.scheduledDate), "MMM d")}
-          </Badge>
-        )}
+
       </div>
 
       {/* Video Content */}
       {isInView ? (
         <div className="absolute inset-0 flex items-center justify-center">
-          {video.thumbnailUrl ? (
+          {video.thumbnailUrl && video.thumbnailUrl != "manual_upload" && (
             <img
               src={video.thumbnailUrl}
               alt="Video thumbnail"
               className="w-full h-full object-cover opacity-50"
             />
-          ) : (
-            <div className="text-muted-foreground">
-              <Clock className="size-8 animate-pulse" />
-            </div>
           )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <div className="text-white text-sm font-medium">Processing...</div>
