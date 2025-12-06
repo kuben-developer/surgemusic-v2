@@ -23,6 +23,13 @@ crons.cron(
     internal.app.bundle.refreshTiktokStats,
 );
 
+// crons.cron(
+//     "refreshTiktokStatsByCampaign",
+//     "*/5 * * * *",
+//     internal.app.bundle.refreshTiktokStatsByCampaign,
+//     { campaignId: "recK2FEC9YDXc0BKs" }
+// );
+
 crons.interval(
     "calculateCampaignAnalytics",
     { minutes: 120 }, // Every 2 hours

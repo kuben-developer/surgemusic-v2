@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useRef, useState, useCallback } from "react";
+import { memo, useRef, useState, useCallback, useEffect } from "react";
 import { Sparkles, Sun, Play, Pause } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,6 +23,7 @@ export const ClipCard = memo(function ClipCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false);
+  const [videoSrc, setVideoSrc] = useState<string | undefined>(undefined);
 
   const handleThumbnailLoad = useCallback(() => {
     if (!thumbnailLoaded) {
@@ -38,12 +39,22 @@ export const ClipCard = memo(function ClipCard({
       videoRef.current.pause();
       setIsPlaying(false);
     } else if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Ignore play errors
-      });
+      // Set video src on first play if not already set
+      if (!videoSrc) {
+        setVideoSrc(clip.videoUrl);
+      }
       setIsPlaying(true);
     }
   };
+
+  // Play video after src is set
+  useEffect(() => {
+    if (videoSrc && isPlaying && videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Ignore play errors
+      });
+    }
+  }, [videoSrc, isPlaying]);
 
   const getQualityLabel = (value: number, type: 'clarity' | 'brightness') => {
     if (type === 'clarity') {
@@ -101,13 +112,13 @@ export const ClipCard = memo(function ClipCard({
             #{clip.clipNumber}
           </div>
 
-          {/* Video element (always present, controls visibility) */}
+          {/* Video element - src only set when user clicks play */}
           <video
             ref={videoRef}
-            src={clip.videoUrl}
+            src={videoSrc}
             poster={clip.thumbnailUrl}
             className="w-full h-full object-contain"
-            preload="metadata"
+            preload="none"
             loop
             muted
             playsInline

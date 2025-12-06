@@ -402,7 +402,7 @@ export const bulkUpdatePostedVideoStats = internalMutation({
 // - 30-90 days: monitor every 3 days
 // - 90-180 days: monitor weekly
 // - 180+ days: monitor monthly
-export const refreshTiktokStatsByCampaign = action({
+export const refreshTiktokStatsByCampaign = internalAction({
   args: {
     campaignId: v.string(),
   },
@@ -663,14 +663,16 @@ export const refreshTiktokStats = internalAction({
       // Get unique campaign IDs from airtableCampaigns
       const campaignIds = await ctx.runQuery(internal.app.bundle.getUniqueCampaignIdsFromAirtable, {});
       let scheduledCount = 0;
+      let offset = 0;
 
       for (const campaignId of campaignIds) {
         // Schedule background job for this campaign
-        await ctx.scheduler.runAfter(0, api.app.bundle.refreshTiktokStatsByCampaign, {
+        await ctx.scheduler.runAfter(offset, internal.app.bundle.refreshTiktokStatsByCampaign, {
           campaignId,
         });
 
         scheduledCount++;
+        offset += 5 * 60 * 1000;
       }
 
       console.log(`Refresh TikTok stats scheduler: ${scheduledCount} campaigns scheduled for processing`);
