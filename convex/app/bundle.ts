@@ -145,6 +145,7 @@ export const getPostsToSkip = internalQuery({
 
     // Time constants in seconds (for post age calculation)
     const DAY_SECONDS = 24 * 60 * 60;
+    const HOURS_48 = 2 * DAY_SECONDS;
     const DAYS_30 = 30 * DAY_SECONDS;
     const DAYS_90 = 90 * DAY_SECONDS;
     const DAYS_180 = 180 * DAY_SECONDS;
@@ -158,6 +159,12 @@ export const getPostsToSkip = internalQuery({
     const postsToSkip = allPosts.filter(post => {
       const postAgeSeconds = nowSeconds - post.postedAt;
       const timeSinceUpdate = now - post.updatedAt;
+
+      // Never skip posts with zero views that are within 48 hours
+      // These need to be retried with TikTok API fallback
+      if (postAgeSeconds <= HOURS_48 && post.views === 0) {
+        return false;
+      }
 
       // Determine required update interval based on post age
       let requiredInterval: number;
@@ -503,6 +510,31 @@ export const refreshTiktokStatsByCampaign = internalAction({
             };
           }
 
+          // Fallback to TikTok API when Bundle Social returns zero views
+          let finalStats = stats;
+          if (stats.views === 0 && bundleData.post.externalData.TIKTOK?.id) {
+            const tiktokVideoId = bundleData.post.externalData.TIKTOK.id;
+            console.log(`Bundle Social returned 0 views for post ${content.postId}, fetching from TikTok API (video: ${tiktokVideoId})`);
+
+            const tiktokResult = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+              videoId: tiktokVideoId,
+            });
+
+            if (tiktokResult.success && tiktokResult.video) {
+              finalStats = {
+                views: tiktokResult.video.views,
+                likes: tiktokResult.video.likes,
+                comments: tiktokResult.video.comments,
+                shares: tiktokResult.video.shares,
+                saves: tiktokResult.video.saves,
+              };
+              console.log(`Successfully fetched TikTok stats: ${finalStats.views} views`);
+            } else {
+              console.log(`TikTok API fallback failed for video ${tiktokVideoId}: ${tiktokResult.error}`);
+              // Keep using Bundle Social's zero stats as fallback
+            }
+          }
+
           // Extract posted date
           const postedAtMs = new Date(bundleData.post.postedDate).getTime();
           const postedAtSeconds = Math.floor(postedAtMs / 1000);
@@ -514,11 +546,11 @@ export const refreshTiktokStatsByCampaign = internalAction({
           if (exists) {
             postsToUpdate.push({
               postId: content.postId,
-              views: stats.views,
-              likes: stats.likes,
-              comments: stats.comments,
-              shares: stats.shares,
-              saves: stats.saves,
+              views: finalStats.views,
+              likes: finalStats.likes,
+              comments: finalStats.comments,
+              shares: finalStats.shares,
+              saves: finalStats.saves,
             });
           } else {
             // Post is new, add to insert list
@@ -529,22 +561,22 @@ export const refreshTiktokStatsByCampaign = internalAction({
               postedAt: postedAtSeconds,
               videoUrl: bundleData.post.externalData.TIKTOK.permalink,
               mediaUrl: undefined,
-              views: stats.views,
-              likes: stats.likes,
-              comments: stats.comments,
-              shares: stats.shares,
-              saves: stats.saves,
+              views: finalStats.views,
+              likes: finalStats.likes,
+              comments: finalStats.comments,
+              shares: finalStats.shares,
+              saves: finalStats.saves,
             });
           }
 
           // Collect snapshot data
           snapshotsToUpsert.push({
             postId: content.postId,
-            views: stats.views,
-            likes: stats.likes,
-            comments: stats.comments,
-            shares: stats.shares,
-            saves: stats.saves,
+            views: finalStats.views,
+            likes: finalStats.likes,
+            comments: finalStats.comments,
+            shares: finalStats.shares,
+            saves: finalStats.saves,
           });
 
           return {
