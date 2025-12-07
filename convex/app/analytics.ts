@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, query } from "../_generated/server";
 import { api, internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
+import type { PaginationResult } from "convex/server";
 
 /**
  * Date utility functions for DD-MM-YYYY format
@@ -740,15 +741,21 @@ export const getAirtablePostsByCampaign = internalQuery({
   },
 });
 
-export const getSnapshotsByCampaign = internalQuery({
-  args: { campaignId: v.string() },
-  handler: async (ctx, { campaignId }) => {
+// Low-level paginated query for fetching snapshots in batches
+export const getSnapshotsByCampaignPage = internalQuery({
+  args: {
+    campaignId: v.string(),
+    cursor: v.union(v.string(), v.null()),
+    numItems: v.number(),
+  },
+  handler: async (ctx, { campaignId, cursor, numItems }) => {
     return await ctx.db
       .query("bundleSocialSnapshots")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .collect();
+      .paginate({ numItems, cursor });
   },
 });
+
 
 export const getTikTokVideosByCampaign = internalQuery({
   args: { campaignId: v.string() },
@@ -858,7 +865,30 @@ export const calculateCampaignAnalyticsByCampaign = internalAction({
 
     const bundlePosts: Doc<"bundleSocialPostedVideos">[] = await ctx.runQuery(internal.app.analytics.getBundleSocialPostsByCampaign, { campaignId });
     const airtablePosts: Doc<"airtableContents">[] = await ctx.runQuery(internal.app.analytics.getAirtablePostsByCampaign, { campaignId });
-    const bundleSnapshots: Doc<"bundleSocialSnapshots">[] = await ctx.runQuery(internal.app.analytics.getSnapshotsByCampaign, { campaignId });
+
+    // Fetch snapshots with pagination to avoid 8192 item limit
+    const bundleSnapshots: Doc<"bundleSocialSnapshots">[] = [];
+    let snapshotCursor: string | null = null;
+    let snapshotsDone = false;
+    const SNAPSHOT_PAGE_SIZE = 8192;
+
+    while (!snapshotsDone) {
+      const result: PaginationResult<Doc<"bundleSocialSnapshots">> = await ctx.runQuery(
+        internal.app.analytics.getSnapshotsByCampaignPage,
+        {
+          campaignId,
+          cursor: snapshotCursor,
+          numItems: SNAPSHOT_PAGE_SIZE,
+        }
+      );
+
+      bundleSnapshots.push(...result.page);
+      snapshotCursor = result.continueCursor;
+      snapshotsDone = result.isDone;
+    }
+
+    console.log(`Fetched ${bundleSnapshots.length} snapshots for campaign ${campaignId}`);
+
     const tiktokVideos: Doc<"tiktokVideos">[] = await ctx.runQuery(internal.app.analytics.getTikTokVideosByCampaign, { campaignId });
 
     // Only include bundlePosts that have a matching postId in airtablePosts
