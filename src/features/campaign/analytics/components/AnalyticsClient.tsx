@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { useCampaignAnalytics } from "../hooks/useCampaignAnalytics";
+import { useVideoPerformance } from "../hooks/useVideoPerformance";
 import { AnalyticsHeader } from "./AnalyticsHeader";
 import { CampaignInfoSection } from "./CampaignInfoSection";
 import { KPIMetrics } from "./KPIMetrics";
@@ -25,11 +26,18 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
   const {
     analyticsData,
     postCountsByDate,
+    postDatesFilter,
     isLoading,
     error,
     dateFilter,
     changeDateFilter,
   } = useCampaignAnalytics(campaignId);
+
+  // Video performance with pagination and filtering
+  const videoPerformance = useVideoPerformance({
+    campaignId,
+    dates: postDatesFilter,
+  });
 
   const [activeMetric, setActiveMetric] = useState<MetricType>("views");
 
@@ -98,7 +106,21 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
             onActiveMetricChange={setActiveMetric}
           />
 
-          <VideoPerformanceTable videoMetrics={analyticsData.videoMetrics} />
+          <VideoPerformanceTable
+            videos={videoPerformance.videos}
+            currentPage={videoPerformance.currentPage}
+            totalPages={videoPerformance.totalPages}
+            totalCount={videoPerformance.totalCount}
+            itemsPerPage={videoPerformance.itemsPerPage}
+            onPageChange={videoPerformance.goToPage}
+            viewsFilter={videoPerformance.viewsFilter}
+            onViewsFilterChange={videoPerformance.updateViewsFilter}
+            onClearFilters={videoPerformance.clearFilters}
+            hasActiveFilters={videoPerformance.hasActiveFilters}
+            sortOrder={videoPerformance.sortOrder}
+            onToggleSortOrder={videoPerformance.toggleSortOrder}
+            isLoading={videoPerformance.isLoading}
+          />
         </div>
       </motion.div>
     </div>

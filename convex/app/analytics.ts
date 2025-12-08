@@ -721,6 +721,97 @@ export const getTopVideosByPostDate = query({
   },
 });
 
+// Paginated version of getTopVideosByPostDate with views filtering
+export const getTopVideosByPostDatePaginated = query({
+  args: {
+    campaignId: v.string(),
+    dates: v.optional(v.array(v.string())),
+    offset: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    minViews: v.optional(v.number()),
+    maxViews: v.optional(v.number()),
+    sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  handler: async (ctx, { campaignId, dates, offset = 0, limit = 100, minViews, maxViews, sortOrder = "desc" }) => {
+    // Helper: Convert DD-MM-YYYY to Unix timestamp range (start and end of day)
+    const dateStringToTimestampRange = (dateStr: string): [number, number] => {
+      const parts = dateStr.split('-').map(Number);
+      const day = parts[0] ?? 1;
+      const month = parts[1] ?? 1;
+      const year = parts[2] ?? 2000;
+      const startOfDay = new Date(year, month - 1, day);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(year, month - 1, day);
+      endOfDay.setHours(23, 59, 59, 999);
+      return [Math.floor(startOfDay.getTime() / 1000), Math.floor(endOfDay.getTime() / 1000)];
+    };
+
+    // Query all posts for this campaign
+    const bundlePosts = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Get valid postIds from airtableContents
+    const airtablePosts = await ctx.db
+      .query("airtableContents")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Filter to only include posts that exist in airtableContents
+    const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
+    let filteredPosts = bundlePosts.filter((post) => airtablePostIds.has(post.postId));
+
+    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
+      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
+    }
+
+    // If dates are provided and not empty, filter by those dates
+    if (dates && dates.length > 0) {
+      const timestampRanges = dates.map(dateStringToTimestampRange);
+      filteredPosts = filteredPosts.filter((post) => {
+        return timestampRanges.some(([start, end]) => {
+          return post.postedAt >= start && post.postedAt <= end;
+        });
+      });
+    }
+
+    // Apply views range filter
+    if (minViews !== undefined) {
+      filteredPosts = filteredPosts.filter((post) => post.views >= minViews);
+    }
+    if (maxViews !== undefined) {
+      filteredPosts = filteredPosts.filter((post) => post.views <= maxViews);
+    }
+
+    // Get total count AFTER filtering but BEFORE pagination
+    const totalCount = filteredPosts.length;
+
+    // Sort by views and apply pagination
+    const paginatedVideos = filteredPosts
+      .sort((a, b) => sortOrder === "desc" ? b.views - a.views : a.views - b.views)
+      .slice(offset, offset + limit)
+      .map((post) => ({
+        videoId: post.videoId,
+        postId: post.postId,
+        postedAt: post.postedAt,
+        videoUrl: post.videoUrl,
+        mediaUrl: post.mediaUrl,
+        views: post.views,
+        likes: post.likes,
+        comments: post.comments,
+        shares: post.shares,
+        saves: post.saves,
+      }));
+
+    return {
+      videos: paginatedVideos,
+      totalCount,
+      hasMore: offset + limit < totalCount,
+    };
+  },
+});
+
 export const getBundleSocialPostsByCampaign = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {

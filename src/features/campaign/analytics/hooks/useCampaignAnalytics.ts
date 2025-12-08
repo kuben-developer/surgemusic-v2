@@ -45,34 +45,27 @@ export function useCampaignAnalytics(campaignId: string) {
     { campaignId, dates: postDatesFilter }
   );
 
-  // Fetch top videos
-  const videoMetrics = useQuery(
-    api.app.analytics.getTopVideosByPostDate,
-    { campaignId, dates: postDatesFilter }
-  );
-
   // Fetch post counts by date (for calendar)
   const postCountsByDate = useQuery(
     api.app.analytics.getPostCountsByDate,
     { campaignId }
   );
 
-  // Combine analytics and video data
+  // Build analytics data (video metrics now handled separately by useVideoPerformance)
   const analyticsData: CampaignAnalyticsData | null = useMemo(() => {
-    if (!analyticsResult || !videoMetrics) return null;
+    if (!analyticsResult) return null;
 
     return {
       campaignId: analyticsResult.campaignId,
       totals: analyticsResult.totals,
       dailyData: analyticsResult.dailyData,
-      videoMetrics,
       lastUpdatedAt: analyticsResult.lastUpdatedAt,
       campaignMetadata: analyticsResult.campaignMetadata,
     };
-  }, [analyticsResult, videoMetrics]);
+  }, [analyticsResult]);
 
-  // Loading state: true if any query is still loading
-  const isLoading = analyticsResult === undefined || videoMetrics === undefined;
+  // Loading state
+  const isLoading = analyticsResult === undefined;
 
   // Change date filter
   const changeDateFilter = (filter: DateFilter | null) => {
@@ -82,6 +75,7 @@ export function useCampaignAnalytics(campaignId: string) {
   return {
     analyticsData,
     postCountsByDate: postCountsByDate ?? {},
+    postDatesFilter, // Expose for useVideoPerformance hook
     isLoading,
     isRefreshing: false, // No manual refresh needed with Convex real-time queries
     error: null, // Convex handles errors differently, can be enhanced if needed
