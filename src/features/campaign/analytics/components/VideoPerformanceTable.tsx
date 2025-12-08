@@ -20,6 +20,7 @@ interface VideoPerformanceTableProps {
   sortOrder: SortOrder;
   onToggleSortOrder: () => void;
   isLoading: boolean;
+  isPublic?: boolean;
 }
 
 export function VideoPerformanceTable({
@@ -36,6 +37,7 @@ export function VideoPerformanceTable({
   sortOrder,
   onToggleSortOrder,
   isLoading,
+  isPublic = false,
 }: VideoPerformanceTableProps) {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalCount);
@@ -47,38 +49,42 @@ export function VideoPerformanceTable({
         <div>
           <h3 className="text-lg font-semibold">Content Performance</h3>
           <p className="text-sm text-muted-foreground">
-            {totalCount.toLocaleString()} videos
+            {isPublic ? "Top 100 videos by views" : `${totalCount.toLocaleString()} videos`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <ViewsRangeFilter
-            minViews={viewsFilter.minViews}
-            maxViews={viewsFilter.maxViews}
-            onFilterChange={onViewsFilterChange}
-            onClear={onClearFilters}
-            hasActiveFilters={hasActiveFilters}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onToggleSortOrder}
-            className="h-8 gap-1.5"
-          >
-            {sortOrder === "desc" ? (
-              <ArrowDown className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowUp className="h-3.5 w-3.5" />
-            )}
-            <span className="text-xs">Views</span>
-          </Button>
-        </div>
+        {!isPublic && (
+          <div className="flex items-center gap-2">
+            <ViewsRangeFilter
+              minViews={viewsFilter.minViews}
+              maxViews={viewsFilter.maxViews}
+              onFilterChange={onViewsFilterChange}
+              onClear={onClearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleSortOrder}
+              className="h-8 gap-1.5"
+            >
+              {sortOrder === "desc" ? (
+                <ArrowDown className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowUp className="h-3.5 w-3.5" />
+              )}
+              <span className="text-xs">Views</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Pagination controls */}
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-muted-foreground">
           {totalCount > 0 ? (
-            `Showing ${startIndex} - ${endIndex} of ${totalCount.toLocaleString()}`
+            isPublic
+              ? `Showing ${startIndex} - ${Math.min(endIndex, 100)} of ${Math.min(totalCount, 100)}`
+              : `Showing ${startIndex} - ${endIndex} of ${totalCount.toLocaleString()}`
           ) : (
             "No videos found"
           )}
@@ -93,12 +99,15 @@ export function VideoPerformanceTable({
             Previous
           </Button>
           <span className="text-sm text-muted-foreground px-2">
-            {currentPage} / {totalPages || 1}
+            {currentPage} / {isPublic ? Math.min(totalPages, Math.ceil(100 / itemsPerPage)) : totalPages || 1}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={currentPage >= totalPages || isLoading}
+            disabled={isPublic
+              ? currentPage >= Math.ceil(100 / itemsPerPage) || isLoading
+              : currentPage >= totalPages || isLoading
+            }
             onClick={() => onPageChange(currentPage + 1)}
           >
             Next

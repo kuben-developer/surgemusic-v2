@@ -120,6 +120,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
             sortOrder={videoPerformance.sortOrder}
             onToggleSortOrder={videoPerformance.toggleSortOrder}
             isLoading={videoPerformance.isLoading}
+            isPublic={isPublic}
           />
         </div>
       </motion.div>
