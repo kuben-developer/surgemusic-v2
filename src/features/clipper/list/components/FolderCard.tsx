@@ -1,7 +1,5 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +12,7 @@ interface FolderCardProps {
 }
 
 export function FolderCard({ folder, onDeleteClick }: FolderCardProps) {
-  // Fetch counts separately to avoid byte limit issues
-  const counts = useQuery(api.app.clipperDb.getFolderCounts, { folderId: folder._id });
-
-  const videoCount = counts?.videoCount ?? 0;
-  const clipCount = counts?.clipCount ?? 0;
-  const isLoadingCounts = counts === undefined;
+  const { videoCount, clipCount } = folder;
 
   return (
     <Link href={`/clipper/${folder._id}`}>
@@ -44,19 +37,11 @@ export function FolderCard({ folder, onDeleteClick }: FolderCardProps) {
           <CardDescription className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Video className="h-4 w-4" />
-              {isLoadingCounts ? (
-                <span className="w-6 h-4 bg-muted animate-pulse rounded" />
-              ) : (
-                `${videoCount} ${videoCount === 1 ? "video" : "videos"}`
-              )}
+              {`${videoCount} ${videoCount === 1 ? "video" : "videos"}`}
             </span>
             <span className="flex items-center gap-1">
               <Film className="h-4 w-4" />
-              {isLoadingCounts ? (
-                <span className="w-6 h-4 bg-muted animate-pulse rounded" />
-              ) : (
-                `${clipCount} ${clipCount === 1 ? "clip" : "clips"}`
-              )}
+              {`${clipCount} ${clipCount === 1 ? "clip" : "clips"}`}
             </span>
           </CardDescription>
         </CardContent>

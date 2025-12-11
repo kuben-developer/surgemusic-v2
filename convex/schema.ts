@@ -195,6 +195,9 @@ export default defineSchema({
   clipperFolders: defineTable({
     userId: v.id('users'),
     folderName: v.string(),
+    // Denormalized counts for efficient queries
+    videoCount: v.optional(v.number()),
+    clipCount: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_folderName", ["folderName"]),
@@ -211,9 +214,15 @@ export default defineSchema({
       isDeleted: v.boolean(),
       thumbnailUrl: v.string(),
     })),
+    // Status for efficient queries without loading full documents
+    status: v.optional(v.union(
+      v.literal("pending"),    // Uploaded, waiting for processing
+      v.literal("processed")   // Has outputUrls populated
+    )),
   })
     .index("by_clipperFolderId", ["clipperFolderId"])
-    .index("by_inputVideoName", ["inputVideoName"]),
+    .index("by_inputVideoName", ["inputVideoName"])
+    .index("by_status", ["status"]),
 
   montagerFolders: defineTable({
     userId: v.id('users'),

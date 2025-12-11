@@ -21,8 +21,7 @@ function sanitizeInputVideoName(name: string): string {
 
 /**
  * Get all folders for the current user
- * Returns folders without counts to avoid hitting Convex's 16MB byte limit.
- * Use getFolderCounts to get counts for individual folders as needed.
+ * Returns folders with denormalized counts from the folder document itself.
  */
 export const getFolders = query({
   args: {},
@@ -46,24 +45,18 @@ export const getFolders = query({
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .collect();
 
-    // Return folders without counts - counts are fetched separately via getFolderCounts
-    // This avoids loading all video documents which can exceed the 16MB byte limit
+    // Return folders with denormalized counts (stored on folder document)
     return folders.map((folder) => ({
       ...folder,
-      videoCount: 0,
-      clipCount: 0,
+      videoCount: folder.videoCount ?? 0,
+      clipCount: folder.clipCount ?? 0,
     }));
   },
 });
 
-// Maximum videos to sample per folder for counting
-// Keep this low to avoid hitting Convex's 16MB byte limit
-const MAX_VIDEOS_FOR_COUNT = 100;
-
 /**
  * Get counts for a single folder
- * Call this separately for each folder to avoid byte limit issues
- * Note: Counts are approximate if folder has more than MAX_VIDEOS_FOR_COUNT videos
+ * Reads from denormalized counts on folder document - very fast, no expensive queries
  */
 export const getFolderCounts = query({
   args: {
@@ -84,22 +77,16 @@ export const getFolderCounts = query({
       return { videoCount: 0, clipCount: 0 };
     }
 
-    // Verify folder belongs to user
+    // Just read the folder document - counts are denormalized
     const folder = await ctx.db.get(args.folderId);
     if (!folder || folder.userId !== user._id) {
       return { videoCount: 0, clipCount: 0 };
     }
 
-    // Use take() with a limit - Convex doesn't allow multiple paginated queries
-    const videos = await ctx.db
-      .query("clippedVideoUrls")
-      .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", args.folderId))
-      .take(MAX_VIDEOS_FOR_COUNT);
-
-    const videoCount = videos.length;
-    const clipCount = videos.reduce((acc, v) => acc + v.outputUrls.length, 0);
-
-    return { videoCount, clipCount };
+    return {
+      videoCount: folder.videoCount ?? 0,
+      clipCount: folder.clipCount ?? 0,
+    };
   },
 });
 
@@ -219,6 +206,8 @@ export const createFolderDb = mutation({
     const folderId = await ctx.db.insert("clipperFolders", {
       userId: user._id,
       folderName: args.folderName,
+      videoCount: 0,
+      clipCount: 0,
     });
 
     return folderId;
@@ -280,6 +269,12 @@ export const uploadVideo = mutation({
       inputVideoName: sanitizedName,
       inputVideoUrl: args.inputVideoUrl,
       outputUrls: [], // Empty initially, will be populated by background job
+      status: "pending",
+    });
+
+    // Increment videoCount on folder
+    await ctx.db.patch(args.folderId, {
+      videoCount: (folder.videoCount ?? 0) + 1,
     });
 
     return { videoId, sanitizedName };
@@ -289,6 +284,7 @@ export const uploadVideo = mutation({
 /**
  * Update video with output URLs (called by background job)
  * Includes all clip metadata: brightness, clarity, clipNumber, isDeleted
+ * Also updates folder clipCount and video status
  */
 export const updateVideoOutputs = internalMutation({
   args: {
@@ -303,14 +299,37 @@ export const updateVideoOutputs = internalMutation({
     })),
   },
   handler: async (ctx, args) => {
+    const video = await ctx.db.get(args.videoId);
+    if (!video) {
+      throw new Error(`Video not found: ${args.videoId}`);
+    }
+
+    // Calculate how many new active clips are being added
+    const oldActiveClipCount = video.outputUrls.filter((c) => !c.isDeleted).length;
+    const newActiveClipCount = args.outputUrls.filter((c) => !c.isDeleted).length;
+    const clipCountDelta = newActiveClipCount - oldActiveClipCount;
+
+    // Update the video
     await ctx.db.patch(args.videoId, {
       outputUrls: args.outputUrls,
+      status: "processed",
     });
+
+    // Update folder clipCount if changed
+    if (clipCountDelta !== 0) {
+      const folder = await ctx.db.get(video.clipperFolderId);
+      if (folder) {
+        await ctx.db.patch(video.clipperFolderId, {
+          clipCount: Math.max(0, (folder.clipCount ?? 0) + clipCountDelta),
+        });
+      }
+    }
   },
 });
 
 /**
  * Delete a video
+ * Also decrements folder videoCount and clipCount
  */
 export const deleteVideo = mutation({
   args: {
@@ -342,7 +361,17 @@ export const deleteVideo = mutation({
       throw new Error("Unauthorized");
     }
 
+    // Calculate active clips being removed
+    const activeClipCount = video.outputUrls.filter((c) => !c.isDeleted).length;
+
     await ctx.db.delete(args.videoId);
+
+    // Decrement folder counts
+    await ctx.db.patch(video.clipperFolderId, {
+      videoCount: Math.max(0, (folder.videoCount ?? 0) - 1),
+      clipCount: Math.max(0, (folder.clipCount ?? 0) - activeClipCount),
+    });
+
     return { success: true };
   },
 });
@@ -435,6 +464,7 @@ export const getVideoByName = query({
 /**
  * Soft delete clips by setting isDeleted to true
  * Takes an array of clip indices to delete
+ * Also decrements folder clipCount
  */
 export const softDeleteClips = mutation({
   args: {
@@ -467,9 +497,11 @@ export const softDeleteClips = mutation({
       throw new Error("Unauthorized");
     }
 
-    // Update outputUrls to mark specified clips as deleted
+    // Count how many active clips are being deleted
+    let clipsDeleted = 0;
     const updatedOutputUrls = video.outputUrls.map((clip, index) => {
-      if (args.clipIndices.includes(index)) {
+      if (args.clipIndices.includes(index) && !clip.isDeleted) {
+        clipsDeleted++;
         return { ...clip, isDeleted: true };
       }
       return clip;
@@ -479,12 +511,20 @@ export const softDeleteClips = mutation({
       outputUrls: updatedOutputUrls,
     });
 
-    return { success: true, deletedCount: args.clipIndices.length };
+    // Decrement folder clipCount
+    if (clipsDeleted > 0) {
+      await ctx.db.patch(video.clipperFolderId, {
+        clipCount: Math.max(0, (folder.clipCount ?? 0) - clipsDeleted),
+      });
+    }
+
+    return { success: true, deletedCount: clipsDeleted };
   },
 });
 
 /**
  * Restore soft-deleted clips
+ * Also increments folder clipCount
  */
 export const restoreClips = mutation({
   args: {
@@ -516,8 +556,11 @@ export const restoreClips = mutation({
       throw new Error("Unauthorized");
     }
 
+    // Count how many deleted clips are being restored
+    let clipsRestored = 0;
     const updatedOutputUrls = video.outputUrls.map((clip, index) => {
-      if (args.clipIndices.includes(index)) {
+      if (args.clipIndices.includes(index) && clip.isDeleted) {
+        clipsRestored++;
         return { ...clip, isDeleted: false };
       }
       return clip;
@@ -527,7 +570,14 @@ export const restoreClips = mutation({
       outputUrls: updatedOutputUrls,
     });
 
-    return { success: true, restoredCount: args.clipIndices.length };
+    // Increment folder clipCount
+    if (clipsRestored > 0) {
+      await ctx.db.patch(video.clipperFolderId, {
+        clipCount: (folder.clipCount ?? 0) + clipsRestored,
+      });
+    }
+
+    return { success: true, restoredCount: clipsRestored };
   },
 });
 
@@ -535,33 +585,23 @@ export const restoreClips = mutation({
 // INTERNAL API FUNCTIONS (for HTTP endpoints)
 // =====================================================
 
-// Maximum videos to check for pending status
-// Keep low since we load full documents (including outputUrls) before filtering
-const MAX_VIDEOS_TO_CHECK_PENDING = 100;
-
 /**
- * Internal query to get all videos with empty outputUrls (pending processing)
+ * Internal query to get all videos with status "pending" (waiting for processing)
  * Used by the external API endpoint
- * Note: Limited to checking MAX_VIDEOS_TO_CHECK_PENDING most recent videos
+ * Uses status index for efficient queries - no byte limit issues
  */
 export const getPendingVideosInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    // Get recent videos with a limit to avoid byte limit issues
-    // Videos are ordered by creation time, so most recent (likely pending) come first
-    const recentVideos = await ctx.db
+    // Use the status index to efficiently get only pending videos
+    // This avoids loading processed videos with large outputUrls arrays
+    const pendingVideos = await ctx.db
       .query("clippedVideoUrls")
-      .order("desc")
-      .take(MAX_VIDEOS_TO_CHECK_PENDING);
-
-    // Filter to only pending videos (empty outputUrls array)
-    // This filtering happens after we've limited the data read
-    const pendingVideos = recentVideos.filter(
-      (video) => video.outputUrls.length === 0
-    );
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
 
     // For each pending video, get the folder info
-    // This is safe because pending videos should be few
+    // Pending videos have empty outputUrls, so they're small documents
     const videosWithFolderInfo = await Promise.all(
       pendingVideos.map(async (video) => {
         const folder = await ctx.db.get(video.clipperFolderId);
@@ -580,8 +620,76 @@ export const getPendingVideosInternal = internalQuery({
 });
 
 /**
+ * Migration: Populate denormalized counts for a single clipper folder
+ * Run for each folder to backfill videoCount and clipCount
+ * Uses pagination to avoid byte limits
+ */
+export const migratePopulateSingleFolderCounts = internalMutation({
+  args: {
+    folderId: v.id("clipperFolders"),
+  },
+  handler: async (ctx, args) => {
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder) {
+      return { success: false, error: "Folder not found" };
+    }
+
+    let videoCount = 0;
+    let clipCount = 0;
+    let cursor: string | null = null;
+    let hasMore = true;
+
+    // Paginate through videos to avoid byte limits
+    while (hasMore) {
+      const result = await ctx.db
+        .query("clippedVideoUrls")
+        .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", args.folderId))
+        .paginate({ cursor, numItems: 50 });
+
+      for (const video of result.page) {
+        videoCount++;
+        // Count active (non-deleted) clips
+        clipCount += video.outputUrls.filter((c) => !c.isDeleted).length;
+
+        // Set status field if not already set
+        if (video.status === undefined) {
+          const hasOutputs = video.outputUrls.length > 0;
+          await ctx.db.patch(video._id, {
+            status: hasOutputs ? "processed" : "pending",
+          });
+        }
+      }
+
+      cursor = result.continueCursor;
+      hasMore = !result.isDone;
+    }
+
+    // Update folder with calculated counts
+    await ctx.db.patch(args.folderId, {
+      videoCount,
+      clipCount,
+    });
+
+    return { success: true, folderId: args.folderId, videoCount, clipCount };
+  },
+});
+
+/**
+ * Migration: Get all folder IDs for batch migration
+ * Returns folder IDs that need to be migrated
+ */
+export const getMigrationFolderIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const folders = await ctx.db.query("clipperFolders").collect();
+    return folders.map((f) => f._id);
+  },
+});
+
+/**
  * Internal mutation to update video outputs from external API
  * Validates the video exists and updates outputUrls
+ * Also updates status and folder clipCount
  */
 export const updateVideoOutputsExternal = internalMutation({
   args: {
@@ -610,10 +718,26 @@ export const updateVideoOutputsExternal = internalMutation({
       isDeleted: clip.isDeleted ?? false,
     }));
 
-    // Update the video with new outputUrls
+    // Calculate clip count delta
+    const oldActiveClipCount = video.outputUrls.filter((c) => !c.isDeleted).length;
+    const newActiveClipCount = normalizedOutputUrls.filter((c) => !c.isDeleted).length;
+    const clipCountDelta = newActiveClipCount - oldActiveClipCount;
+
+    // Update the video with new outputUrls and status
     await ctx.db.patch(args.videoId, {
       outputUrls: normalizedOutputUrls,
+      status: "processed",
     });
+
+    // Update folder clipCount if changed
+    if (clipCountDelta !== 0) {
+      const folder = await ctx.db.get(video.clipperFolderId);
+      if (folder) {
+        await ctx.db.patch(video.clipperFolderId, {
+          clipCount: Math.max(0, (folder.clipCount ?? 0) + clipCountDelta),
+        });
+      }
+    }
 
     return {
       success: true,
