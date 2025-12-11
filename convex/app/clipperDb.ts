@@ -21,6 +21,8 @@ function sanitizeInputVideoName(name: string): string {
 
 /**
  * Get all folders for the current user
+ * Returns folders without counts to avoid hitting Convex's 16MB byte limit.
+ * Use getFolderCounts to get counts for individual folders as needed.
  */
 export const getFolders = query({
   args: {},
@@ -44,23 +46,60 @@ export const getFolders = query({
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .collect();
 
-    // Get video counts for each folder
-    const foldersWithCounts = await Promise.all(
-      folders.map(async (folder) => {
-        const videos = await ctx.db
-          .query("clippedVideoUrls")
-          .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", folder._id))
-          .collect();
+    // Return folders without counts - counts are fetched separately via getFolderCounts
+    // This avoids loading all video documents which can exceed the 16MB byte limit
+    return folders.map((folder) => ({
+      ...folder,
+      videoCount: 0,
+      clipCount: 0,
+    }));
+  },
+});
 
-        return {
-          ...folder,
-          videoCount: videos.length,
-          clipCount: videos.reduce((acc, v) => acc + v.outputUrls.length, 0),
-        };
-      })
-    );
+// Maximum videos to sample per folder for counting
+// Keep this low to avoid hitting Convex's 16MB byte limit
+const MAX_VIDEOS_FOR_COUNT = 100;
 
-    return foldersWithCounts;
+/**
+ * Get counts for a single folder
+ * Call this separately for each folder to avoid byte limit issues
+ * Note: Counts are approximate if folder has more than MAX_VIDEOS_FOR_COUNT videos
+ */
+export const getFolderCounts = query({
+  args: {
+    folderId: v.id("clipperFolders"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { videoCount: 0, clipCount: 0 };
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return { videoCount: 0, clipCount: 0 };
+    }
+
+    // Verify folder belongs to user
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder || folder.userId !== user._id) {
+      return { videoCount: 0, clipCount: 0 };
+    }
+
+    // Use take() with a limit - Convex doesn't allow multiple paginated queries
+    const videos = await ctx.db
+      .query("clippedVideoUrls")
+      .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", args.folderId))
+      .take(MAX_VIDEOS_FOR_COUNT);
+
+    const videoCount = videos.length;
+    const clipCount = videos.reduce((acc, v) => acc + v.outputUrls.length, 0);
+
+    return { videoCount, clipCount };
   },
 });
 
@@ -496,22 +535,33 @@ export const restoreClips = mutation({
 // INTERNAL API FUNCTIONS (for HTTP endpoints)
 // =====================================================
 
+// Maximum videos to check for pending status
+// Keep low since we load full documents (including outputUrls) before filtering
+const MAX_VIDEOS_TO_CHECK_PENDING = 100;
+
 /**
  * Internal query to get all videos with empty outputUrls (pending processing)
  * Used by the external API endpoint
+ * Note: Limited to checking MAX_VIDEOS_TO_CHECK_PENDING most recent videos
  */
 export const getPendingVideosInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    // Get all clippedVideoUrls where outputUrls is empty
-    const allVideos = await ctx.db.query("clippedVideoUrls").collect();
+    // Get recent videos with a limit to avoid byte limit issues
+    // Videos are ordered by creation time, so most recent (likely pending) come first
+    const recentVideos = await ctx.db
+      .query("clippedVideoUrls")
+      .order("desc")
+      .take(MAX_VIDEOS_TO_CHECK_PENDING);
 
     // Filter to only pending videos (empty outputUrls array)
-    const pendingVideos = allVideos.filter(
+    // This filtering happens after we've limited the data read
+    const pendingVideos = recentVideos.filter(
       (video) => video.outputUrls.length === 0
     );
 
-    // For each video, get the folder info
+    // For each pending video, get the folder info
+    // This is safe because pending videos should be few
     const videosWithFolderInfo = await Promise.all(
       pendingVideos.map(async (video) => {
         const folder = await ctx.db.get(video.clipperFolderId);

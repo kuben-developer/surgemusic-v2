@@ -10,9 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Folder, Trash2, Video, Film } from "lucide-react";
+import { Folder, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { ClipperFolder, FolderId } from "../types/clipper.types";
+import { FolderCountCells } from "./FolderCountCells";
 
 interface ClipperFolderTableProps {
   folders: ClipperFolder[];
@@ -63,18 +64,8 @@ export function ClipperFolderTable({
               <TableCell className="text-muted-foreground text-sm">
                 {formatDistanceToNow(folder._creationTime, { addSuffix: true })}
               </TableCell>
-              <TableCell className="text-center">
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                  <Video className="size-3.5" />
-                  <span>{folder.videoCount}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-center">
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                  <Film className="size-3.5" />
-                  <span>{folder.clipCount}</span>
-                </div>
-              </TableCell>
+              {/* Counts are fetched separately per folder to avoid byte limits */}
+              <FolderCountCells folderId={folder._id} />
               <TableCell>
                 <Button
                   variant="ghost"

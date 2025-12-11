@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Folder, Video, Film, Trash2, Loader2 } from "lucide-react";
+import { Folder, Loader2 } from "lucide-react";
 import type { ClipperFolder, FolderId } from "../types/clipper.types";
 import { useState } from "react";
 import {
@@ -17,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { FolderCard } from "./FolderCard";
 
 interface FolderGridProps {
   folders: ClipperFolder[];
@@ -65,38 +63,11 @@ export function FolderGrid({ folders, onDeleteFolder }: FolderGridProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {folders.map((folder) => (
-          <Link key={folder._id} href={`/clipper/${folder._id}`}>
-            <Card className="cursor-pointer hover:border-primary transition-colors group">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Folder className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-base truncate">{folder.folderName}</CardTitle>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteClick(e, folder._id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <Video className="h-4 w-4" />
-                    {folder.videoCount} {folder.videoCount === 1 ? "video" : "videos"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Film className="h-4 w-4" />
-                    {folder.clipCount} {folder.clipCount === 1 ? "clip" : "clips"}
-                  </span>
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
+          <FolderCard
+            key={folder._id}
+            folder={folder}
+            onDeleteClick={handleDeleteClick}
+          />
         ))}
       </div>
 
@@ -106,7 +77,7 @@ export function FolderGrid({ folders, onDeleteFolder }: FolderGridProps) {
             <AlertDialogTitle>Delete Folder</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{folderToDelete?.folderName}&quot;?
-              This will permanently delete the folder and all {folderToDelete?.videoCount || 0} videos in it.
+              This will permanently delete the folder and all its videos.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
