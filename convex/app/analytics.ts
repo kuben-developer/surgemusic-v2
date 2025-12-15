@@ -1,8 +1,12 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery, query } from "../_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { api, internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 import type { PaginationResult } from "convex/server";
+
+// Type export for report analytics (used by reports feature)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnalyticsResponse = any;
 
 /**
  * Date utility functions for DD-MM-YYYY format
@@ -457,7 +461,7 @@ export const getCampaignAnalytics = query({
     dates: v.optional(v.array(v.string())),
   },
   handler: async (ctx, { campaignId, dates }) => {
-    // Fetch campaign analytics record
+    // Fetch campaign analytics record (for metadata and as data source)
     const analytics = await ctx.db
       .query("campaignAnalytics")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
@@ -467,6 +471,124 @@ export const getCampaignAnalytics = query({
       return null;
     }
 
+    // Get minViewsFilter setting
+    const minViewsFilter = analytics.minViewsFilter ?? 0;
+
+    // Helper to build response with filtered data (using snapshots for accurate graph)
+    const buildFilteredResponse = async () => {
+      // Fetch source posts for filtering
+      const bundlePosts = await ctx.db
+        .query("bundleSocialPostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      // Get valid postIds from airtableContents
+      const airtablePosts = await ctx.db
+        .query("airtableContents")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
+
+      // Filter posts: must exist in airtable AND meet minViews threshold
+      let filteredPosts = bundlePosts.filter((post) =>
+        airtablePostIds.has(post.postId) && post.views >= minViewsFilter
+      );
+
+      // Helper: Convert DD-MM-YYYY to Unix timestamp range
+      const dateStringToTimestampRange = (dateStr: string): [number, number] => {
+        const parts = dateStr.split('-').map(Number);
+        const day = parts[0] ?? 1;
+        const month = parts[1] ?? 1;
+        const year = parts[2] ?? 2000;
+        const startOfDay = new Date(year, month - 1, day);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(year, month - 1, day);
+        endOfDay.setHours(23, 59, 59, 999);
+        return [Math.floor(startOfDay.getTime() / 1000), Math.floor(endOfDay.getTime() / 1000)];
+      };
+
+      // Apply date filter if provided
+      if (dates && dates.length > 0) {
+        const timestampRanges = dates.map(dateStringToTimestampRange);
+        filteredPosts = filteredPosts.filter((post) => {
+          return timestampRanges.some(([start, end]) => {
+            return post.postedAt >= start && post.postedAt <= end;
+          });
+        });
+      }
+
+      // Get the postIds that passed the filter
+      const filteredPostIds = new Set(filteredPosts.map((post) => post.postId));
+
+      // Calculate totals from filtered posts (current values)
+      const totalPosts = filteredPosts.length;
+      const totalViews = filteredPosts.reduce((acc, post) => acc + post.views, 0);
+      const totalLikes = filteredPosts.reduce((acc, post) => acc + post.likes, 0);
+      const totalComments = filteredPosts.reduce((acc, post) => acc + post.comments, 0);
+      const totalShares = filteredPosts.reduce((acc, post) => acc + post.shares, 0);
+      const totalSaves = filteredPosts.reduce((acc, post) => acc + post.saves, 0);
+
+      // Fetch snapshots for filtered posts only
+      const allSnapshots = await ctx.db
+        .query("bundleSocialSnapshots")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      // Filter snapshots to only include posts that passed the minViews filter
+      const filteredSnapshots = allSnapshots.filter((snapshot) =>
+        filteredPostIds.has(snapshot.postId)
+      );
+
+      // Use forwardFillSnapshots to fill gaps in snapshot data
+      const forwardFilledSnapshots = forwardFillSnapshots(filteredSnapshots, filteredPosts);
+
+      // Calculate daily totals from the forward-filled snapshots
+      const dailyTotals = calculateDailyTotalSnapshots(forwardFilledSnapshots);
+
+      // Transform to array format for charting (this is already cumulative per date)
+      const dailyData = Object.entries(dailyTotals)
+        .map(([date, snapshot]) => ({
+          date,
+          views: snapshot.totalViews,
+          likes: snapshot.totalLikes,
+          comments: snapshot.totalComments,
+          shares: snapshot.totalShares,
+          saves: snapshot.totalSaves,
+        }))
+        .sort((a, b) => {
+          const dateA = parseDate(a.date);
+          const dateB = parseDate(b.date);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+      return {
+        campaignId: analytics.campaignId,
+        campaignMetadata: {
+          campaignId: analytics.campaignId,
+          name: analytics.campaignName,
+          artist: analytics.artist,
+          song: analytics.song,
+        },
+        totals: {
+          posts: totalPosts,
+          views: totalViews,
+          likes: totalLikes,
+          comments: totalComments,
+          shares: totalShares,
+          saves: totalSaves,
+        },
+        dailyData,
+        lastUpdatedAt: analytics._creationTime,
+      };
+    };
+
+    // If minViewsFilter is set, recalculate from source data
+    if (minViewsFilter > 0) {
+      return await buildFilteredResponse();
+    }
+
+    // No minViewsFilter - use pre-calculated data
     // If no date filter, return all-time data
     if (!dates || dates.length === 0) {
       // Transform dailySnapshots from record to array for charting
@@ -507,7 +629,7 @@ export const getCampaignAnalytics = query({
       };
     }
 
-    // Filter by selected post dates
+    // Filter by selected post dates (no minViewsFilter)
     const datesSet = new Set(dates);
     const filteredDateAnalytics = Object.entries(analytics.dailySnapshotsByDate)
       .filter(([postDate]) => datesSet.has(postDate));
@@ -683,8 +805,16 @@ export const getTopVideosByPostDate = query({
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
     let filteredPosts = bundlePosts.filter((post) => airtablePostIds.has(post.postId));
 
-    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
-      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
+    // Get campaign analytics settings for minViewsFilter
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+    const minViewsFilter = analytics?.minViewsFilter ?? 0;
+
+    // Apply minViewsFilter if set
+    if (minViewsFilter > 0) {
+      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views >= minViewsFilter);
     }
 
     // If dates are provided and not empty, filter by those dates
@@ -762,8 +892,16 @@ export const getTopVideosByPostDatePaginated = query({
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
     let filteredPosts = bundlePosts.filter((post) => airtablePostIds.has(post.postId));
 
-    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
-      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
+    // Get campaign analytics settings for minViewsFilter
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+    const settingsMinViewsFilter = analytics?.minViewsFilter ?? 0;
+
+    // Apply settings-based minViewsFilter if set (this is the campaign-level setting)
+    if (settingsMinViewsFilter > 0) {
+      filteredPosts = filteredPosts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views >= settingsMinViewsFilter);
     }
 
     // If dates are provided and not empty, filter by those dates
@@ -776,7 +914,7 @@ export const getTopVideosByPostDatePaginated = query({
       });
     }
 
-    // Apply views range filter
+    // Apply user's views range filter (from UI controls, separate from settings)
     if (minViews !== undefined) {
       filteredPosts = filteredPosts.filter((post) => post.views >= minViews);
     }
@@ -1010,9 +1148,8 @@ export const calculateCampaignAnalyticsByCampaign = internalAction({
 
     posts.push(...tiktokPostsToAdd);
 
-    if (campaignId === "recfMqIdSjfY7Q2kW" || campaignId === "recC4ugPAbpnncm8q") {
-      posts = posts.filter((post: Doc<"bundleSocialPostedVideos">) => post.views > 0);
-    }
+    // Note: minViewsFilter is a display setting applied at query time, not during data calculation
+    // Raw analytics data includes all posts - filtering happens in getCampaignAnalytics and related queries
 
     const totalPosts: number = posts.length;
     const totalViews: number = posts.reduce((acc: number, post: Doc<"bundleSocialPostedVideos">) => acc + post.views, 0);
@@ -1077,5 +1214,72 @@ export const calculateCampaignAnalytics = internalAction({
     }
 
     console.log(`${scheduledCount} campaigns scheduled for processing`);
+  },
+});
+
+/**
+ * Get campaign analytics settings
+ */
+export const getCampaignAnalyticsSettings = query({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      return {
+        minViewsFilter: 0,
+        currencySymbol: "USD" as const,
+      };
+    }
+
+    return {
+      minViewsFilter: analytics.minViewsFilter ?? 0,
+      currencySymbol: analytics.currencySymbol ?? "USD" as const,
+    };
+  },
+});
+
+/**
+ * Update campaign analytics settings
+ * This allows logged-in users to configure:
+ * - minViewsFilter: Hide posts with fewer than X views (0 = show all)
+ * - currencySymbol: Currency for CPM display (USD or GBP)
+ */
+export const updateCampaignAnalyticsSettings = mutation({
+  args: {
+    campaignId: v.string(),
+    minViewsFilter: v.optional(v.number()),
+    currencySymbol: v.optional(v.union(v.literal("USD"), v.literal("GBP"))),
+  },
+  handler: async (ctx, { campaignId, minViewsFilter, currencySymbol }) => {
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      throw new Error(`Campaign analytics not found for campaign ${campaignId}`);
+    }
+
+    const updates: Partial<Doc<"campaignAnalytics">> = {};
+
+    if (minViewsFilter !== undefined) {
+      updates.minViewsFilter = minViewsFilter;
+    }
+
+    if (currencySymbol !== undefined) {
+      updates.currencySymbol = currencySymbol;
+    }
+
+    await ctx.db.patch(analytics._id, updates);
+
+    return {
+      success: true,
+      minViewsFilter: minViewsFilter ?? analytics.minViewsFilter ?? 0,
+      currencySymbol: currencySymbol ?? analytics.currencySymbol ?? "USD",
+    };
   },
 });

@@ -13,6 +13,8 @@ import { motion } from "framer-motion";
 import { fadeInUp } from "../constants/metrics";
 import { calculateCPM, formatCPM } from "../utils/cpm.utils";
 
+type CurrencySymbol = "USD" | "GBP";
+
 interface CampaignInfoSectionProps {
   campaignMetadata: {
     campaignId: string;
@@ -24,9 +26,10 @@ interface CampaignInfoSectionProps {
     posts: number;
     views: number;
   };
+  currencySymbol?: CurrencySymbol;
 }
 
-export function CampaignInfoSection({ campaignMetadata, totals }: CampaignInfoSectionProps) {
+export function CampaignInfoSection({ campaignMetadata, totals, currencySymbol = "USD" }: CampaignInfoSectionProps) {
   // Only show artist/song if they have valid data
   const hasArtist = campaignMetadata.artist && campaignMetadata.artist !== 'Unknown Artist';
   const hasSong = campaignMetadata.song && campaignMetadata.song !== 'Unknown Song';
@@ -34,7 +37,7 @@ export function CampaignInfoSection({ campaignMetadata, totals }: CampaignInfoSe
 
   // Calculate CPM
   const cpm = calculateCPM(totals.views, totals.posts);
-  const formattedCPM = formatCPM(cpm);
+  const formattedCPM = formatCPM(cpm, currencySymbol);
 
   return (
     <motion.div variants={fadeInUp}>

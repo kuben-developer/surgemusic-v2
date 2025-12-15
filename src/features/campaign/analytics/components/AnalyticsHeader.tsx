@@ -11,6 +11,7 @@ import { fadeInUp } from "../constants/metrics";
 import type { DateFilter } from "../types/analytics.types";
 import { format } from "date-fns";
 import type { DateRange, DayButtonProps } from "react-day-picker";
+import { AnalyticsSettings, type CurrencySymbol } from "./AnalyticsSettings";
 
 interface AnalyticsHeaderProps {
   campaignId: string;
@@ -20,6 +21,9 @@ interface AnalyticsHeaderProps {
   onDateFilterChange: (value: DateFilter | null) => void;
   isPublic?: boolean;
   hideBackButton?: boolean;
+  minViewsFilter?: number;
+  currencySymbol?: CurrencySymbol;
+  onSettingsChange?: (settings: { minViewsFilter: number; currencySymbol: CurrencySymbol }) => void;
 }
 
 export function AnalyticsHeader({
@@ -30,6 +34,9 @@ export function AnalyticsHeader({
   onDateFilterChange,
   isPublic = false,
   hideBackButton = false,
+  minViewsFilter = 0,
+  currencySymbol = "USD",
+  onSettingsChange,
 }: AnalyticsHeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
     dateFilter ? { from: dateFilter.startDate, to: dateFilter.endDate } : undefined
@@ -177,6 +184,16 @@ export function AnalyticsHeader({
             >
               <X className="h-4 w-4" />
             </Button>
+          )}
+
+          {/* Settings button - only visible for logged-in users */}
+          {!isPublic && onSettingsChange && (
+            <AnalyticsSettings
+              campaignId={campaignId}
+              minViewsFilter={minViewsFilter}
+              currencySymbol={currencySymbol}
+              onSettingsChange={onSettingsChange}
+            />
           )}
         </div>
       </motion.div>

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "convex/_generated/api";
 import { useCampaignAnalytics } from "../hooks/useCampaignAnalytics";
 import { useVideoPerformance } from "../hooks/useVideoPerformance";
 import { AnalyticsHeader } from "./AnalyticsHeader";
@@ -13,6 +15,7 @@ import { MetricsChart } from "./MetricsChart";
 import { VideoPerformanceTable } from "./VideoPerformanceTable";
 import { staggerContainer } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
+import type { CurrencySymbol } from "./AnalyticsSettings";
 
 interface AnalyticsClientProps {
   campaignId: string;
@@ -22,6 +25,22 @@ interface AnalyticsClientProps {
 export function AnalyticsClient({ campaignId, hideBackButton = false }: AnalyticsClientProps) {
   const { userId } = useAuth();
   const isPublic = !userId;
+
+  // Fetch campaign analytics settings
+  const settingsData = useQuery(api.app.analytics.getCampaignAnalyticsSettings, { campaignId });
+
+  // Local state for optimistic updates
+  const [localSettings, setLocalSettings] = useState<{
+    minViewsFilter: number;
+    currencySymbol: CurrencySymbol;
+  } | null>(null);
+
+  // Use local settings if available, otherwise use fetched settings
+  const currentSettings = localSettings ?? settingsData ?? { minViewsFilter: 0, currencySymbol: "USD" as const };
+
+  const handleSettingsChange = useCallback((newSettings: { minViewsFilter: number; currencySymbol: CurrencySymbol }) => {
+    setLocalSettings(newSettings);
+  }, []);
 
   const {
     analyticsData,
@@ -83,6 +102,9 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
         onDateFilterChange={changeDateFilter}
         isPublic={isPublic}
         hideBackButton={hideBackButton}
+        minViewsFilter={currentSettings.minViewsFilter}
+        currencySymbol={currentSettings.currencySymbol}
+        onSettingsChange={handleSettingsChange}
       />
 
       <motion.div
@@ -94,6 +116,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
         <CampaignInfoSection
           campaignMetadata={analyticsData.campaignMetadata}
           totals={analyticsData.totals}
+          currencySymbol={currentSettings.currencySymbol}
         />
 
         <KPIMetrics data={kpiData} />

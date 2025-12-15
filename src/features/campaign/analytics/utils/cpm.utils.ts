@@ -35,10 +35,12 @@ export function calculateCPM(totalViews: number, numberOfVideos: number): number
  * Format CPM value as currency string
  *
  * @param cpm - CPM value to format
- * @returns Formatted string (e.g., "$0.23")
+ * @param currency - Currency symbol to use (USD or GBP)
+ * @returns Formatted string (e.g., "$0.23" or "£0.23")
  */
-export function formatCPM(cpm: number): string {
-  return `$${cpm.toFixed(2)}`;
+export function formatCPM(cpm: number, currency: "USD" | "GBP" = "USD"): string {
+  const symbol = currency === "GBP" ? "£" : "$";
+  return `${symbol}${cpm.toFixed(2)}`;
 }
 
 /**
