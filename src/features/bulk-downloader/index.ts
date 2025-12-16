@@ -26,6 +26,7 @@ export type {
   ProfileStatus,
   ProfileProgress,
   JobProgress,
+  VideoEntry,
   JobResult,
   FailedUrl,
   CreateJobInput,
@@ -43,6 +44,4 @@ export {
   countValidUrls,
   getDateFilterTimestamp,
   formatFileSize,
-  formatExpiryDate,
-  isDownloadExpired,
 } from "./utils/url-parser.utils";

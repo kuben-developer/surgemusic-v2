@@ -155,18 +155,3 @@ export function formatFileSize(bytes: number): string {
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
-
-/**
- * Format date for display
- */
-export function formatExpiryDate(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString();
-}
-
-/**
- * Check if a download URL has expired
- */
-export function isDownloadExpired(expiresAt: number): boolean {
-  return Date.now() > expiresAt;
-}

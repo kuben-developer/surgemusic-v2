@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "convex/_generated/api";
 import { toast } from "sonner";
 import type {
@@ -14,7 +14,6 @@ interface UseJobHistoryReturn {
   completedJobs: BulkDownloadJob[] | undefined;
   isLoading: boolean;
   deleteJob: (jobId: BulkDownloadJobId) => Promise<void>;
-  regenerateDownloadUrl: (jobId: BulkDownloadJobId) => Promise<string | null>;
 }
 
 export function useJobHistory(limit?: number): UseJobHistoryReturn {
@@ -29,7 +28,6 @@ export function useJobHistory(limit?: number): UseJobHistoryReturn {
   });
 
   const deleteJobMutation = useMutation(api.app.bulkDownloader.mutations.deleteJob);
-  const regenerateUrlAction = useAction(api.app.bulkDownloader.actions.regenerateDownloadUrl);
 
   const isLoading = jobs === undefined;
 
@@ -43,26 +41,11 @@ export function useJobHistory(limit?: number): UseJobHistoryReturn {
     }
   };
 
-  const regenerateDownloadUrl = async (
-    jobId: BulkDownloadJobId
-  ): Promise<string | null> => {
-    try {
-      const result = await regenerateUrlAction({ jobId });
-      toast.success("Download link refreshed");
-      return result.zipUrl;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to refresh download link";
-      toast.error(message);
-      return null;
-    }
-  };
-
   return {
     jobs,
     activeJobs,
     completedJobs,
     isLoading,
     deleteJob,
-    regenerateDownloadUrl,
   };
 }

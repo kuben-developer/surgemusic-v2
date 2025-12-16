@@ -197,11 +197,15 @@ export const completeJob = internalMutation({
   args: {
     jobId: v.id("bulkDownloadJobs"),
     result: v.object({
-      zipUrl: v.string(),
-      zipKey: v.string(),
-      zipSize: v.number(),
-      totalVideosInZip: v.number(),
-      expiresAt: v.number(),
+      videos: v.array(
+        v.object({
+          filename: v.string(),
+          url: v.string(),
+          size: v.number(),
+        })
+      ),
+      totalVideos: v.number(),
+      totalSize: v.number(),
     }),
     progress: v.object({
       totalItems: v.number(),
@@ -325,6 +329,6 @@ export const deleteJob = mutation({
 
     await ctx.db.delete(args.jobId);
 
-    return { success: true, deletedZipKey: job.result?.zipKey };
+    return { success: true, deletedVideos: job.result?.totalVideos ?? 0 };
   },
 });

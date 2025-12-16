@@ -9,7 +9,6 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import JSZip from "jszip";
 
 import { userByUsername } from "../../services/tokapi/user";
 import { fetchUserPosts } from "../../services/tokapi/post";
@@ -33,7 +32,7 @@ const s3Client = new S3Client({
 });
 
 // Constants
-const ZIP_EXPIRY_HOURS = 24;
+const URL_EXPIRY_HOURS = 24;
 const VIDEO_DOWNLOAD_TIMEOUT = 30000; // 30 seconds
 const MAX_CONCURRENT_DOWNLOADS = 5;
 
@@ -146,21 +145,21 @@ async function downloadVideo(
 }
 
 /**
- * Upload ZIP buffer to S3 and return presigned URL
+ * Upload a single video to S3 and return presigned URL
  */
-async function uploadZipToS3(
-  zipBuffer: Buffer,
+async function uploadVideoToS3(
+  buffer: Buffer,
   userId: string,
-  jobId: string
-): Promise<{ zipKey: string; zipUrl: string; expiresAt: number }> {
-  const timestamp = Date.now();
-  const zipKey = `bulk-downloads/${userId}/${jobId}_${timestamp}.zip`;
+  jobId: string,
+  filename: string
+): Promise<{ key: string; url: string; size: number }> {
+  const key = `bulk-downloads/${userId}/${jobId}/${filename}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
-    Key: zipKey,
-    Body: zipBuffer,
-    ContentType: "application/zip",
+    Key: key,
+    Body: buffer,
+    ContentType: "video/mp4",
   });
 
   await s3Client.send(command);
@@ -168,17 +167,37 @@ async function uploadZipToS3(
   // Generate presigned URL for download
   const getCommand = new GetObjectCommand({
     Bucket: BUCKET_NAME,
-    Key: zipKey,
+    Key: key,
   });
 
-  const expiresInSeconds = ZIP_EXPIRY_HOURS * 60 * 60;
-  const zipUrl = await getSignedUrl(s3Client, getCommand, {
+  const expiresInSeconds = URL_EXPIRY_HOURS * 60 * 60;
+  const url = await getSignedUrl(s3Client, getCommand, {
     expiresIn: expiresInSeconds,
   });
 
-  const expiresAt = Date.now() + expiresInSeconds * 1000;
+  return { key, url, size: buffer.length };
+}
 
-  return { zipKey, zipUrl, expiresAt };
+/**
+ * Generate presigned URLs for a list of S3 keys
+ */
+async function generatePresignedUrls(
+  keys: string[]
+): Promise<Array<{ key: string; url: string }>> {
+  const expiresInSeconds = URL_EXPIRY_HOURS * 60 * 60;
+
+  return Promise.all(
+    keys.map(async (key) => {
+      const getCommand = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+      });
+      const url = await getSignedUrl(s3Client, getCommand, {
+        expiresIn: expiresInSeconds,
+      });
+      return { key, url };
+    })
+  );
 }
 
 /**
@@ -240,7 +259,7 @@ export const processVideoUrls = internalAction({
     }
 
     const failedUrls: Array<{ url: string; reason: string }> = [];
-    const videoBuffers: Array<{ filename: string; buffer: Buffer }> = [];
+    const uploadedVideos: Array<{ filename: string; url: string; size: number }> = [];
 
     try {
       // Update status to fetching
@@ -333,7 +352,7 @@ export const processVideoUrls = internalAction({
         }
       );
 
-      // Download videos in parallel batches
+      // Download and upload videos in parallel batches
       let completedDownloads = 0;
 
       for (let i = 0; i < videosToDownload.length; i += MAX_CONCURRENT_DOWNLOADS) {
@@ -347,14 +366,14 @@ export const processVideoUrls = internalAction({
             progress: {
               totalItems: job.progress.totalItems,
               processedItems: videoIds.length,
-              downloadedVideos: videoBuffers.length,
+              downloadedVideos: uploadedVideos.length,
               failedVideos: failedUrls.length,
               currentPhase: `Downloading videos ${completedDownloads + 1}-${Math.min(completedDownloads + batch.length, videosToDownload.length)} of ${videosToDownload.length}...`,
             },
           }
         );
 
-        // Download batch in parallel
+        // Download and upload batch in parallel
         const batchResults = await Promise.all(
           batch.map(async (video) => {
             const downloadResult = await downloadVideo(video.mediaUrl);
@@ -365,7 +384,22 @@ export const processVideoUrls = internalAction({
                 .substring(0, 50)
                 .trim();
               const filename = `${video.videoId}_${safeDesc || "video"}.mp4`;
-              return { success: true as const, filename, buffer: downloadResult.buffer };
+
+              try {
+                const uploaded = await uploadVideoToS3(
+                  downloadResult.buffer,
+                  job.userId,
+                  args.jobId,
+                  filename
+                );
+                return { success: true as const, ...uploaded, filename };
+              } catch (uploadError) {
+                return {
+                  success: false as const,
+                  url: video.url,
+                  reason: `Upload failed: ${String(uploadError)}`,
+                };
+              }
             } else {
               return {
                 success: false as const,
@@ -379,7 +413,11 @@ export const processVideoUrls = internalAction({
         // Process batch results
         for (const result of batchResults) {
           if (result.success) {
-            videoBuffers.push({ filename: result.filename, buffer: result.buffer });
+            uploadedVideos.push({
+              filename: result.filename,
+              url: result.url,
+              size: result.size,
+            });
           } else {
             failedUrls.push({ url: result.url, reason: result.reason });
           }
@@ -388,7 +426,7 @@ export const processVideoUrls = internalAction({
         completedDownloads += batch.length;
       }
 
-      if (videoBuffers.length === 0) {
+      if (uploadedVideos.length === 0) {
         await ctx.runMutation(internal.app.bulkDownloader.mutations.failJob, {
           jobId: args.jobId,
           error: "Failed to download any videos",
@@ -397,71 +435,20 @@ export const processVideoUrls = internalAction({
         return;
       }
 
-      // Update status to zipping
-      await ctx.runMutation(
-        internal.app.bulkDownloader.mutations.updateJobProgress,
-        {
-          jobId: args.jobId,
-          status: "zipping",
-          progress: {
-            totalItems: job.progress.totalItems,
-            processedItems: videoIds.length,
-            downloadedVideos: videoBuffers.length,
-            failedVideos: failedUrls.length,
-            currentPhase: "Creating ZIP file...",
-          },
-        }
-      );
+      // Mark as completed with video URLs
+      const totalSize = uploadedVideos.reduce((sum, v) => sum + v.size, 0);
 
-      // Create ZIP
-      const zip = new JSZip();
-      for (const { filename, buffer } of videoBuffers) {
-        zip.file(filename, buffer);
-      }
-
-      const zipBuffer = await zip.generateAsync({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-        compressionOptions: { level: 5 },
-      });
-
-      // Update status to uploading
-      await ctx.runMutation(
-        internal.app.bulkDownloader.mutations.updateJobProgress,
-        {
-          jobId: args.jobId,
-          status: "uploading",
-          progress: {
-            totalItems: job.progress.totalItems,
-            processedItems: videoIds.length,
-            downloadedVideos: videoBuffers.length,
-            failedVideos: failedUrls.length,
-            currentPhase: "Uploading to storage...",
-          },
-        }
-      );
-
-      // Upload to S3
-      const { zipKey, zipUrl, expiresAt } = await uploadZipToS3(
-        zipBuffer,
-        job.userId,
-        args.jobId
-      );
-
-      // Mark as completed
       await ctx.runMutation(internal.app.bulkDownloader.mutations.completeJob, {
         jobId: args.jobId,
         result: {
-          zipUrl,
-          zipKey,
-          zipSize: zipBuffer.length,
-          totalVideosInZip: videoBuffers.length,
-          expiresAt,
+          videos: uploadedVideos,
+          totalVideos: uploadedVideos.length,
+          totalSize,
         },
         progress: {
           totalItems: job.progress.totalItems,
           processedItems: videoIds.length,
-          downloadedVideos: videoBuffers.length,
+          downloadedVideos: uploadedVideos.length,
           failedVideos: failedUrls.length,
           currentPhase: "Complete!",
         },
@@ -505,7 +492,7 @@ export const processProfiles = internalAction({
     }
 
     const failedUrls: Array<{ url: string; reason: string }> = [];
-    const allVideoBuffers: Array<{ filename: string; buffer: Buffer }> = [];
+    const uploadedVideos: Array<{ filename: string; url: string; size: number }> = [];
 
     try {
       // Update status to fetching
@@ -638,14 +625,14 @@ export const processProfiles = internalAction({
             }
           );
 
-          // Download videos for this profile in parallel batches
+          // Download and upload videos for this profile in parallel batches
           let downloadedCount = 0;
           const postsWithMedia = allPosts.filter((post) => post.mediaUrl);
 
           for (let i = 0; i < postsWithMedia.length; i += MAX_CONCURRENT_DOWNLOADS) {
             const batch = postsWithMedia.slice(i, i + MAX_CONCURRENT_DOWNLOADS);
 
-            // Download batch in parallel
+            // Download and upload batch in parallel
             const batchResults = await Promise.all(
               batch.map(async (post) => {
                 const downloadResult = await downloadVideo(post.mediaUrl!);
@@ -656,7 +643,18 @@ export const processProfiles = internalAction({
                     .substring(0, 50)
                     .trim();
                   const filename = `${username}/${post.id}_${safeDesc || "video"}.mp4`;
-                  return { success: true as const, filename, buffer: downloadResult.buffer };
+
+                  try {
+                    const uploaded = await uploadVideoToS3(
+                      downloadResult.buffer,
+                      job.userId,
+                      args.jobId,
+                      filename
+                    );
+                    return { success: true as const, ...uploaded, filename };
+                  } catch (uploadError) {
+                    return { success: false as const };
+                  }
                 } else {
                   return { success: false as const };
                 }
@@ -666,9 +664,10 @@ export const processProfiles = internalAction({
             // Process batch results
             for (const result of batchResults) {
               if (result.success) {
-                allVideoBuffers.push({
+                uploadedVideos.push({
                   filename: result.filename,
-                  buffer: result.buffer,
+                  url: result.url,
+                  size: result.size,
                 });
                 downloadedCount++;
               }
@@ -706,7 +705,7 @@ export const processProfiles = internalAction({
               progress: {
                 totalItems: usernames.length,
                 processedItems: profileIdx + 1,
-                downloadedVideos: allVideoBuffers.length,
+                downloadedVideos: uploadedVideos.length,
                 failedVideos: failedUrls.length,
                 currentPhase: `Processed ${profileIdx + 1}/${usernames.length} profiles`,
               },
@@ -730,7 +729,7 @@ export const processProfiles = internalAction({
         }
       }
 
-      if (allVideoBuffers.length === 0) {
+      if (uploadedVideos.length === 0) {
         await ctx.runMutation(internal.app.bulkDownloader.mutations.failJob, {
           jobId: args.jobId,
           error: "No videos downloaded from any profile",
@@ -739,71 +738,20 @@ export const processProfiles = internalAction({
         return;
       }
 
-      // Update status to zipping
-      await ctx.runMutation(
-        internal.app.bulkDownloader.mutations.updateJobProgress,
-        {
-          jobId: args.jobId,
-          status: "zipping",
-          progress: {
-            totalItems: usernames.length,
-            processedItems: usernames.length,
-            downloadedVideos: allVideoBuffers.length,
-            failedVideos: failedUrls.length,
-            currentPhase: "Creating ZIP file...",
-          },
-        }
-      );
+      // Mark as completed with video URLs
+      const totalSize = uploadedVideos.reduce((sum, v) => sum + v.size, 0);
 
-      // Create ZIP with folder structure
-      const zip = new JSZip();
-      for (const { filename, buffer } of allVideoBuffers) {
-        zip.file(filename, buffer);
-      }
-
-      const zipBuffer = await zip.generateAsync({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-        compressionOptions: { level: 5 },
-      });
-
-      // Update status to uploading
-      await ctx.runMutation(
-        internal.app.bulkDownloader.mutations.updateJobProgress,
-        {
-          jobId: args.jobId,
-          status: "uploading",
-          progress: {
-            totalItems: usernames.length,
-            processedItems: usernames.length,
-            downloadedVideos: allVideoBuffers.length,
-            failedVideos: failedUrls.length,
-            currentPhase: "Uploading to storage...",
-          },
-        }
-      );
-
-      // Upload to S3
-      const { zipKey, zipUrl, expiresAt } = await uploadZipToS3(
-        zipBuffer,
-        job.userId,
-        args.jobId
-      );
-
-      // Mark as completed
       await ctx.runMutation(internal.app.bulkDownloader.mutations.completeJob, {
         jobId: args.jobId,
         result: {
-          zipUrl,
-          zipKey,
-          zipSize: zipBuffer.length,
-          totalVideosInZip: allVideoBuffers.length,
-          expiresAt,
+          videos: uploadedVideos,
+          totalVideos: uploadedVideos.length,
+          totalSize,
         },
         progress: {
           totalItems: usernames.length,
           processedItems: usernames.length,
-          downloadedVideos: allVideoBuffers.length,
+          downloadedVideos: uploadedVideos.length,
           failedVideos: failedUrls.length,
           currentPhase: "Complete!",
         },
@@ -830,13 +778,13 @@ export const processProfiles = internalAction({
 });
 
 /**
- * Regenerate presigned download URL for a completed job
+ * Regenerate presigned download URLs for a completed job
  */
-export const regenerateDownloadUrl = action({
+export const regenerateDownloadUrls = action({
   args: {
     jobId: v.id("bulkDownloadJobs"),
   },
-  handler: async (ctx, args): Promise<{ zipUrl: string; expiresAt: number }> => {
+  handler: async (ctx, args): Promise<{ videos: Array<{ filename: string; url: string; size: number }> }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Unauthorized");
@@ -847,35 +795,39 @@ export const regenerateDownloadUrl = action({
       { jobId: args.jobId }
     );
 
-    if (!job || !job.result?.zipKey) {
-      throw new Error("Job not found or no ZIP available");
+    if (!job || !job.result?.videos) {
+      throw new Error("Job not found or no videos available");
     }
 
-    // Generate new presigned URL
-    const zipKey = job.result.zipKey;
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: zipKey,
+    // Extract S3 keys from the current URLs and regenerate
+    const videos = job.result.videos;
+    const keys = videos.map((v) => {
+      // Extract key from the URL (it's in the path after the bucket)
+      const urlPath = new URL(v.url).pathname;
+      // Remove leading slash and bucket name
+      return urlPath.replace(/^\/[^/]+\//, "");
     });
 
-    const expiresInSeconds = ZIP_EXPIRY_HOURS * 60 * 60;
-    const newZipUrl = await getSignedUrl(s3Client, getCommand, {
-      expiresIn: expiresInSeconds,
-    });
+    const newUrls = await generatePresignedUrls(keys);
 
-    const newExpiresAt = Date.now() + expiresInSeconds * 1000;
+    // Map back to video objects
+    const updatedVideos = videos.map((video, idx) => ({
+      filename: video.filename,
+      url: newUrls[idx]?.url || video.url,
+      size: video.size,
+    }));
 
-    // Update the job with new URL
+    // Update the job with new URLs
     await ctx.runMutation(internal.app.bulkDownloader.mutations.completeJob, {
       jobId: args.jobId,
       result: {
-        ...job.result,
-        zipUrl: newZipUrl,
-        expiresAt: newExpiresAt,
+        videos: updatedVideos,
+        totalVideos: job.result.totalVideos,
+        totalSize: job.result.totalSize,
       },
       progress: job.progress,
     });
 
-    return { zipUrl: newZipUrl, expiresAt: newExpiresAt };
+    return { videos: updatedVideos };
   },
 });

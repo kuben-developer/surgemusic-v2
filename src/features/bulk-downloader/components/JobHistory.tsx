@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +24,11 @@ import {
   FileArchive,
   History,
   Loader2,
-  RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
 import { useJobHistory } from "../hooks/useJobHistory";
-import { formatFileSize, formatExpiryDate, isDownloadExpired } from "../utils/url-parser.utils";
+import { formatFileSize } from "../utils/url-parser.utils";
 import type { BulkDownloadJob, JobResult, JobStatus } from "../types/bulk-downloader.types";
 
 const STATUS_ICONS: Record<JobStatus, React.ComponentType<{ className?: string }>> = {
@@ -43,30 +44,74 @@ const STATUS_ICONS: Record<JobStatus, React.ComponentType<{ className?: string }
 function JobHistoryItem({
   job,
   onDelete,
-  onRegenerateUrl,
 }: {
   job: BulkDownloadJob;
   onDelete: () => void;
-  onRegenerateUrl: () => Promise<string | null>;
 }) {
-  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
   const StatusIcon = STATUS_ICONS[job.status];
   const isCompleted = job.status === "completed";
   const result = job.result as JobResult | undefined;
-  const expired = result ? isDownloadExpired(result.expiresAt) : false;
 
-  const handleDownload = () => {
-    if (result && !expired) {
-      window.open(result.zipUrl, "_blank");
-    }
-  };
+  const handleDownload = async () => {
+    if (isDownloading || !result?.videos?.length) return;
 
-  const handleRefresh = async () => {
-    setIsRegenerating(true);
+    setIsDownloading(true);
+    setDownloadProgress(0);
+
     try {
-      await onRegenerateUrl();
+      const zip = new JSZip();
+      const totalVideos = result.videos.length;
+
+      // Download each video and add to ZIP
+      for (let i = 0; i < totalVideos; i++) {
+        const video = result.videos[i];
+        if (!video) continue;
+
+        setDownloadProgress(Math.round((i / totalVideos) * 80));
+
+        try {
+          const response = await fetch(video.url);
+          if (!response.ok) continue;
+
+          const blob = await response.blob();
+          zip.file(video.filename, blob);
+        } catch {
+          continue;
+        }
+      }
+
+      setDownloadProgress(85);
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 5 },
+      }, (metadata) => {
+        setDownloadProgress(85 + Math.round(metadata.percent * 0.15));
+      });
+
+      setDownloadProgress(100);
+
+      // Trigger download
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `bulk-download-${job._id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
     } finally {
-      setIsRegenerating(false);
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
     }
   };
 
@@ -107,35 +152,30 @@ function JobHistoryItem({
           {createdDate}
           {isCompleted && result && (
             <span className="ml-2">
-              &middot; {result.totalVideosInZip} videos &middot;{" "}
-              {formatFileSize(result.zipSize)}
+              &middot; {result.totalVideos} videos &middot;{" "}
+              {formatFileSize(result.totalSize)}
             </span>
           )}
         </p>
+        {isDownloading && (
+          <Progress value={downloadProgress} className="h-1 mt-2" />
+        )}
       </div>
 
       <div className="flex items-center gap-2">
         {isCompleted && result && (
-          <>
-            {expired ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleRefresh}
-                disabled={isRegenerating}
-              >
-                {isRegenerating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-              </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownload}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Button size="sm" variant="outline" onClick={handleDownload}>
-                <Download className="h-4 w-4" />
-              </Button>
+              <Download className="h-4 w-4" />
             )}
-          </>
+          </Button>
         )}
 
         <AlertDialog>
@@ -148,7 +188,7 @@ function JobHistoryItem({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this download?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove the download job from your history. The ZIP file
+                This will remove the download job from your history. The video files
                 will no longer be accessible.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -164,7 +204,7 @@ function JobHistoryItem({
 }
 
 export function JobHistory() {
-  const { completedJobs, isLoading, deleteJob, regenerateDownloadUrl } = useJobHistory(10);
+  const { completedJobs, isLoading, deleteJob } = useJobHistory(10);
 
   if (isLoading) {
     return (
@@ -221,7 +261,6 @@ export function JobHistory() {
             key={job._id}
             job={job}
             onDelete={() => deleteJob(job._id)}
-            onRegenerateUrl={() => regenerateDownloadUrl(job._id)}
           />
         ))}
       </CardContent>

@@ -1,20 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2,
   Download,
   FileArchive,
   Loader2,
-  RefreshCw,
-  Clock,
-  AlertTriangle,
 } from "lucide-react";
-import { useJobHistory } from "../hooks/useJobHistory";
-import { formatFileSize, formatExpiryDate, isDownloadExpired } from "../utils/url-parser.utils";
+import { formatFileSize } from "../utils/url-parser.utils";
 import type { BulkDownloadJob, JobResult } from "../types/bulk-downloader.types";
 
 interface DownloadReadyCardProps {
@@ -22,27 +20,82 @@ interface DownloadReadyCardProps {
 }
 
 export function DownloadReadyCard({ job }: DownloadReadyCardProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { regenerateDownloadUrl } = useJobHistory();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadPhase, setDownloadPhase] = useState("");
 
   const result = job.result as JobResult;
-  const expired = isDownloadExpired(result.expiresAt);
 
-  const handleDownload = () => {
-    if (!expired) {
-      window.open(result.zipUrl, "_blank");
-    }
-  };
+  const handleDownload = async () => {
+    if (isDownloading || !result?.videos?.length) return;
 
-  const handleRefreshUrl = async () => {
-    setIsRefreshing(true);
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadPhase("Preparing download...");
+
     try {
-      const newUrl = await regenerateDownloadUrl(job._id);
-      if (newUrl) {
-        // The job will be updated via subscription, so we don't need to do anything else
+      const zip = new JSZip();
+      const totalVideos = result.videos.length;
+
+      // Download each video and add to ZIP
+      for (let i = 0; i < totalVideos; i++) {
+        const video = result.videos[i];
+        if (!video) continue;
+
+        setDownloadPhase(`Downloading video ${i + 1} of ${totalVideos}...`);
+        setDownloadProgress(Math.round((i / totalVideos) * 80)); // 80% for downloading
+
+        try {
+          const response = await fetch(video.url);
+          if (!response.ok) {
+            console.error(`Failed to fetch ${video.filename}: HTTP ${response.status}`);
+            continue;
+          }
+
+          const blob = await response.blob();
+          zip.file(video.filename, blob);
+        } catch (fetchError) {
+          console.error(`Failed to fetch ${video.filename}:`, fetchError);
+          continue;
+        }
       }
+
+      setDownloadPhase("Creating ZIP file...");
+      setDownloadProgress(85);
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 5 },
+      }, (metadata) => {
+        // Update progress during ZIP generation
+        setDownloadProgress(85 + Math.round(metadata.percent * 0.15));
+      });
+
+      setDownloadPhase("Starting download...");
+      setDownloadProgress(100);
+
+      // Trigger download
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `bulk-download-${job._id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      setDownloadPhase("Download complete!");
+    } catch (error) {
+      console.error("Download failed:", error);
+      setDownloadPhase("Download failed. Please try again.");
     } finally {
-      setIsRefreshing(false);
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        setDownloadPhase("");
+      }, 2000);
     }
   };
 
@@ -72,56 +125,37 @@ export function DownloadReadyCard({ job }: DownloadReadyCardProps) {
           </div>
           <div className="flex-1">
             <p className="font-medium">
-              {result.totalVideosInZip} videos
+              {result.totalVideos} videos
             </p>
             <p className="text-sm text-muted-foreground">
-              {formatFileSize(result.zipSize)}
+              {formatFileSize(result.totalSize)}
             </p>
           </div>
-          {expired ? (
-            <Button
-              onClick={handleRefreshUrl}
-              disabled={isRefreshing}
-              variant="outline"
-            >
-              {isRefreshing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh Link
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download ZIP
-            </Button>
-          )}
+          <Button onClick={handleDownload} disabled={isDownloading}>
+            {isDownloading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download ZIP
+              </>
+            )}
+          </Button>
         </div>
 
-        {/* Expiry info */}
-        <div className="flex items-center gap-2 text-sm">
-          {expired ? (
-            <>
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <span className="text-amber-600">
-                Download link expired. Click &quot;Refresh Link&quot; to get a new one.
-              </span>
-            </>
-          ) : (
-            <>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                Link expires: {formatExpiryDate(result.expiresAt)}
-              </span>
-            </>
-          )}
-        </div>
+        {/* Download progress */}
+        {isDownloading && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{downloadPhase}</span>
+              <span className="font-medium">{downloadProgress}%</span>
+            </div>
+            <Progress value={downloadProgress} className="h-2" />
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 pt-2 border-t">

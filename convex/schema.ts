@@ -315,13 +315,15 @@ export default defineSchema({
       errorMessage: v.optional(v.string()),
     }))),
 
-    // Result (when completed)
+    // Result (when completed) - array of video URLs for client-side zipping
     result: v.optional(v.object({
-      zipUrl: v.string(),
-      zipKey: v.string(),
-      zipSize: v.number(),
-      totalVideosInZip: v.number(),
-      expiresAt: v.number(),
+      videos: v.array(v.object({
+        filename: v.string(),
+        url: v.string(),
+        size: v.number(),
+      })),
+      totalVideos: v.number(),
+      totalSize: v.number(),
     })),
 
     // Error (when failed)

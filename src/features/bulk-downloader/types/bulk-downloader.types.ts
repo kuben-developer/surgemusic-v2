@@ -45,13 +45,18 @@ export interface JobProgress {
   currentPhase: string;
 }
 
-// Job result when completed
+// Video entry in job result
+export interface VideoEntry {
+  filename: string;
+  url: string;
+  size: number;
+}
+
+// Job result when completed - array of video URLs for client-side zipping
 export interface JobResult {
-  zipUrl: string;
-  zipKey: string;
-  zipSize: number;
-  totalVideosInZip: number;
-  expiresAt: number;
+  videos: VideoEntry[];
+  totalVideos: number;
+  totalSize: number;
 }
 
 // Failed URL entry
