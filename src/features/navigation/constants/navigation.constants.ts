@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Calendar,
+  Download,
   FileText,
   Home,
   LayoutGrid,
@@ -81,6 +82,11 @@ export const navigationData: { navMain: NavSection[] } = {
           title: "Analytics",
           url: "/analytics",
           icon: BarChart3,
+        },
+        {
+          title: "Bulk Downloader",
+          url: "/bulk-downloader",
+          icon: Download,
         },
         // {
         //   title: "Pricing",

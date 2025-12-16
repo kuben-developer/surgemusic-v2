@@ -266,4 +266,76 @@ export default defineSchema({
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])
     .index("by_airtableRecordId", ["airtableRecordId"])
     .index("by_campaignId", ["campaignId"]),
+
+  // BULK DOWNLOADER
+  bulkDownloadJobs: defineTable({
+    userId: v.id("users"),
+
+    // Job type
+    type: v.union(v.literal("videos"), v.literal("profiles")),
+
+    // Job status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("fetching"),
+      v.literal("downloading"),
+      v.literal("zipping"),
+      v.literal("uploading"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+
+    // Input
+    inputUrls: v.array(v.string()),
+    uploadedBefore: v.optional(v.number()), // Unix timestamp for profile filtering
+
+    // Progress tracking
+    progress: v.object({
+      totalItems: v.number(),
+      processedItems: v.number(),
+      downloadedVideos: v.number(),
+      failedVideos: v.number(),
+      currentPhase: v.string(),
+    }),
+
+    // Profile-specific progress (for profiles type only)
+    profileProgress: v.optional(v.array(v.object({
+      username: v.string(),
+      profilePicture: v.optional(v.string()),
+      nickname: v.optional(v.string()),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("fetching"),
+        v.literal("downloading"),
+        v.literal("completed"),
+        v.literal("failed")
+      ),
+      totalVideos: v.number(),
+      downloadedVideos: v.number(),
+      errorMessage: v.optional(v.string()),
+    }))),
+
+    // Result (when completed)
+    result: v.optional(v.object({
+      zipUrl: v.string(),
+      zipKey: v.string(),
+      zipSize: v.number(),
+      totalVideosInZip: v.number(),
+      expiresAt: v.number(),
+    })),
+
+    // Error (when failed)
+    error: v.optional(v.string()),
+    failedUrls: v.optional(v.array(v.object({
+      url: v.string(),
+      reason: v.string(),
+    }))),
+
+    // Timestamps
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_createdAt", ["userId", "createdAt"])
+    .index("by_status", ["status"]),
 })
