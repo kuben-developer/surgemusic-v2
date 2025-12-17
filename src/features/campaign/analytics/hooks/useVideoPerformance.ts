@@ -41,6 +41,7 @@ export function useVideoPerformance({ campaignId, dates }: UseVideoPerformancePr
     minViews: viewsFilter.minViews,
     maxViews: viewsFilter.maxViews,
     sortOrder,
+    isManualOnly: viewsFilter.isManualOnly,
   });
 
   const isLoading = queryResult === undefined;
@@ -121,7 +122,7 @@ export function useVideoPerformance({ campaignId, dates }: UseVideoPerformancePr
     viewsFilter,
     updateViewsFilter,
     clearFilters,
-    hasActiveFilters: viewsFilter.minViews !== undefined || viewsFilter.maxViews !== undefined,
+    hasActiveFilters: viewsFilter.minViews !== undefined || viewsFilter.maxViews !== undefined || viewsFilter.isManualOnly === true,
 
     // Sort state
     sortOrder,

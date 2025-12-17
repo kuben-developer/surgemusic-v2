@@ -845,6 +845,7 @@ export const getTopVideosByPostDate = query({
         comments: post.comments,
         shares: post.shares,
         saves: post.saves,
+        isManual: post.isManual,
       }));
 
     return topVideos;
@@ -861,8 +862,9 @@ export const getTopVideosByPostDatePaginated = query({
     minViews: v.optional(v.number()),
     maxViews: v.optional(v.number()),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    isManualOnly: v.optional(v.boolean()),
   },
-  handler: async (ctx, { campaignId, dates, offset = 0, limit = 100, minViews, maxViews, sortOrder = "desc" }) => {
+  handler: async (ctx, { campaignId, dates, offset = 0, limit = 100, minViews, maxViews, sortOrder = "desc", isManualOnly }) => {
     // Helper: Convert DD-MM-YYYY to Unix timestamp range (start and end of day)
     const dateStringToTimestampRange = (dateStr: string): [number, number] => {
       const parts = dateStr.split('-').map(Number);
@@ -922,6 +924,11 @@ export const getTopVideosByPostDatePaginated = query({
       filteredPosts = filteredPosts.filter((post) => post.views <= maxViews);
     }
 
+    // Apply manual posts filter
+    if (isManualOnly) {
+      filteredPosts = filteredPosts.filter((post) => post.isManual === true);
+    }
+
     // Get total count AFTER filtering but BEFORE pagination
     const totalCount = filteredPosts.length;
 
@@ -940,6 +947,7 @@ export const getTopVideosByPostDatePaginated = query({
         comments: post.comments,
         shares: post.shares,
         saves: post.saves,
+        isManual: post.isManual,
       }));
 
     return {

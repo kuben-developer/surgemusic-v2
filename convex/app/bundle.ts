@@ -254,6 +254,7 @@ export const bulkInsertPostedVideos = internalMutation({
       comments: v.number(),
       shares: v.number(),
       saves: v.number(),
+      isManual: v.optional(v.boolean()),
     })),
   },
   handler: async (ctx, { posts }) => {
@@ -424,9 +425,11 @@ export const refreshTiktokStatsByCampaign = internalAction({
       // Get all airtable contents for this campaign where error is empty and postId exists
       const allContents = await ctx.runQuery(internal.app.bundle.getAirtableContentsByCampaign, { campaignId });
 
-      // Filter to only UUID format postIds
+      // Filter to UUID format postIds (Bundle Social) OR manual posts with tiktokId
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const contents = allContents.filter((content: { postId: string; campaignId: string; }) => uuidRegex.test(content.postId));
+      const contents = allContents.filter((content: { postId: string; campaignId: string; isManual?: boolean; tiktokId?: string; }) =>
+        uuidRegex.test(content.postId) || (content.isManual && content.tiktokId)
+      );
 
       // Fetch posts to skip based on tiered monitoring schedule
       // We'll skip Bundle Social API calls for these to save API requests
@@ -456,6 +459,7 @@ export const refreshTiktokStatsByCampaign = internalAction({
         comments: number;
         shares: number;
         saves: number;
+        isManual?: boolean;
       }> = [];
 
       const postsToUpdate: Array<{
@@ -477,7 +481,7 @@ export const refreshTiktokStatsByCampaign = internalAction({
       }> = [];
 
       // Process a single content (fetch data only, no DB writes)
-      const processContent = async (content: { postId: string; campaignId: string }) => {
+      const processContent = async (content: { postId: string; campaignId: string; isManual?: boolean; tiktokId?: string }) => {
         try {
           // Safety check: Skip if somehow a skipped post made it through (shouldn't happen after filtering above)
           if (postsToSkipSet.has(content.postId)) {
@@ -490,7 +494,75 @@ export const refreshTiktokStatsByCampaign = internalAction({
             };
           }
 
-          // Fetch data from Bundle Social (only for posts not skipped by tiered monitoring)
+          // Handle MANUAL posts - fetch directly from TikTok API (skip Bundle Social)
+          if (content.isManual && content.tiktokId) {
+            console.log(`[refreshTiktokStats] Processing manual post ${content.postId} with TikTok ID: ${content.tiktokId}`);
+
+            const tiktokResult = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+              videoId: content.tiktokId,
+            });
+
+            if (!tiktokResult.success || !tiktokResult.video) {
+              return {
+                postId: content.postId,
+                success: false,
+                error: `TikTok API error: ${tiktokResult.error || 'Unknown error'}`,
+              };
+            }
+
+            const stats = tiktokResult.video;
+
+            // For manual posts, use current time as posted date (TikTok API doesn't return createTime)
+            const postedAtSeconds = Math.floor(Date.now() / 1000);
+
+            // Check if post already exists
+            const exists = existingPostIdsSet.has(content.postId);
+
+            if (exists) {
+              postsToUpdate.push({
+                postId: content.postId,
+                views: stats.views,
+                likes: stats.likes,
+                comments: stats.comments,
+                shares: stats.shares,
+                saves: stats.saves,
+              });
+            } else {
+              postsToInsert.push({
+                campaignId: content.campaignId,
+                postId: content.postId,
+                videoId: content.tiktokId,
+                postedAt: postedAtSeconds,
+                videoUrl: `https://www.tiktok.com/@/video/${content.tiktokId}`,
+                mediaUrl: undefined,
+                views: stats.views,
+                likes: stats.likes,
+                comments: stats.comments,
+                shares: stats.shares,
+                saves: stats.saves,
+                isManual: true,
+              });
+            }
+
+            // Collect snapshot data
+            snapshotsToUpsert.push({
+              postId: content.postId,
+              views: stats.views,
+              likes: stats.likes,
+              comments: stats.comments,
+              shares: stats.shares,
+              saves: stats.saves,
+            });
+
+            console.log(`[refreshTiktokStats] Successfully processed manual post ${content.postId}: ${stats.views} views`);
+
+            return {
+              postId: content.postId,
+              success: true,
+            };
+          }
+
+          // NON-MANUAL posts - Fetch data from Bundle Social
           const bundleData = await fetchBundleSocialPost(content.postId);
 
           if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
@@ -623,7 +695,7 @@ export const refreshTiktokStatsByCampaign = internalAction({
         console.log(`[refreshTiktokStats] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(contentsToProcess.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
 
         const batchResults = await Promise.allSettled(
-          batch.map((content: { postId: string; campaignId: string; }) => processContent(content))
+          batch.map((content: { postId: string; campaignId: string; isManual?: boolean; tiktokId?: string; }) => processContent(content))
         );
 
         batchResults.forEach((result: PromiseSettledResult<{ postId: string; success: boolean; error?: string; skipped?: boolean; }>) => {

@@ -38,6 +38,8 @@ interface ContentItem {
     video_category: string;
     api_post_id?: string;
     date?: string; // ISO format "YYYY-MM-DD"
+    is_manual?: boolean; // true if manually posted (not through Bundle Social API)
+    tiktok_id?: string; // TikTok video ID for manual posts
 }
 
 // Helper function to fetch records from Airtable
@@ -230,6 +232,8 @@ export const getCampaignContent = action({
             url.searchParams.append("fields[]", "video_category");
             url.searchParams.append("fields[]", "api_post_id");
             url.searchParams.append("fields[]", "date");
+            url.searchParams.append("fields[]", "is_manual");
+            url.searchParams.append("fields[]", "tiktok_id");
 
             if (offset) url.searchParams.append("offset", offset);
 
@@ -247,6 +251,8 @@ export const getCampaignContent = action({
                 // account_niche is an array in Airtable, take first element
                 const accountNiche = record.fields["account_niche"] as string[] | undefined;
                 const apiPostId = record.fields["api_post_id"] as string[] | undefined;
+                const isManual = record.fields["is_manual"] as boolean | undefined;
+                const tiktokId = record.fields["tiktok_id"] as string | undefined;
 
                 allRecords.push({
                     id: record.id,
@@ -255,6 +261,8 @@ export const getCampaignContent = action({
                     video_category: (record.fields["video_category"] as string) || "",
                     api_post_id: apiPostId?.[0] as string | undefined,
                     date: record.fields["date"] as string | undefined,
+                    is_manual: isManual,
+                    tiktok_id: tiktokId,
                 });
             });
 
@@ -309,11 +317,15 @@ export const insertContent = internalMutation({
     args: {
         campaignId: v.string(),
         postId: v.string(),
+        isManual: v.optional(v.boolean()),
+        tiktokId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         await ctx.db.insert("airtableContents", {
             campaignId: args.campaignId,
             postId: args.postId,
+            isManual: args.isManual,
+            tiktokId: args.tiktokId,
         });
     },
 });
@@ -449,10 +461,14 @@ export const syncAirtableContentByCampaign = internalAction({
             );
 
             // Build Set of valid postIds from Airtable content
+            // For manual posts without api_post_id, use tiktok_id as the postId
             const validPostIds = new Set<string>();
             for (const content of contentRecords) {
                 if (content.api_post_id) {
                     validPostIds.add(content.api_post_id);
+                } else if (content.is_manual && content.tiktok_id) {
+                    // Manual posts use tiktok_id as postId
+                    validPostIds.add(content.tiktok_id);
                 }
             }
 
@@ -476,15 +492,26 @@ export const syncAirtableContentByCampaign = internalAction({
             let insertedCount = 0;
             for (const content of contentRecords) {
                 const apiPostId = content.api_post_id;
+                const isManual = content.is_manual ?? false;
+                const tiktokId = content.tiktok_id;
 
-                // Skip if no api_post_id
-                if (!apiPostId) {
+                // Determine the postId to use
+                // For manual posts without api_post_id, use tiktok_id as postId
+                let postId: string | undefined;
+                if (apiPostId) {
+                    postId = apiPostId;
+                } else if (isManual && tiktokId) {
+                    postId = tiktokId;
+                }
+
+                // Skip if no valid postId
+                if (!postId) {
                     continue;
                 }
 
                 // Check if already exists
                 const exists = await ctx.runQuery(internal.app.airtable.checkContentExists, {
-                    postId: apiPostId,
+                    postId,
                 });
 
                 if (exists) {
@@ -494,7 +521,9 @@ export const syncAirtableContentByCampaign = internalAction({
                 // Insert into database
                 await ctx.runMutation(internal.app.airtable.insertContent, {
                     campaignId: campaignRecordId,
-                    postId: apiPostId,
+                    postId,
+                    isManual: isManual || undefined,
+                    tiktokId: tiktokId,
                 });
 
                 insertedCount++;

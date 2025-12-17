@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eye, Heart, MessageCircle, Share2, ExternalLink, Loader2, ArrowUp, ArrowDown } from "lucide-react";
@@ -57,6 +58,7 @@ export function VideoPerformanceTable({
             <ViewsRangeFilter
               minViews={viewsFilter.minViews}
               maxViews={viewsFilter.maxViews}
+              isManualOnly={viewsFilter.isManualOnly}
               onFilterChange={onViewsFilterChange}
               onClear={onClearFilters}
               hasActiveFilters={hasActiveFilters}
@@ -137,7 +139,14 @@ export function VideoPerformanceTable({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium truncate">{video.videoId}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium truncate">{video.videoId}</h4>
+                    {video.isManual && (
+                      <Badge variant="secondary" className="text-xs">
+                        Manual
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">
                       {new Date(video.postedAt * 1000).toLocaleDateString("en-US", {

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Filter, X } from "lucide-react";
 import type { ViewsFilter } from "../types/analytics.types";
@@ -10,6 +12,7 @@ import type { ViewsFilter } from "../types/analytics.types";
 interface ViewsRangeFilterProps {
   minViews?: number;
   maxViews?: number;
+  isManualOnly?: boolean;
   onFilterChange: (filter: ViewsFilter) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
@@ -24,6 +27,7 @@ function formatViewCount(num: number): string {
 export function ViewsRangeFilter({
   minViews,
   maxViews,
+  isManualOnly,
   onFilterChange,
   onClear,
   hasActiveFilters,
@@ -31,18 +35,21 @@ export function ViewsRangeFilter({
   const [open, setOpen] = useState(false);
   const [localMin, setLocalMin] = useState(minViews?.toString() ?? "");
   const [localMax, setLocalMax] = useState(maxViews?.toString() ?? "");
+  const [localManualOnly, setLocalManualOnly] = useState(isManualOnly ?? false);
 
   const handleApply = useCallback(() => {
     onFilterChange({
       minViews: localMin ? parseInt(localMin, 10) : undefined,
       maxViews: localMax ? parseInt(localMax, 10) : undefined,
+      isManualOnly: localManualOnly || undefined,
     });
     setOpen(false);
-  }, [localMin, localMax, onFilterChange]);
+  }, [localMin, localMax, localManualOnly, onFilterChange]);
 
   const handleClear = useCallback(() => {
     setLocalMin("");
     setLocalMax("");
+    setLocalManualOnly(false);
     onClear();
     setOpen(false);
   }, [onClear]);
@@ -103,6 +110,16 @@ export function ViewsRangeFilter({
                 className="h-8 text-sm"
                 min={0}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="manual-only"
+                checked={localManualOnly}
+                onCheckedChange={(checked) => setLocalManualOnly(checked === true)}
+              />
+              <Label htmlFor="manual-only" className="text-sm cursor-pointer">
+                Manual posts only
+              </Label>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleApply} className="flex-1 h-8">

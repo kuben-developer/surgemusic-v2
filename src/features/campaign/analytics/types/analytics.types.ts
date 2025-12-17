@@ -8,11 +8,13 @@ export interface VideoMetric {
   likes: number;
   comments: number;
   shares: number;
+  isManual?: boolean;
 }
 
 export interface ViewsFilter {
   minViews?: number;
   maxViews?: number;
+  isManualOnly?: boolean;
 }
 
 export type SortOrder = "asc" | "desc";

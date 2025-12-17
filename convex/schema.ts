@@ -25,9 +25,11 @@ export default defineSchema({
   // AIRTABLE
   airtableContents: defineTable({
     campaignId: v.string(), // airtable campaign id
-    postId: v.string(), // from airtable api_post_id column in Content base
+    postId: v.string(), // from airtable api_post_id column in Content base or tiktok_id for manual posts
     caption: v.optional(v.string()),
     error: v.optional(v.string()),
+    isManual: v.optional(v.boolean()), // true if manually posted (not through Bundle Social API)
+    tiktokId: v.optional(v.string()), // TikTok video ID for manual posts
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_postId", ["postId"])
@@ -72,7 +74,7 @@ export default defineSchema({
   // BUNDLE SOCIAL
   bundleSocialPostedVideos: defineTable({
     campaignId: v.string(), // airtable campaign id
-    postId: v.string(), // from airtable api_post_id column in Content base
+    postId: v.string(), // from airtable api_post_id column in Content base or tiktok_id for manual posts
     videoId: v.string(),
     postedAt: v.number(),
     videoUrl: v.string(),
@@ -83,6 +85,7 @@ export default defineSchema({
     shares: v.number(),
     saves: v.number(),
     updatedAt: v.number(),
+    isManual: v.optional(v.boolean()), // true if manually posted (not through Bundle Social API)
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_postId", ["postId"])
