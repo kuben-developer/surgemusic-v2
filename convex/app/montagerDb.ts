@@ -500,19 +500,22 @@ export const getPendingVideoCount = query({
 });
 
 /**
- * Get all airtableRecordIds that have been assigned to montager videos
+ * Get all airtableRecordIds that have been assigned to montager videos for a specific campaign
  * Used to filter out records that already have videos assigned
  */
 export const getAssignedAirtableRecordIds = query({
-  args: {},
-  handler: async (ctx) => {
-    // Get all montagerVideos that have an airtableRecordId (not pending)
-    const allVideos = await ctx.db
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get montagerVideos for this campaign using the index
+    const videos = await ctx.db
       .query("montagerVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
       .collect();
 
-    // Filter for videos that have an airtableRecordId assigned
-    const assignedIds = allVideos
+    // Filter for videos that have an airtableRecordId assigned and are not pending
+    const assignedIds = videos
       .filter((video) => video.airtableRecordId && video.status !== "pending")
       .map((video) => video.airtableRecordId!);
 

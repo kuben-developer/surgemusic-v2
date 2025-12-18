@@ -47,8 +47,11 @@ export function CampaignContentPage() {
     selectedCategory ? { campaignId: campaignRecordId } : "skip"
   );
 
-  // Get all airtable record IDs that already have montager videos assigned
-  const assignedRecordIds = useQuery(api.app.montagerDb.getAssignedAirtableRecordIds);
+  // Get airtable record IDs that already have montager videos assigned for this campaign
+  const assignedRecordIds = useQuery(
+    api.app.montagerDb.getAssignedAirtableRecordIds,
+    { campaignId: campaignRecordId }
+  );
   const assignedSet = useMemo(
     () => new Set(assignedRecordIds ?? []),
     [assignedRecordIds]
