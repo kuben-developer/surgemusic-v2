@@ -77,7 +77,7 @@ export default defineSchema({
     postId: v.string(), // from airtable api_post_id column in Content base or tiktok_id for manual posts
     videoId: v.string(),
     postedAt: v.number(),
-    videoUrl: v.string(),
+    videoUrl: v.optional(v.string()),
     mediaUrl: v.optional(v.string()),
     views: v.number(),
     likes: v.number(),

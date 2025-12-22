@@ -247,7 +247,7 @@ export const bulkInsertPostedVideos = internalMutation({
       postId: v.string(),
       videoId: v.string(),
       postedAt: v.number(),
-      videoUrl: v.string(),
+      videoUrl: v.optional(v.string()),
       mediaUrl: v.optional(v.string()),
       views: v.number(),
       likes: v.number(),
