@@ -52,8 +52,8 @@ export function MetricsChart({
   const MetricIcon = metricConfig.icon;
 
   return (
-    <Card className="p-6 border border-primary/10 shadow-md overflow-hidden">
-      <div className="mb-6">
+    <Card className="p-4 sm:p-6 border border-primary/10 shadow-md overflow-hidden">
+      <div className="mb-4 sm:mb-6">
         <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
 
         {/* Metric Info */}
@@ -65,21 +65,21 @@ export function MetricsChart({
         {/* Metric Tabs */}
         <Tabs value={activeMetric} onValueChange={(value) => onActiveMetricChange(value as MetricType)}>
           <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="views">
-              <Eye className="h-4 w-4 mr-1.5" />
-              Views
+            <TabsTrigger value="views" className="gap-1.5">
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">Views</span>
             </TabsTrigger>
-            <TabsTrigger value="likes">
-              <Heart className="h-4 w-4 mr-1.5" />
-              Likes
+            <TabsTrigger value="likes" className="gap-1.5">
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline">Likes</span>
             </TabsTrigger>
-            <TabsTrigger value="comments">
-              <MessageCircle className="h-4 w-4 mr-1.5" />
-              Comments
+            <TabsTrigger value="comments" className="gap-1.5">
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Comments</span>
             </TabsTrigger>
-            <TabsTrigger value="shares">
-              <Share2 className="h-4 w-4 mr-1.5" />
-              Shares
+            <TabsTrigger value="shares" className="gap-1.5">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Shares</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -87,7 +87,7 @@ export function MetricsChart({
 
       {/* Chart */}
       <motion.div
-        className="h-80 bg-white dark:bg-muted/30 rounded-lg p-4 border border-border/30 shadow-sm"
+        className="h-60 sm:h-80 bg-white dark:bg-muted/30 rounded-lg p-2 sm:p-4 border border-border/30 shadow-sm"
         key={activeMetric}
         variants={chartVariants}
         initial="hidden"

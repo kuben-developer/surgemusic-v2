@@ -44,9 +44,9 @@ export function VideoPerformanceTable({
   const endIndex = Math.min(currentPage * itemsPerPage, totalCount);
 
   return (
-    <Card className="p-6 border border-primary/10">
+    <Card className="p-4 sm:p-6 border border-primary/10">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">Content Performance</h3>
           <p className="text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export function VideoPerformanceTable({
       </div>
 
       {/* Pagination controls */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <div className="text-sm text-muted-foreground">
           {totalCount > 0 ? (
             isPublic
@@ -131,57 +131,60 @@ export function VideoPerformanceTable({
             videos.map((video) => (
               <div
                 key={video.postId}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors"
               >
-                {video.mediaUrl && (
-                  <div className="relative h-16 aspect-[9/16] rounded overflow-hidden bg-muted">
-                    <video src={video.mediaUrl} className="h-full w-full object-cover" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium truncate">{video.videoId}</h4>
-                    {video.isManual && (
-                      <Badge variant="secondary" className="text-xs">
-                        Manual
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(video.postedAt * 1000).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                    {video.videoUrl && (
-                      <a
-                        href={video.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Open on TikTok
-                      </a>
-                    )}
+                <div className="flex items-center gap-3 sm:gap-4">
+                  {video.mediaUrl && (
+                    <div className="relative h-16 aspect-[9/16] rounded overflow-hidden bg-muted flex-shrink-0">
+                      <video src={video.mediaUrl} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium truncate text-sm sm:text-base">{video.videoId}</h4>
+                      {video.isManual && (
+                        <Badge variant="secondary" className="text-xs">
+                          Manual
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(video.postedAt * 1000).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                      {video.videoUrl && (
+                        <a
+                          href={video.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="hidden xs:inline">Open on TikTok</span>
+                          <span className="xs:hidden">TikTok</span>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1 min-w-[60px]">
+                <div className="grid grid-cols-4 sm:flex sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm pl-0 sm:pl-0 sm:ml-auto">
+                  <div className="flex items-center gap-1 justify-center sm:justify-start sm:min-w-[60px]">
                     <Eye className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                     <span>{video.views.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-1 min-w-[60px]">
+                  <div className="flex items-center gap-1 justify-center sm:justify-start sm:min-w-[60px]">
                     <Heart className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                     <span>{video.likes.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-1 min-w-[60px]">
+                  <div className="flex items-center gap-1 justify-center sm:justify-start sm:min-w-[60px]">
                     <Share2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                     <span>{video.shares.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-1 min-w-[60px]">
+                  <div className="flex items-center gap-1 justify-center sm:justify-start sm:min-w-[60px]">
                     <MessageCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                     <span>{video.comments.toLocaleString()}</span>
                   </div>

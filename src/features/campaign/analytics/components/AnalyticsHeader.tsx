@@ -134,12 +134,12 @@ export function AnalyticsHeader({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {getDisplayText()}
+              <Button variant="outline" className="w-full sm:w-[280px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{getDisplayText()}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -148,8 +148,19 @@ export function AnalyticsHeader({
                 selected={tempDateRange}
                 onSelect={setTempDateRange}
                 disabled={(date) => !hasPostsOnDate(date)}
+                numberOfMonths={1}
+                className="p-3 sm:hidden"
+                components={{
+                  DayButton: CustomDayButton,
+                }}
+              />
+              <Calendar
+                mode="range"
+                selected={tempDateRange}
+                onSelect={setTempDateRange}
+                disabled={(date) => !hasPostsOnDate(date)}
                 numberOfMonths={2}
-                className="p-3"
+                className="p-3 hidden sm:block"
                 components={{
                   DayButton: CustomDayButton,
                 }}

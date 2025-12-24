@@ -93,7 +93,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
       <AnalyticsHeader
         campaignId={campaignId}
         dateFilter={dateFilter}
@@ -111,7 +111,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
         variants={staggerContainer}
         initial="initial"
         animate="animate"
-        className="space-y-6"
+        className="space-y-4 sm:space-y-6"
       >
         <CampaignInfoSection
           campaignMetadata={analyticsData.campaignMetadata}
@@ -122,7 +122,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
         <KPIMetrics data={kpiData} />
 
         {/* Side-by-side layout for Performance Metrics and Content Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <MetricsChart
             dailyData={analyticsData.dailyData}
             activeMetric={activeMetric}
