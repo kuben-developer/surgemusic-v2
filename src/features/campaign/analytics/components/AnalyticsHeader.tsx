@@ -111,15 +111,6 @@ export function AnalyticsHeader({
 
   return (
     <>
-      {lastUpdatedAt && (
-        <div className="flex mb-6 mr-1 items-center justify-end text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500/70 animate-pulse" />
-            Updated {new Date(lastUpdatedAt).toLocaleString()}
-          </span>
-        </div>
-      )}
-
       <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {!isPublic && !hideBackButton && (
           <div className="flex items-center gap-2">
@@ -134,79 +125,81 @@ export function AnalyticsHeader({
           </div>
         )}
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[280px] justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{getDisplayText()}</span>
+        {!isPublic && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-[280px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{getDisplayText()}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={tempDateRange}
+                  onSelect={setTempDateRange}
+                  disabled={(date) => !hasPostsOnDate(date)}
+                  numberOfMonths={1}
+                  className="p-3 sm:hidden"
+                  components={{
+                    DayButton: CustomDayButton,
+                  }}
+                />
+                <Calendar
+                  mode="range"
+                  selected={tempDateRange}
+                  onSelect={setTempDateRange}
+                  disabled={(date) => !hasPostsOnDate(date)}
+                  numberOfMonths={2}
+                  className="p-3 hidden sm:block"
+                  components={{
+                    DayButton: CustomDayButton,
+                  }}
+                />
+                <div className="p-3 border-t flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClear}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleApply}
+                    disabled={!tempDateRange?.from}
+                    className="flex-1"
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {dateFilter && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClear}
+                className="h-10 w-10"
+              >
+                <X className="h-4 w-4" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={tempDateRange}
-                onSelect={setTempDateRange}
-                disabled={(date) => !hasPostsOnDate(date)}
-                numberOfMonths={1}
-                className="p-3 sm:hidden"
-                components={{
-                  DayButton: CustomDayButton,
-                }}
-              />
-              <Calendar
-                mode="range"
-                selected={tempDateRange}
-                onSelect={setTempDateRange}
-                disabled={(date) => !hasPostsOnDate(date)}
-                numberOfMonths={2}
-                className="p-3 hidden sm:block"
-                components={{
-                  DayButton: CustomDayButton,
-                }}
-              />
-              <div className="p-3 border-t flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClear}
-                  className="flex-1"
-                >
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleApply}
-                  disabled={!tempDateRange?.from}
-                  className="flex-1"
-                >
-                  Apply
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+            )}
 
-          {dateFilter && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClear}
-              className="h-10 w-10"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-
-          {/* Settings button - only visible for logged-in users */}
-          {!isPublic && onSettingsChange && (
-            <AnalyticsSettings
-              campaignId={campaignId}
-              minViewsFilter={minViewsFilter}
-              currencySymbol={currencySymbol}
-              onSettingsChange={onSettingsChange}
-            />
-          )}
-        </div>
+            {/* Settings button - only visible for logged-in users */}
+            {onSettingsChange && (
+              <AnalyticsSettings
+                campaignId={campaignId}
+                minViewsFilter={minViewsFilter}
+                currencySymbol={currencySymbol}
+                onSettingsChange={onSettingsChange}
+              />
+            )}
+          </div>
+        )}
       </motion.div>
     </>
   );
