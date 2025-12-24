@@ -81,27 +81,28 @@ export function VideoPerformanceTable({
       </div>
 
       {/* Pagination controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
+        <div className="text-xs sm:text-sm text-muted-foreground">
           {totalCount > 0 ? (
             isPublic
-              ? `Showing ${startIndex} - ${Math.min(endIndex, 100)} of ${Math.min(totalCount, 100)}`
-              : `Showing ${startIndex} - ${endIndex} of ${totalCount.toLocaleString()}`
+              ? `${startIndex}-${Math.min(endIndex, 100)} of ${Math.min(totalCount, 100)}`
+              : `${startIndex}-${endIndex} of ${totalCount.toLocaleString()}`
           ) : (
-            "No videos found"
+            "No videos"
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage === 1 || isLoading}
             onClick={() => onPageChange(currentPage - 1)}
+            className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
           >
-            Previous
+            Prev
           </Button>
-          <span className="text-sm text-muted-foreground px-2">
-            {currentPage} / {isPublic ? Math.min(totalPages, Math.ceil(100 / itemsPerPage)) : totalPages || 1}
+          <span className="text-xs sm:text-sm text-muted-foreground px-1 sm:px-2">
+            {currentPage}/{isPublic ? Math.min(totalPages, Math.ceil(100 / itemsPerPage)) : totalPages || 1}
           </span>
           <Button
             variant="outline"
@@ -111,6 +112,7 @@ export function VideoPerformanceTable({
               : currentPage >= totalPages || isLoading
             }
             onClick={() => onPageChange(currentPage + 1)}
+            className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
           >
             Next
           </Button>
@@ -143,7 +145,7 @@ export function VideoPerformanceTable({
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium truncate text-sm sm:text-base">{video.videoId}</h4>
                       {video.isManual && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
                           Manual
                         </Badge>
                       )}

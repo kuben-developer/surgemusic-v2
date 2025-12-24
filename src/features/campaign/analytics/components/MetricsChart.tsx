@@ -20,6 +20,16 @@ interface MetricsChartProps {
   onActiveMetricChange: (metric: MetricType) => void;
 }
 
+const formatCompactNumber = (value: number): string => {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)}K`;
+  }
+  return value.toString();
+};
+
 const METRIC_CONFIG = {
   views: {
     label: "Views",
@@ -125,12 +135,12 @@ export function MetricsChart({
               tickLine={false}
             />
             <YAxis
-              tickFormatter={(value: number) => value.toLocaleString()}
+              tickFormatter={formatCompactNumber}
               className="dark:fill-gray-400 fill-gray-500"
               tick={{ className: "dark:fill-gray-400 fill-gray-500", fontSize: 12 }}
               axisLine={{ className: "dark:stroke-gray-700 stroke-gray-300" }}
               tickLine={false}
-              width={60}
+              width={45}
             />
             <Tooltip
               contentStyle={{
