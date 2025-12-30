@@ -24,7 +24,7 @@ export function CampaignMediaSection({ campaignId }: CampaignMediaSectionProps) 
   };
 
   return (
-    <Card className="p-4 space-y-4">
+    <Card className="p-4 space-y-4 border-0">
       {/* Audio Upload Section */}
       <AudioUploadSection
         campaignId={campaignId}

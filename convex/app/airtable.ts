@@ -40,6 +40,7 @@ interface ContentItem {
     date?: string; // ISO format "YYYY-MM-DD"
     is_manual?: boolean; // true if manually posted (not through Bundle Social API)
     tiktok_id?: string; // TikTok video ID for manual posts
+    status?: string; // "planned" | "done" | etc.
 }
 
 // Helper function to fetch records from Airtable
@@ -234,6 +235,7 @@ export const getCampaignContent = action({
             url.searchParams.append("fields[]", "date");
             url.searchParams.append("fields[]", "is_manual");
             url.searchParams.append("fields[]", "tiktok_id");
+            url.searchParams.append("fields[]", "status");
 
             if (offset) url.searchParams.append("offset", offset);
 
@@ -253,6 +255,7 @@ export const getCampaignContent = action({
                 const apiPostId = record.fields["api_post_id"] as string[] | undefined;
                 const isManual = record.fields["is_manual"] as boolean | undefined;
                 const tiktokId = record.fields["tiktok_id"] as string | undefined;
+                const status = record.fields["status"] as string | undefined;
 
                 allRecords.push({
                     id: record.id,
@@ -263,6 +266,7 @@ export const getCampaignContent = action({
                     date: record.fields["date"] as string | undefined,
                     is_manual: isManual,
                     tiktok_id: tiktokId,
+                    status: status,
                 });
             });
 

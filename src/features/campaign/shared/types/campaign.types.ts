@@ -13,6 +13,7 @@ export interface AirtableContent {
   video_category: string;
   api_post_id?: string;
   date?: string; // ISO format "YYYY-MM-DD"
+  status?: string; // "planned" | "done" | etc.
 }
 
 export interface VideoCategoryStats {

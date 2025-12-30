@@ -25,7 +25,6 @@ interface MontagerVideoDialogProps {
   airtableRecords: { id: string; date?: string }[];
   campaignId: string;
   categoryName: string;
-  nicheName: string;
   onSuccess?: () => void;
 }
 
@@ -35,7 +34,6 @@ export function MontagerVideoDialog({
   airtableRecords,
   campaignId,
   categoryName,
-  nicheName,
   onSuccess,
 }: MontagerVideoDialogProps) {
   const {
@@ -215,10 +213,6 @@ export function MontagerVideoDialog({
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Category</div>
                   <div className="font-medium">{categoryName}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Niche</div>
-                  <div className="font-medium">{nicheName}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Montager Folder</div>

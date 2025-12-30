@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music2, User, BarChart3 } from "lucide-react";
+import { Music2, User, BarChart3, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface CampaignInfoCardProps {
@@ -11,6 +11,7 @@ interface CampaignInfoCardProps {
   artist: string;
   song: string;
   campaignId: string;
+  onOpenAssets?: () => void;
 }
 
 export function CampaignInfoCard({
@@ -18,6 +19,7 @@ export function CampaignInfoCard({
   artist,
   song,
   campaignId,
+  onOpenAssets,
 }: CampaignInfoCardProps) {
   const router = useRouter();
 
@@ -51,14 +53,26 @@ export function CampaignInfoCard({
             </div>
           )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push(`/campaign/${campaignId}/analytics`)}
-        >
-          <BarChart3 className="size-4 mr-2" />
-          View Analytics
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/campaign/${campaignId}/analytics`)}
+          >
+            <BarChart3 className="size-4 mr-2" />
+            View Analytics
+          </Button>
+          {onOpenAssets && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenAssets}
+            >
+              <Settings className="size-4 mr-2" />
+              Manage Assets
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
