@@ -42,6 +42,8 @@ import type * as services_tokapi_following from "../services/tokapi/following.js
 import type * as services_tokapi_post from "../services/tokapi/post.js";
 import type * as services_tokapi_user from "../services/tokapi/user.js";
 import type * as services_tokapi_utils from "../services/tokapi/utils.js";
+import type * as webhooks_campaignAnalytics from "../webhooks/campaignAnalytics.js";
+import type * as webhooks_campaignAnalyticsQueries from "../webhooks/campaignAnalyticsQueries.js";
 import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_montager from "../webhooks/montager.js";
@@ -86,6 +88,8 @@ declare const fullApi: ApiFromModules<{
   "services/tokapi/post": typeof services_tokapi_post;
   "services/tokapi/user": typeof services_tokapi_user;
   "services/tokapi/utils": typeof services_tokapi_utils;
+  "webhooks/campaignAnalytics": typeof webhooks_campaignAnalytics;
+  "webhooks/campaignAnalyticsQueries": typeof webhooks_campaignAnalyticsQueries;
   "webhooks/clerk": typeof webhooks_clerk;
   "webhooks/clipper": typeof webhooks_clipper;
   "webhooks/montager": typeof webhooks_montager;

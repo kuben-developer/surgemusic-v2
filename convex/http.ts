@@ -4,6 +4,7 @@ import { testWebhook } from "./webhooks/test";
 import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/clipper";
 import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/montager";
 import { getPendingVideosForProcessing, updateProcessedVideos } from "./webhooks/montagerVideos";
+import { getAllCampaignsPublic, getCampaignAnalyticsPublic } from "./webhooks/campaignAnalytics";
 
 const http = httpRouter();
 
@@ -66,6 +67,20 @@ http.route({
   path: "/api/montager-videos/update",
   method: "POST",
   handler: updateProcessedVideos,
+});
+
+// Campaign Analytics API - Public endpoint to get all campaigns
+http.route({
+  path: "/api/campaigns",
+  method: "GET",
+  handler: getAllCampaignsPublic,
+});
+
+// Campaign Analytics API - Public endpoint to get campaign analytics by Airtable campaign ID
+http.route({
+  path: "/api/campaign-analytics",
+  method: "GET",
+  handler: getCampaignAnalyticsPublic,
 });
 
 export default http;
