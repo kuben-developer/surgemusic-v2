@@ -474,7 +474,9 @@ export const getCampaignAnalytics = query({
     // Get minViewsFilter setting
     const minViewsFilter = analytics.minViewsFilter ?? 0;
 
-    // Helper to build response with filtered data (using snapshots for accurate graph)
+    // Helper to build response with filtered data
+    // Note: Uses pre-calculated dailySnapshots for chart data to avoid hitting Convex's
+    // 32K document read limit. Totals are accurately calculated from filtered posts.
     const buildFilteredResponse = async () => {
       // Fetch source posts for filtering
       const bundlePosts = await ctx.db
@@ -518,10 +520,7 @@ export const getCampaignAnalytics = query({
         });
       }
 
-      // Get the postIds that passed the filter
-      const filteredPostIds = new Set(filteredPosts.map((post) => post.postId));
-
-      // Calculate totals from filtered posts (current values)
+      // Calculate totals from filtered posts (current values) - this is accurate
       const totalPosts = filteredPosts.length;
       const totalViews = filteredPosts.reduce((acc, post) => acc + post.views, 0);
       const totalLikes = filteredPosts.reduce((acc, post) => acc + post.likes, 0);
@@ -529,38 +528,65 @@ export const getCampaignAnalytics = query({
       const totalShares = filteredPosts.reduce((acc, post) => acc + post.shares, 0);
       const totalSaves = filteredPosts.reduce((acc, post) => acc + post.saves, 0);
 
-      // Fetch snapshots for filtered posts only
-      const allSnapshots = await ctx.db
-        .query("bundleSocialSnapshots")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-        .collect();
+      // For chart data, use pre-calculated dailySnapshotsByDate filtered by post dates
+      // This avoids fetching all snapshots which can exceed the 32K document limit
+      let dailyData: Array<{ date: string; views: number; likes: number; comments: number; shares: number; saves: number }> = [];
 
-      // Filter snapshots to only include posts that passed the minViews filter
-      const filteredSnapshots = allSnapshots.filter((snapshot) =>
-        filteredPostIds.has(snapshot.postId)
-      );
+      if (dates && dates.length > 0) {
+        // Filter by selected post dates using dailySnapshotsByDate
+        const datesSet = new Set(dates);
+        const filteredDateAnalytics = Object.entries(analytics.dailySnapshotsByDate)
+          .filter(([postDate]) => datesSet.has(postDate));
 
-      // Use forwardFillSnapshots to fill gaps in snapshot data
-      const forwardFilledSnapshots = forwardFillSnapshots(filteredSnapshots, filteredPosts);
+        // Aggregate daily snapshots across filtered post dates
+        const snapshotDateMap = new Map<string, { views: number; likes: number; comments: number; shares: number; saves: number }>();
 
-      // Calculate daily totals from the forward-filled snapshots
-      const dailyTotals = calculateDailyTotalSnapshots(forwardFilledSnapshots);
+        for (const [, postDateData] of filteredDateAnalytics) {
+          for (const [snapshotDate, snapshot] of Object.entries(postDateData.dailySnapshots)) {
+            const existing = snapshotDateMap.get(snapshotDate);
+            if (existing) {
+              existing.views += snapshot.totalViews;
+              existing.likes += snapshot.totalLikes;
+              existing.comments += snapshot.totalComments;
+              existing.shares += snapshot.totalShares;
+              existing.saves += snapshot.totalSaves;
+            } else {
+              snapshotDateMap.set(snapshotDate, {
+                views: snapshot.totalViews,
+                likes: snapshot.totalLikes,
+                comments: snapshot.totalComments,
+                shares: snapshot.totalShares,
+                saves: snapshot.totalSaves,
+              });
+            }
+          }
+        }
 
-      // Transform to array format for charting (this is already cumulative per date)
-      const dailyData = Object.entries(dailyTotals)
-        .map(([date, snapshot]) => ({
-          date,
-          views: snapshot.totalViews,
-          likes: snapshot.totalLikes,
-          comments: snapshot.totalComments,
-          shares: snapshot.totalShares,
-          saves: snapshot.totalSaves,
-        }))
-        .sort((a, b) => {
-          const dateA = parseDate(a.date);
-          const dateB = parseDate(b.date);
-          return dateA.getTime() - dateB.getTime();
-        });
+        dailyData = Array.from(snapshotDateMap.entries())
+          .map(([date, snapshot]) => ({
+            date,
+            views: snapshot.views,
+            likes: snapshot.likes,
+            comments: snapshot.comments,
+            shares: snapshot.shares,
+            saves: snapshot.saves,
+          }))
+          .sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+      } else {
+        // No date filter - use aggregate dailySnapshots
+        // For minViewsFilter, we use the pre-calculated data as an approximation
+        // The totals are accurate (from filtered posts), chart shows overall trend
+        dailyData = Object.entries(analytics.dailySnapshots)
+          .map(([date, snapshot]) => ({
+            date,
+            views: snapshot.totalViews,
+            likes: snapshot.totalLikes,
+            comments: snapshot.totalComments,
+            shares: snapshot.totalShares,
+            saves: snapshot.totalSaves,
+          }))
+          .sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+      }
 
       return {
         campaignId: analytics.campaignId,

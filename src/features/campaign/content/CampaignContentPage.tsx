@@ -58,18 +58,10 @@ export function CampaignContentPage() {
     [assignedRecordIds]
   );
 
-  // Get ALL record IDs for the campaign (for querying all montager videos)
-  const allRecordIds = useMemo(() => {
-    if (!data?.content) return [];
-    return data.content.map((record) => record.id);
-  }, [data?.content]);
-
-  // Query montager videos for ALL records in the campaign
+  // Query montager videos for ALL records in the campaign (single indexed query)
   const allMontagerVideosData = useQuery(
-    api.app.montagerDb.getMontagerVideosByAirtableRecordIds,
-    allRecordIds.length > 0
-      ? { airtableRecordIds: allRecordIds }
-      : "skip"
+    api.app.montagerDb.getMontagerVideosByCampaignId,
+    { campaignId: campaignRecordId }
   );
 
   // Calculate comprehensive stats per category

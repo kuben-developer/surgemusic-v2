@@ -524,36 +524,25 @@ export const getAssignedAirtableRecordIds = query({
 });
 
 /**
- * Get montager videos by their airtableRecordIds
- * Used to display videos in the Ready to Publish tab
+ * Get montager videos by campaign ID
+ * Uses the by_campaignId index for efficient single-query lookup
+ * Much more efficient than querying individual airtableRecordIds
  */
-export const getMontagerVideosByAirtableRecordIds = query({
+export const getMontagerVideosByCampaignId = query({
   args: {
-    airtableRecordIds: v.array(v.string()),
+    campaignId: v.string(),
   },
   handler: async (ctx, args) => {
-    if (args.airtableRecordIds.length === 0) {
-      return { processing: [], processed: [] };
-    }
+    // Single indexed query to get all videos for this campaign
+    const videos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
 
-    // Query videos for each airtableRecordId
-    const videos = await Promise.all(
-      args.airtableRecordIds.map(async (recordId) => {
-        const video = await ctx.db
-          .query("montagerVideos")
-          .withIndex("by_airtableRecordId", (q) => q.eq("airtableRecordId", recordId))
-          .first();
-        return video;
-      })
-    );
-
-    // Filter out nulls and group by status
-    const validVideos = videos.filter((v) => v !== null);
-
-    const processing = validVideos.filter(
+    const processing = videos.filter(
       (v) => v.status === "ready_for_processing"
     );
-    const processed = validVideos.filter(
+    const processed = videos.filter(
       (v) => v.status === "processed"
     );
 
