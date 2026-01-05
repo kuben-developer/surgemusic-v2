@@ -59,15 +59,16 @@ export const getPendingVideosForProcessing = httpAction(async (ctx) => {
 /**
  * POST /api/montager-videos/update
  *
- * Updates montager videos with processed video URLs.
- * Sets the processedVideoUrl and changes status to "processed".
+ * Updates montager videos with processed video URLs and optional thumbnails.
+ * Sets the processedVideoUrl, optionally updates thumbnailUrl, and changes status to "processed".
  *
  * Request body format:
  * {
  *   "updates": [
  *     {
  *       "videoId": "j572...",
- *       "processedVideoUrl": "https://..."
+ *       "processedVideoUrl": "https://...",
+ *       "thumbnailUrl": "https://..." // optional
  *     }
  *   ]
  * }
@@ -135,12 +136,13 @@ export const updateProcessedVideos = httpAction(async (ctx, request) => {
     // Process each update
     const results = await Promise.allSettled(
       body.updates.map(
-        async (update: { videoId: string; processedVideoUrl: string }) => {
+        async (update: { videoId: string; processedVideoUrl: string; thumbnailUrl?: string }) => {
           const result = await ctx.runMutation(
             internal.app.montagerDb.updateProcessedVideoExternal,
             {
               videoId: update.videoId as Id<"montagerVideos">,
               processedVideoUrl: update.processedVideoUrl,
+              thumbnailUrl: update.thumbnailUrl,
             }
           );
           return result;
