@@ -18,6 +18,7 @@ import {
   Loader2,
   Clock,
   Calendar,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -432,7 +433,9 @@ function VideoCard({
   showSelection,
 }: VideoCardProps) {
   const [isInView, setIsInView] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const config = VARIANT_CONFIG[variant];
 
   useEffect(() => {
@@ -456,7 +459,18 @@ function VideoCard({
     return () => observer.disconnect();
   }, []);
 
+  const handlePlayClick = () => {
+    setIsPlaying(true);
+    // Auto-play after state updates
+    setTimeout(() => {
+      videoRef.current?.play();
+    }, 0);
+  };
+
   const StatusIcon = config.icon;
+  const hasThumbnail = video.thumbnailUrl &&
+    video.thumbnailUrl !== "manual_upload" &&
+    video.thumbnailUrl !== "direct_upload";
 
   return (
     <div
@@ -513,7 +527,7 @@ function VideoCard({
         video.isProcessing ? (
           // Processing state - show thumbnail with overlay
           <div className="absolute inset-0 flex items-center justify-center">
-            {video.thumbnailUrl && video.thumbnailUrl !== "manual_upload" && (
+            {hasThumbnail && (
               <img
                 src={video.thumbnailUrl}
                 alt="Video thumbnail"
@@ -525,15 +539,41 @@ function VideoCard({
             </div>
           </div>
         ) : video.videoUrl ? (
-          // Video player
-          <video
-            src={video.videoUrl}
-            className="absolute inset-0 w-full h-full object-cover"
-            controls
-            loop
-            preload="metadata"
-            playsInline
-          />
+          isPlaying ? (
+            // Video player - only loaded after user clicks play
+            <video
+              ref={videoRef}
+              src={video.videoUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              controls
+              loop
+              playsInline
+            />
+          ) : (
+            // Thumbnail with play button - default state
+            <div
+              className="absolute inset-0 cursor-pointer group/play"
+              onClick={handlePlayClick}
+            >
+              {hasThumbnail ? (
+                <img
+                  src={video.thumbnailUrl}
+                  alt="Video thumbnail"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <Video className="size-12 text-muted-foreground/30" />
+                </div>
+              )}
+              {/* Play button overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/play:bg-black/40 transition-colors">
+                <div className="size-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover/play:scale-110 transition-transform">
+                  <Play className="size-6 text-black ml-1" fill="currentColor" />
+                </div>
+              </div>
+            </div>
+          )
         ) : (
           // No video URL
           <div className="absolute inset-0 flex items-center justify-center">
@@ -541,6 +581,7 @@ function VideoCard({
           </div>
         )
       ) : (
+        // Not in view yet - placeholder
         <div className="absolute inset-0 flex items-center justify-center">
           <Video className="size-8 text-muted-foreground/50" />
         </div>
