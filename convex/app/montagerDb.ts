@@ -1217,11 +1217,12 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "";
 const AIRTABLE_CONTENT_TABLE_ID = "tbleqHUKb7il998rO";
 
 /**
- * Helper function to update an Airtable record with video URL and status
+ * Helper function to update an Airtable record with video URL, thumbnail URL, and status
  */
 async function updateAirtableRecord(
   recordId: string,
-  videoUrl: string
+  videoUrl: string,
+  thumbnailUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}/${recordId}`;
 
@@ -1236,6 +1237,7 @@ async function updateAirtableRecord(
         fields: {
           video_url: videoUrl,
           status: "done",
+          ...(thumbnailUrl && { thumbnail_url: thumbnailUrl }),
         },
       }),
     });
@@ -1255,7 +1257,7 @@ async function updateAirtableRecord(
 
 /**
  * Publish processed videos to Airtable
- * Updates video_url and status fields in Airtable Content table
+ * Updates video_url, thumbnail_url, and status fields in Airtable Content table
  * Then marks videos as "published" in local database
  */
 export const publishVideosToAirtable = action({
@@ -1301,8 +1303,15 @@ export const publishVideosToAirtable = action({
       // Use processedVideoUrl if available, otherwise fall back to videoUrl
       const videoUrl = video.processedVideoUrl || video.videoUrl;
 
+      // Get thumbnail URL (skip placeholder values)
+      const thumbnailUrl = video.thumbnailUrl &&
+        video.thumbnailUrl !== "manual_upload" &&
+        video.thumbnailUrl !== "direct_upload"
+          ? video.thumbnailUrl
+          : undefined;
+
       // Update Airtable record
-      const result = await updateAirtableRecord(video.airtableRecordId, videoUrl);
+      const result = await updateAirtableRecord(video.airtableRecordId, videoUrl, thumbnailUrl);
 
       if (result.success) {
         published++;
