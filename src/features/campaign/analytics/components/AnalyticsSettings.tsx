@@ -12,11 +12,20 @@ import { toast } from "sonner";
 
 export type CurrencySymbol = "USD" | "GBP";
 
+export interface AnalyticsSettingsValues {
+  minViewsFilter: number;
+  currencySymbol: CurrencySymbol;
+  manualCpmMultiplier: number;
+  apiCpmMultiplier: number;
+}
+
 interface AnalyticsSettingsProps {
   campaignId: string;
   minViewsFilter: number;
   currencySymbol: CurrencySymbol;
-  onSettingsChange?: (settings: { minViewsFilter: number; currencySymbol: CurrencySymbol }) => void;
+  manualCpmMultiplier: number;
+  apiCpmMultiplier: number;
+  onSettingsChange?: (settings: AnalyticsSettingsValues) => void;
 }
 
 const QUICK_MIN_VIEWS_OPTIONS = [
@@ -31,17 +40,23 @@ export function AnalyticsSettings({
   campaignId,
   minViewsFilter,
   currencySymbol,
+  manualCpmMultiplier,
+  apiCpmMultiplier,
   onSettingsChange,
 }: AnalyticsSettingsProps) {
   const [open, setOpen] = useState(false);
   const [localMinViews, setLocalMinViews] = useState(minViewsFilter.toString());
   const [localCurrency, setLocalCurrency] = useState<CurrencySymbol>(currencySymbol);
+  const [localManualCpm, setLocalManualCpm] = useState(manualCpmMultiplier.toString());
+  const [localApiCpm, setLocalApiCpm] = useState(apiCpmMultiplier.toString());
   const [isSaving, setIsSaving] = useState(false);
 
   const updateSettings = useMutation(api.app.analytics.updateCampaignAnalyticsSettings);
 
   const handleSave = useCallback(async () => {
     const minViews = parseInt(localMinViews, 10) || 0;
+    const manualCpm = parseFloat(localManualCpm) || 0.5;
+    const apiCpm = parseFloat(localApiCpm) || 0.5;
 
     setIsSaving(true);
     try {
@@ -49,9 +64,16 @@ export function AnalyticsSettings({
         campaignId,
         minViewsFilter: minViews,
         currencySymbol: localCurrency,
+        manualCpmMultiplier: manualCpm,
+        apiCpmMultiplier: apiCpm,
       });
 
-      onSettingsChange?.({ minViewsFilter: minViews, currencySymbol: localCurrency });
+      onSettingsChange?.({
+        minViewsFilter: minViews,
+        currencySymbol: localCurrency,
+        manualCpmMultiplier: manualCpm,
+        apiCpmMultiplier: apiCpm,
+      });
       toast.success("Settings saved");
       setOpen(false);
     } catch (error) {
@@ -60,7 +82,7 @@ export function AnalyticsSettings({
     } finally {
       setIsSaving(false);
     }
-  }, [campaignId, localMinViews, localCurrency, updateSettings, onSettingsChange]);
+  }, [campaignId, localMinViews, localCurrency, localManualCpm, localApiCpm, updateSettings, onSettingsChange]);
 
   const handleQuickSelect = useCallback((value: number) => {
     setLocalMinViews(value.toString());
@@ -68,7 +90,9 @@ export function AnalyticsSettings({
 
   const hasChanges =
     parseInt(localMinViews, 10) !== minViewsFilter ||
-    localCurrency !== currencySymbol;
+    localCurrency !== currencySymbol ||
+    parseFloat(localManualCpm) !== manualCpmMultiplier ||
+    parseFloat(localApiCpm) !== apiCpmMultiplier;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -145,6 +169,45 @@ export function AnalyticsSettings({
                 >
                   £ GBP
                 </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm">CPM Rates</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Cost per video for CPM calculation
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="manualCpm" className="text-xs w-16 flex-shrink-0">
+                    Manual
+                  </Label>
+                  <Input
+                    id="manualCpm"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.50"
+                    value={localManualCpm}
+                    onChange={(e) => setLocalManualCpm(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="apiCpm" className="text-xs w-16 flex-shrink-0">
+                    API
+                  </Label>
+                  <Input
+                    id="apiCpm"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.50"
+                    value={localApiCpm}
+                    onChange={(e) => setLocalApiCpm(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>

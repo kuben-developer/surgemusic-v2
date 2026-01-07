@@ -15,7 +15,7 @@ import { MetricsChart } from "./MetricsChart";
 import { VideoPerformanceTable } from "./VideoPerformanceTable";
 import { staggerContainer } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
-import type { CurrencySymbol } from "./AnalyticsSettings";
+import type { AnalyticsSettingsValues } from "./AnalyticsSettings";
 
 interface AnalyticsClientProps {
   campaignId: string;
@@ -30,15 +30,17 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
   const settingsData = useQuery(api.app.analytics.getCampaignAnalyticsSettings, { campaignId });
 
   // Local state for optimistic updates
-  const [localSettings, setLocalSettings] = useState<{
-    minViewsFilter: number;
-    currencySymbol: CurrencySymbol;
-  } | null>(null);
+  const [localSettings, setLocalSettings] = useState<AnalyticsSettingsValues | null>(null);
 
   // Use local settings if available, otherwise use fetched settings
-  const currentSettings = localSettings ?? settingsData ?? { minViewsFilter: 0, currencySymbol: "USD" as const };
+  const currentSettings = localSettings ?? settingsData ?? {
+    minViewsFilter: 0,
+    currencySymbol: "USD" as const,
+    manualCpmMultiplier: 0.5,
+    apiCpmMultiplier: 0.5,
+  };
 
-  const handleSettingsChange = useCallback((newSettings: { minViewsFilter: number; currencySymbol: CurrencySymbol }) => {
+  const handleSettingsChange = useCallback((newSettings: AnalyticsSettingsValues) => {
     setLocalSettings(newSettings);
   }, []);
 
@@ -104,6 +106,8 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
         hideBackButton={hideBackButton}
         minViewsFilter={currentSettings.minViewsFilter}
         currencySymbol={currentSettings.currencySymbol}
+        manualCpmMultiplier={currentSettings.manualCpmMultiplier}
+        apiCpmMultiplier={currentSettings.apiCpmMultiplier}
         onSettingsChange={handleSettingsChange}
       />
 
@@ -117,6 +121,8 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
           campaignMetadata={analyticsData.campaignMetadata}
           totals={analyticsData.totals}
           currencySymbol={currentSettings.currencySymbol}
+          manualCpmMultiplier={currentSettings.manualCpmMultiplier}
+          apiCpmMultiplier={currentSettings.apiCpmMultiplier}
         />
 
         <KPIMetrics data={kpiData} />

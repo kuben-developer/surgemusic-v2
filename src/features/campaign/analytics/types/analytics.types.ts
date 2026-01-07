@@ -29,6 +29,8 @@ export interface CampaignAnalyticsData {
   campaignId: string;
   totals: {
     posts: number;
+    manualPosts: number;
+    apiPosts: number;
     views: number;
     likes: number;
     comments: number;

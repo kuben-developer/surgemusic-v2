@@ -23,19 +23,35 @@ interface CampaignInfoSectionProps {
   };
   totals: {
     posts: number;
+    manualPosts: number;
+    apiPosts: number;
     views: number;
   };
   currencySymbol?: CurrencySymbol;
+  manualCpmMultiplier?: number;
+  apiCpmMultiplier?: number;
 }
 
-export function CampaignInfoSection({ campaignMetadata, totals, currencySymbol = "USD" }: CampaignInfoSectionProps) {
+export function CampaignInfoSection({
+  campaignMetadata,
+  totals,
+  currencySymbol = "USD",
+  manualCpmMultiplier = 0.5,
+  apiCpmMultiplier = 0.5,
+}: CampaignInfoSectionProps) {
   // Only show artist/song if they have valid data
   const hasArtist = campaignMetadata.artist && campaignMetadata.artist !== 'Unknown Artist';
   const hasSong = campaignMetadata.song && campaignMetadata.song !== 'Unknown Song';
   const showArtistSong = hasArtist || hasSong;
 
-  // Calculate CPM
-  const cpm = calculateCPM(totals.views, totals.posts);
+  // Calculate CPM with separate multipliers for manual and API videos
+  const cpm = calculateCPM({
+    totalViews: totals.views,
+    manualVideoCount: totals.manualPosts,
+    apiVideoCount: totals.apiPosts,
+    manualCpmMultiplier,
+    apiCpmMultiplier,
+  });
   const formattedCPM = formatCPM(cpm, currencySymbol);
 
   return (

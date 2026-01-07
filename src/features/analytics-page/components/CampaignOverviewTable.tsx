@@ -31,9 +31,13 @@ export function CampaignOverviewTable({
     direction: "desc",
   });
 
-  // Helper to get CPM for a campaign
+  // Helper to get CPM for a campaign (uses default multipliers since we don't have per-campaign settings here)
   const getCPM = (campaign: CampaignWithAnalytics) =>
-    calculateCPM(campaign.totals.views, campaign.totals.posts);
+    calculateCPM({
+      totalViews: campaign.totals.views,
+      manualVideoCount: 0, // Overview doesn't track manual vs API, so treat all as API
+      apiVideoCount: campaign.totals.posts,
+    });
 
   // Sort campaigns
   const sortedCampaigns = useMemo(() => {
@@ -226,7 +230,11 @@ function CampaignRow({
       <TableCell>
         <div className="flex items-center gap-1.5">
           <DollarSign className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="tabular-nums">{formatCPM(calculateCPM(campaign.totals.views, campaign.totals.posts))}</span>
+          <span className="tabular-nums">{formatCPM(calculateCPM({
+            totalViews: campaign.totals.views,
+            manualVideoCount: 0,
+            apiVideoCount: campaign.totals.posts,
+          }))}</span>
         </div>
       </TableCell>
       <TableCell>

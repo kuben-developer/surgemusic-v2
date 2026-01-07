@@ -5,27 +5,49 @@
  * how much it costs to reach 1,000 views.
  */
 
-const COST_PER_VIDEO = 0.50;
+const DEFAULT_CPM_MULTIPLIER = 0.5;
+
+export interface CpmParams {
+  totalViews: number;
+  manualVideoCount: number;
+  apiVideoCount: number;
+  manualCpmMultiplier?: number;
+  apiCpmMultiplier?: number;
+}
 
 /**
  * Calculate CPM (Cost Per Thousand views)
  *
  * Formula: CPM = (Total Cost / Total Views) × 1000
- * Where Total Cost = Number of Videos × $0.50
+ * Where Total Cost = (Manual Videos × Manual Rate) + (API Videos × API Rate)
  *
- * @param totalViews - Total number of views across all videos
- * @param numberOfVideos - Total number of videos in the campaign
+ * @param params - Object containing view counts and CPM multipliers
  * @returns CPM value (cost per thousand views)
  *
  * @example
- * // 20 videos, 50,000 views
- * calculateCPM(50000, 20) // Returns 0.20 ($0.20 per 1,000 views)
+ * // 5 manual videos at $0.25, 15 API videos at $0.50, 50,000 views
+ * calculateCPM({
+ *   totalViews: 50000,
+ *   manualVideoCount: 5,
+ *   apiVideoCount: 15,
+ *   manualCpmMultiplier: 0.25,
+ *   apiCpmMultiplier: 0.50,
+ * }) // Returns 0.175 ($0.175 per 1,000 views)
  */
-export function calculateCPM(totalViews: number, numberOfVideos: number): number {
+export function calculateCPM(params: CpmParams): number {
+  const {
+    totalViews,
+    manualVideoCount,
+    apiVideoCount,
+    manualCpmMultiplier = DEFAULT_CPM_MULTIPLIER,
+    apiCpmMultiplier = DEFAULT_CPM_MULTIPLIER,
+  } = params;
+
   // Handle edge case: no views
   if (totalViews === 0) return 0;
 
-  const totalCost = numberOfVideos * COST_PER_VIDEO;
+  const totalCost =
+    manualVideoCount * manualCpmMultiplier + apiVideoCount * apiCpmMultiplier;
   const cpm = (totalCost / totalViews) * 1000;
 
   return cpm;
@@ -41,11 +63,4 @@ export function calculateCPM(totalViews: number, numberOfVideos: number): number
 export function formatCPM(cpm: number, currency: "USD" | "GBP" = "USD"): string {
   const symbol = currency === "GBP" ? "£" : "$";
   return `${symbol}${cpm.toFixed(2)}`;
-}
-
-/**
- * Get the cost per video constant
- */
-export function getCostPerVideo(): number {
-  return COST_PER_VIDEO;
 }

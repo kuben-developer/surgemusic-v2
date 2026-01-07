@@ -522,6 +522,8 @@ export const getCampaignAnalytics = query({
 
       // Calculate totals from filtered posts (current values) - this is accurate
       const totalPosts = filteredPosts.length;
+      const manualPosts = filteredPosts.filter((post) => post.isManual === true).length;
+      const apiPosts = totalPosts - manualPosts;
       const totalViews = filteredPosts.reduce((acc, post) => acc + post.views, 0);
       const totalLikes = filteredPosts.reduce((acc, post) => acc + post.likes, 0);
       const totalComments = filteredPosts.reduce((acc, post) => acc + post.comments, 0);
@@ -598,6 +600,8 @@ export const getCampaignAnalytics = query({
         },
         totals: {
           posts: totalPosts,
+          manualPosts,
+          apiPosts,
           views: totalViews,
           likes: totalLikes,
           comments: totalComments,
@@ -634,6 +638,14 @@ export const getCampaignAnalytics = query({
           return dateA.getTime() - dateB.getTime();
         });
 
+      // Fetch posts to count manual vs API (not pre-calculated)
+      const bundlePosts = await ctx.db
+        .query("bundleSocialPostedVideos")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+      const manualPosts = bundlePosts.filter((post) => post.isManual === true).length;
+      const apiPosts = analytics.totalPosts - manualPosts;
+
       return {
         campaignId: analytics.campaignId,
         campaignMetadata: {
@@ -644,6 +656,8 @@ export const getCampaignAnalytics = query({
         },
         totals: {
           posts: analytics.totalPosts,
+          manualPosts,
+          apiPosts,
           views: analytics.totalViews,
           likes: analytics.totalLikes,
           comments: analytics.totalComments,
@@ -660,6 +674,39 @@ export const getCampaignAnalytics = query({
     const filteredDateAnalytics = Object.entries(analytics.dailySnapshotsByDate)
       .filter(([postDate]) => datesSet.has(postDate));
 
+    // Fetch posts to count manual vs API for the filtered dates
+    const bundlePosts = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Helper: Convert DD-MM-YYYY to Unix timestamp range
+    const dateStringToTimestampRange = (dateStr: string): [number, number] => {
+      const parts = dateStr.split("-").map(Number);
+      const day = parts[0] ?? 1;
+      const month = parts[1] ?? 1;
+      const year = parts[2] ?? 2000;
+      const startOfDay = new Date(year, month - 1, day);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(year, month - 1, day);
+      endOfDay.setHours(23, 59, 59, 999);
+      return [
+        Math.floor(startOfDay.getTime() / 1000),
+        Math.floor(endOfDay.getTime() / 1000),
+      ];
+    };
+
+    // Filter posts by date
+    const timestampRanges = dates.map(dateStringToTimestampRange);
+    const filteredPostsForCounts = bundlePosts.filter((post) => {
+      return timestampRanges.some(([start, end]) => {
+        return post.postedAt >= start && post.postedAt <= end;
+      });
+    });
+    const manualPosts = filteredPostsForCounts.filter(
+      (post) => post.isManual === true
+    ).length;
+
     // Calculate filtered totals from dailySnapshotsByDate
     let totalPosts = 0;
     let totalViews = 0;
@@ -669,7 +716,16 @@ export const getCampaignAnalytics = query({
     let totalSaves = 0;
 
     // Collect all unique snapshot dates from filtered post dates
-    const snapshotDateMap = new Map<string, { views: number; likes: number; comments: number; shares: number; saves: number }>();
+    const snapshotDateMap = new Map<
+      string,
+      {
+        views: number;
+        likes: number;
+        comments: number;
+        shares: number;
+        saves: number;
+      }
+    >();
 
     for (const [, postDateData] of filteredDateAnalytics) {
       totalPosts += postDateData.totalPosts;
@@ -680,7 +736,9 @@ export const getCampaignAnalytics = query({
       totalSaves += postDateData.totalSaves;
 
       // Aggregate daily snapshots across filtered post dates
-      for (const [snapshotDate, snapshot] of Object.entries(postDateData.dailySnapshots)) {
+      for (const [snapshotDate, snapshot] of Object.entries(
+        postDateData.dailySnapshots
+      )) {
         const existing = snapshotDateMap.get(snapshotDate);
         if (existing) {
           existing.views += snapshot.totalViews;
@@ -699,6 +757,8 @@ export const getCampaignAnalytics = query({
         }
       }
     }
+
+    const apiPosts = totalPosts - manualPosts;
 
     // Transform to array format for charting
     const dailyData = Array.from(snapshotDateMap.entries())
@@ -726,6 +786,8 @@ export const getCampaignAnalytics = query({
       },
       totals: {
         posts: totalPosts,
+        manualPosts,
+        apiPosts,
         views: totalViews,
         likes: totalLikes,
         comments: totalComments,
@@ -1266,12 +1328,16 @@ export const getCampaignAnalyticsSettings = query({
       return {
         minViewsFilter: 0,
         currencySymbol: "USD" as const,
+        manualCpmMultiplier: 0.5,
+        apiCpmMultiplier: 0.5,
       };
     }
 
     return {
       minViewsFilter: analytics.minViewsFilter ?? 0,
-      currencySymbol: analytics.currencySymbol ?? "USD" as const,
+      currencySymbol: analytics.currencySymbol ?? ("USD" as const),
+      manualCpmMultiplier: analytics.manualCpmMultiplier ?? 0.5,
+      apiCpmMultiplier: analytics.apiCpmMultiplier ?? 0.5,
     };
   },
 });
@@ -1281,14 +1347,27 @@ export const getCampaignAnalyticsSettings = query({
  * This allows logged-in users to configure:
  * - minViewsFilter: Hide posts with fewer than X views (0 = show all)
  * - currencySymbol: Currency for CPM display (USD or GBP)
+ * - manualCpmMultiplier: CPM rate for manual posts (default: 0.50)
+ * - apiCpmMultiplier: CPM rate for API posts (default: 0.50)
  */
 export const updateCampaignAnalyticsSettings = mutation({
   args: {
     campaignId: v.string(),
     minViewsFilter: v.optional(v.number()),
     currencySymbol: v.optional(v.union(v.literal("USD"), v.literal("GBP"))),
+    manualCpmMultiplier: v.optional(v.number()),
+    apiCpmMultiplier: v.optional(v.number()),
   },
-  handler: async (ctx, { campaignId, minViewsFilter, currencySymbol }) => {
+  handler: async (
+    ctx,
+    {
+      campaignId,
+      minViewsFilter,
+      currencySymbol,
+      manualCpmMultiplier,
+      apiCpmMultiplier,
+    }
+  ) => {
     const analytics = await ctx.db
       .query("campaignAnalytics")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
@@ -1308,12 +1387,22 @@ export const updateCampaignAnalyticsSettings = mutation({
       updates.currencySymbol = currencySymbol;
     }
 
+    if (manualCpmMultiplier !== undefined) {
+      updates.manualCpmMultiplier = manualCpmMultiplier;
+    }
+
+    if (apiCpmMultiplier !== undefined) {
+      updates.apiCpmMultiplier = apiCpmMultiplier;
+    }
+
     await ctx.db.patch(analytics._id, updates);
 
     return {
       success: true,
       minViewsFilter: minViewsFilter ?? analytics.minViewsFilter ?? 0,
       currencySymbol: currencySymbol ?? analytics.currencySymbol ?? "USD",
+      manualCpmMultiplier: manualCpmMultiplier ?? analytics.manualCpmMultiplier ?? 0.5,
+      apiCpmMultiplier: apiCpmMultiplier ?? analytics.apiCpmMultiplier ?? 0.5,
     };
   },
 });

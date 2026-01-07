@@ -11,7 +11,7 @@ import { fadeInUp } from "../constants/metrics";
 import type { DateFilter } from "../types/analytics.types";
 import { format } from "date-fns";
 import type { DateRange, DayButtonProps } from "react-day-picker";
-import { AnalyticsSettings, type CurrencySymbol } from "./AnalyticsSettings";
+import { AnalyticsSettings, type CurrencySymbol, type AnalyticsSettingsValues } from "./AnalyticsSettings";
 
 interface AnalyticsHeaderProps {
   campaignId: string;
@@ -23,7 +23,9 @@ interface AnalyticsHeaderProps {
   hideBackButton?: boolean;
   minViewsFilter?: number;
   currencySymbol?: CurrencySymbol;
-  onSettingsChange?: (settings: { minViewsFilter: number; currencySymbol: CurrencySymbol }) => void;
+  manualCpmMultiplier?: number;
+  apiCpmMultiplier?: number;
+  onSettingsChange?: (settings: AnalyticsSettingsValues) => void;
 }
 
 export function AnalyticsHeader({
@@ -36,6 +38,8 @@ export function AnalyticsHeader({
   hideBackButton = false,
   minViewsFilter = 0,
   currencySymbol = "USD",
+  manualCpmMultiplier = 0.5,
+  apiCpmMultiplier = 0.5,
   onSettingsChange,
 }: AnalyticsHeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
@@ -195,6 +199,8 @@ export function AnalyticsHeader({
                 campaignId={campaignId}
                 minViewsFilter={minViewsFilter}
                 currencySymbol={currencySymbol}
+                manualCpmMultiplier={manualCpmMultiplier}
+                apiCpmMultiplier={apiCpmMultiplier}
                 onSettingsChange={onSettingsChange}
               />
             )}

@@ -122,6 +122,8 @@ export default defineSchema({
     // Display settings (controlled from logged-in view only)
     minViewsFilter: v.optional(v.number()), // Filter out posts with fewer than X views (0 = show all)
     currencySymbol: v.optional(v.union(v.literal("USD"), v.literal("GBP"))), // Currency for CPM display
+    manualCpmMultiplier: v.optional(v.number()), // CPM rate for manual posts (default: 0.50)
+    apiCpmMultiplier: v.optional(v.number()), // CPM rate for API posts (default: 0.50)
 
     dailySnapshotsByDate: v.record(v.string(), v.object({
       totalPosts: v.number(),
