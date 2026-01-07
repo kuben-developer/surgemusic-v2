@@ -644,7 +644,7 @@ export const getPendingVideosForProcessingInternal = internalQuery({
     // Get all videos with status "ready_for_processing"
     const videos = await ctx.db
       .query("montagerVideos")
-      .filter((q) => q.eq(q.field("status"), "ready_for_processing"))
+      .withIndex("by_status", (q) => q.eq("status", "ready_for_processing"))
       .collect();
 
     // Group videos by campaignId to batch fetch campaign data

@@ -270,7 +270,8 @@ export default defineSchema({
     .index("by_montagerFolderId", ["montagerFolderId"])
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])
     .index("by_airtableRecordId", ["airtableRecordId"])
-    .index("by_campaignId", ["campaignId"]),
+    .index("by_campaignId", ["campaignId"])
+    .index("by_status", ["status"]),
 
   // BULK DOWNLOADER
   bulkDownloadJobs: defineTable({
