@@ -42,6 +42,7 @@ export const getAllCampaignsInternal = internalAction({
 
 /**
  * Internal query to fetch campaign analytics data
+ * Respects minViewsFilter setting to filter out posts with fewer views
  */
 export const getCampaignAnalyticsInternal = internalQuery({
   args: { campaignId: v.string() },
@@ -55,23 +56,70 @@ export const getCampaignAnalyticsInternal = internalQuery({
       return null;
     }
 
+    // Get minViewsFilter setting
+    const minViewsFilter = analytics.minViewsFilter ?? 0;
+
+    // If no minViewsFilter, return pre-calculated totals
+    if (minViewsFilter === 0) {
+      return {
+        campaignId: analytics.campaignId,
+        campaignName: analytics.campaignName,
+        artist: analytics.artist,
+        song: analytics.song,
+        totalPosts: analytics.totalPosts,
+        totalViews: analytics.totalViews,
+        totalLikes: analytics.totalLikes,
+        totalComments: analytics.totalComments,
+        totalShares: analytics.totalShares,
+        totalSaves: analytics.totalSaves,
+      };
+    }
+
+    // minViewsFilter is set - recalculate totals from filtered posts
+    const bundlePosts = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Get valid postIds from airtableContents
+    const airtablePosts = await ctx.db
+      .query("airtableContents")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
+
+    // Filter posts: must exist in airtable AND meet minViews threshold
+    const filteredPosts = bundlePosts.filter((post) =>
+      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
+    );
+
+    // Calculate totals from filtered posts
+    const totalPosts = filteredPosts.length;
+    const totalViews = filteredPosts.reduce((acc, post) => acc + post.views, 0);
+    const totalLikes = filteredPosts.reduce((acc, post) => acc + post.likes, 0);
+    const totalComments = filteredPosts.reduce((acc, post) => acc + post.comments, 0);
+    const totalShares = filteredPosts.reduce((acc, post) => acc + post.shares, 0);
+    const totalSaves = filteredPosts.reduce((acc, post) => acc + post.saves, 0);
+
     return {
       campaignId: analytics.campaignId,
       campaignName: analytics.campaignName,
       artist: analytics.artist,
       song: analytics.song,
-      totalPosts: analytics.totalPosts,
-      totalViews: analytics.totalViews,
-      totalLikes: analytics.totalLikes,
-      totalComments: analytics.totalComments,
-      totalShares: analytics.totalShares,
-      totalSaves: analytics.totalSaves,
+      totalPosts,
+      totalViews,
+      totalLikes,
+      totalComments,
+      totalShares,
+      totalSaves,
     };
   },
 });
 
 /**
  * Internal query to fetch top performing videos for a campaign
+ * Respects minViewsFilter setting to filter out posts with fewer views
  */
 export const getTopVideosInternal = internalQuery({
   args: {
@@ -79,6 +127,14 @@ export const getTopVideosInternal = internalQuery({
     limit: v.number(),
   },
   handler: async (ctx, { campaignId, limit }) => {
+    // Get minViewsFilter setting from campaign analytics
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    const minViewsFilter = analytics?.minViewsFilter ?? 0;
+
     // Get all posts for this campaign
     const bundlePosts = await ctx.db
       .query("bundleSocialPostedVideos")
@@ -91,9 +147,11 @@ export const getTopVideosInternal = internalQuery({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    // Filter to only include posts that exist in airtableContents
+    // Filter to only include posts that exist in airtableContents AND meet minViews threshold
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
-    const filteredPosts = bundlePosts.filter((post) => airtablePostIds.has(post.postId));
+    const filteredPosts = bundlePosts.filter((post) =>
+      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
+    );
 
     // Sort by views descending and take top N
     const topVideos = filteredPosts
