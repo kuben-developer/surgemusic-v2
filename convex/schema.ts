@@ -147,9 +147,15 @@ export default defineSchema({
       totalComments: v.number(),
       totalShares: v.number(),
       totalSaves: v.number(),
-    }))
+    })),
 
-
+    // Content samples for analytics dashboard display
+    contentSamples: v.optional(v.array(v.object({
+      videoUrl: v.string(),
+      thumbnailUrl: v.string(),
+      addedAt: v.number(),
+      sourceVideoId: v.optional(v.string()),
+    }))),
   })
     .index("by_campaignId", ["campaignId"]),
 

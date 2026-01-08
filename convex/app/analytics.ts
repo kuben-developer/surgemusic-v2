@@ -1406,3 +1406,143 @@ export const updateCampaignAnalyticsSettings = mutation({
     };
   },
 });
+
+/**
+ * Get content samples for a campaign
+ * Used by the analytics page to display video samples
+ */
+export const getContentSamples = query({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      return [];
+    }
+
+    return analytics.contentSamples ?? [];
+  },
+});
+
+/**
+ * Push content samples to campaign analytics
+ * Called from the campaign content page when user selects videos to showcase
+ * Prevents duplicates by checking sourceVideoId or videoUrl
+ */
+export const pushContentSamples = mutation({
+  args: {
+    campaignId: v.string(),
+    samples: v.array(v.object({
+      videoUrl: v.string(),
+      thumbnailUrl: v.string(),
+      sourceVideoId: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, { campaignId, samples }) => {
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      throw new Error(`Campaign analytics not found for campaign ${campaignId}`);
+    }
+
+    // Get existing samples or empty array
+    const existingContentSamples = analytics.contentSamples ?? [];
+
+    // Create sets for quick duplicate checking
+    const existingSourceIds = new Set(
+      existingContentSamples
+        .map(s => s.sourceVideoId)
+        .filter((id): id is string => !!id)
+    );
+    const existingVideoUrls = new Set(
+      existingContentSamples.map(s => s.videoUrl)
+    );
+
+    // Filter out duplicates
+    const newSamples = samples.filter(sample => {
+      // Check by sourceVideoId first (most reliable)
+      if (sample.sourceVideoId && existingSourceIds.has(sample.sourceVideoId)) {
+        return false;
+      }
+      // Fallback to checking by videoUrl
+      if (existingVideoUrls.has(sample.videoUrl)) {
+        return false;
+      }
+      return true;
+    });
+
+    // If no new samples to add, return early
+    if (newSamples.length === 0) {
+      return {
+        success: true,
+        addedCount: 0,
+        skippedCount: samples.length,
+        totalCount: existingContentSamples.length,
+      };
+    }
+
+    // Add timestamp to each new sample
+    const samplesWithTimestamp = newSamples.map(sample => ({
+      ...sample,
+      addedAt: Date.now(),
+    }));
+
+    // Append new samples
+    const updatedContentSamples = [...existingContentSamples, ...samplesWithTimestamp];
+
+    // Update the record
+    await ctx.db.patch(analytics._id, {
+      contentSamples: updatedContentSamples,
+    });
+
+    return {
+      success: true,
+      addedCount: newSamples.length,
+      skippedCount: samples.length - newSamples.length,
+      totalCount: updatedContentSamples.length,
+    };
+  },
+});
+
+/**
+ * Remove content samples from campaign analytics by indices
+ */
+export const removeContentSamples = mutation({
+  args: {
+    campaignId: v.string(),
+    indicesToRemove: v.array(v.number()),
+  },
+  handler: async (ctx, { campaignId, indicesToRemove }) => {
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!analytics) {
+      throw new Error(`Campaign analytics not found for campaign ${campaignId}`);
+    }
+
+    const existingContentSamples = analytics.contentSamples ?? [];
+    const indicesToRemoveSet = new Set(indicesToRemove);
+
+    const updatedContentSamples = existingContentSamples.filter(
+      (_, index) => !indicesToRemoveSet.has(index)
+    );
+
+    await ctx.db.patch(analytics._id, {
+      contentSamples: updatedContentSamples,
+    });
+
+    return {
+      success: true,
+      removedCount: indicesToRemove.length,
+      remainingCount: updatedContentSamples.length,
+    };
+  },
+});

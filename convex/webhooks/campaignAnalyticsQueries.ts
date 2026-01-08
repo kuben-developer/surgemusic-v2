@@ -72,6 +72,7 @@ export const getCampaignAnalyticsInternal = internalQuery({
         totalComments: analytics.totalComments,
         totalShares: analytics.totalShares,
         totalSaves: analytics.totalSaves,
+        contentSamples: analytics.contentSamples ?? [],
       };
     }
 
@@ -113,6 +114,7 @@ export const getCampaignAnalyticsInternal = internalQuery({
       totalComments,
       totalShares,
       totalSaves,
+      contentSamples: analytics.contentSamples ?? [],
     };
   },
 });

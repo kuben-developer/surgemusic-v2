@@ -1,22 +1,26 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft, FolderPlus } from "lucide-react";
+import { toast } from "sonner";
 import { useCampaignContent } from "./hooks/useCampaignContent";
+import { usePushableVideoSelection } from "./hooks/usePushableVideoSelection";
 import { MontagerVideoDialog } from "./dialogs/MontagerVideoDialog";
 import { MissingAssetsDialog } from "./dialogs/MissingAssetsDialog";
 import { CampaignAssetsDialog } from "./dialogs/CampaignAssetsDialog";
 import { ViewToggle } from "./components/ViewToggle";
 import type { VideoView } from "./components/ViewToggle";
 import { VideoGrid } from "./components/VideoGrid";
+import { PushToAnalyticsBar } from "./components/PushToAnalyticsBar";
 import { DateFilterTabs } from "./components/DateFilterTabs";
 import { CampaignInfoCard } from "./components/CampaignInfoCard";
 import { VideoCategoryCard } from "./components/VideoCategoryCard";
 import { useState, useMemo, useEffect } from "react";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
 interface CategoryStatsWithCounts {
   category: string;
@@ -41,6 +45,11 @@ export function CampaignContentPage() {
   const [montagerDialogOpen, setMontagerDialogOpen] = useState(false);
   const [missingAssetsDialogOpen, setMissingAssetsDialogOpen] = useState(false);
   const [assetsDialogOpen, setAssetsDialogOpen] = useState(false);
+  const [isPushingToAnalytics, setIsPushingToAnalytics] = useState(false);
+
+  // Push to analytics selection
+  const pushSelection = usePushableVideoSelection();
+  const pushContentSamples = useMutation(api.app.analytics.pushContentSamples);
 
   // Validate campaign assets for Montager
   const validation = useQuery(
@@ -266,6 +275,86 @@ export function CampaignContentPage() {
   // Only show date filter for scheduled/published views
   const showDateFilter = (videoView === "scheduled" || videoView === "published") && dateStats.length > 0;
 
+  // Enable push selection for ready, scheduled, and published views
+  const enablePushSelection = videoView === "ready" || videoView === "scheduled" || videoView === "published";
+
+  // Create a map of airtable record ID to montager video for scheduled/published views
+  const montagerVideoMap = useMemo(() => {
+    const map = new Map<string, Doc<"montagerVideos">>();
+    // Use all processed montager videos for the campaign
+    const allProcessed = [
+      ...(allMontagerVideosData?.processed ?? []),
+    ];
+    for (const video of allProcessed) {
+      if (video.airtableRecordId) {
+        map.set(video.airtableRecordId, video);
+      }
+    }
+    return map;
+  }, [allMontagerVideosData]);
+
+  // Handle push to analytics
+  const handlePushToAnalytics = async () => {
+    if (!pushSelection.hasSelection) return;
+
+    setIsPushingToAnalytics(true);
+    try {
+      // Collect video data for selected IDs
+      const samples: { videoUrl: string; thumbnailUrl: string; sourceVideoId: string }[] = [];
+
+      // For ready view, get directly from montager videos
+      if (videoView === "ready") {
+        for (const videoId of pushSelection.selectedIds) {
+          const video = montagerVideosForCategory.processed.find(v => v._id === videoId);
+          if (video?.processedVideoUrl) {
+            samples.push({
+              videoUrl: video.processedVideoUrl,
+              thumbnailUrl: video.thumbnailUrl ?? "",
+              sourceVideoId: video._id,
+            });
+          }
+        }
+      } else {
+        // For scheduled/published, the IDs are montager video IDs (already resolved in VideoGrid)
+        for (const videoId of pushSelection.selectedIds) {
+          // Find the montager video by ID
+          const video = allMontagerVideosData?.processed?.find(v => v._id === videoId);
+          if (video?.processedVideoUrl) {
+            samples.push({
+              videoUrl: video.processedVideoUrl,
+              thumbnailUrl: video.thumbnailUrl ?? "",
+              sourceVideoId: video._id,
+            });
+          }
+        }
+      }
+
+      if (samples.length === 0) {
+        toast.error("No valid videos to push");
+        return;
+      }
+
+      const result = await pushContentSamples({
+        campaignId: campaignRecordId,
+        samples,
+      });
+
+      if (result.addedCount === 0 && result.skippedCount > 0) {
+        toast.info(`All ${result.skippedCount} video${result.skippedCount > 1 ? "s" : ""} already exist in analytics`);
+      } else if (result.skippedCount > 0) {
+        toast.success(`Pushed ${result.addedCount} video${result.addedCount > 1 ? "s" : ""} to analytics (${result.skippedCount} duplicate${result.skippedCount > 1 ? "s" : ""} skipped)`);
+      } else {
+        toast.success(`Pushed ${result.addedCount} video${result.addedCount > 1 ? "s" : ""} to analytics`);
+      }
+      pushSelection.clearSelection();
+    } catch (error) {
+      console.error("Failed to push content samples:", error);
+      toast.error("Failed to push videos to analytics");
+    } finally {
+      setIsPushingToAnalytics(false);
+    }
+  };
+
   const handleAddFromMontager = () => {
     if (!validation) return;
 
@@ -418,18 +507,29 @@ export function CampaignContentPage() {
                     campaignId={campaignRecordId}
                     unassignedRecordIds={unassignedRecordIds}
                     onVideosAdded={handleVideosAdded}
+                    enablePushSelection={enablePushSelection}
+                    pushSelectedIds={pushSelection.selectedIds}
+                    onPushToggleSelection={pushSelection.toggleSelection}
                   />
                 )}
                 {videoView === "scheduled" && (
                   <VideoGrid
                     variant="scheduled"
                     airtableVideos={dateFilteredAirtableVideos.filter((v) => v.video_url && !v.api_post_id)}
+                    enablePushSelection={enablePushSelection}
+                    pushSelectedIds={pushSelection.selectedIds}
+                    onPushToggleSelection={pushSelection.toggleSelection}
+                    montagerVideoMap={montagerVideoMap}
                   />
                 )}
                 {videoView === "published" && (
                   <VideoGrid
                     variant="published"
                     airtableVideos={dateFilteredAirtableVideos.filter((v) => !!v.api_post_id)}
+                    enablePushSelection={enablePushSelection}
+                    pushSelectedIds={pushSelection.selectedIds}
+                    onPushToggleSelection={pushSelection.toggleSelection}
+                    montagerVideoMap={montagerVideoMap}
                   />
                 )}
               </div>
@@ -472,6 +572,14 @@ export function CampaignContentPage() {
             onSuccess={handleVideosAdded}
           />
         )}
+
+        {/* Push to Analytics Bar */}
+        <PushToAnalyticsBar
+          selectedCount={pushSelection.selectedCount}
+          onPush={handlePushToAnalytics}
+          onClear={pushSelection.clearSelection}
+          isLoading={isPushingToAnalytics}
+        />
       </div>
     </div>
   );

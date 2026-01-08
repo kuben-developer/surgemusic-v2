@@ -86,6 +86,12 @@ interface VideoGridProps {
   campaignId?: string;
   unassignedRecordIds?: string[];
   onVideosAdded?: () => void;
+  // Push to analytics selection props (for ready/scheduled/published)
+  enablePushSelection?: boolean;
+  pushSelectedIds?: Set<string>;
+  onPushToggleSelection?: (id: string) => void;
+  // Map of airtable record ID to montager video data (for scheduled/published)
+  montagerVideoMap?: Map<string, MontagerVideo>;
 }
 
 // Unified video type for internal use
@@ -116,7 +122,7 @@ function normalizeVideo(
   const v = video as MontagerVideo;
   return {
     id: v._id,
-    videoUrl: v.processedVideoUrl || v.videoUrl,
+    videoUrl: v.processedVideoUrl ?? v.videoUrl,
     scheduledDate: v.scheduledDate,
     overlayStyle: v.overlayStyle,
     thumbnailUrl: v.thumbnailUrl,
@@ -133,6 +139,10 @@ export function VideoGrid({
   campaignId,
   unassignedRecordIds = [],
   onVideosAdded,
+  enablePushSelection = false,
+  pushSelectedIds,
+  onPushToggleSelection,
+  montagerVideoMap,
 }: VideoGridProps) {
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -288,8 +298,26 @@ export function VideoGrid({
               onCheckedChange={(checked) => {
                 if (checked) {
                   selectAll();
+                  // Also select all for push selection if enabled
+                  if (enablePushSelection && onPushToggleSelection) {
+                    const videoIds = (filteredVideos as MontagerVideo[]).map(v => v._id);
+                    videoIds.forEach(id => {
+                      if (!pushSelectedIds?.has(id)) {
+                        onPushToggleSelection(id);
+                      }
+                    });
+                  }
                 } else {
                   deselectAll();
+                  // Also deselect all for push selection if enabled
+                  if (enablePushSelection && onPushToggleSelection) {
+                    const videoIds = (filteredVideos as MontagerVideo[]).map(v => v._id);
+                    videoIds.forEach(id => {
+                      if (pushSelectedIds?.has(id)) {
+                        onPushToggleSelection(id);
+                      }
+                    });
+                  }
                 }
               }}
               aria-label="Select all videos"
@@ -380,14 +408,52 @@ export function VideoGrid({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {paginatedVideos.map((video) => {
           const normalized = normalizeVideo(video, variant);
+
+          // For push selection, get the montager video data for scheduled/published variants
+          let pushSelectId = normalized.id;
+          if (enablePushSelection && (variant === "scheduled" || variant === "published") && montagerVideoMap) {
+            // For airtable videos, we need to find the corresponding montager video
+            const airtableVideo = video as AirtableContent;
+            const montagerVideo = montagerVideoMap.get(airtableVideo.id);
+            if (montagerVideo) {
+              pushSelectId = montagerVideo._id;
+              // Also update normalized with montager video URLs for display
+              normalized.videoUrl = montagerVideo.processedVideoUrl ?? montagerVideo.videoUrl;
+              normalized.thumbnailUrl = montagerVideo.thumbnailUrl;
+            }
+          }
+
+          // Determine if push selection should be shown for this variant
+          const showPushSelection = enablePushSelection &&
+            (variant === "ready" || variant === "scheduled" || variant === "published") &&
+            onPushToggleSelection;
+
+          // For ready variant, we might have both publish selection AND push selection
+          const isPushSelected = showPushSelection && pushSelectedIds?.has(pushSelectId);
+
+          // For Ready variant with push selection enabled, sync both selections
+          const handleToggleSelect = isReadyVariant
+            ? () => {
+                toggleSelection(normalized.id as Doc<"montagerVideos">["_id"]);
+                // Also toggle push selection if enabled
+                if (enablePushSelection && onPushToggleSelection) {
+                  onPushToggleSelection(pushSelectId);
+                }
+              }
+            : undefined;
+
           return (
             <VideoCard
               key={normalized.id}
               video={normalized}
               variant={variant}
               isSelected={isReadyVariant ? isSelected(normalized.id as Doc<"montagerVideos">["_id"]) : false}
-              onToggleSelect={isReadyVariant ? () => toggleSelection(normalized.id as Doc<"montagerVideos">["_id"]) : undefined}
+              onToggleSelect={handleToggleSelect}
               showSelection={isReadyVariant}
+              // Push selection props
+              showPushSelection={showPushSelection}
+              isPushSelected={isPushSelected}
+              onPushToggleSelect={showPushSelection ? () => onPushToggleSelection(pushSelectId) : undefined}
             />
           );
         })}
@@ -423,6 +489,10 @@ interface VideoCardProps {
   isSelected: boolean;
   onToggleSelect?: () => void;
   showSelection: boolean;
+  // Push to analytics selection
+  showPushSelection?: boolean;
+  isPushSelected?: boolean;
+  onPushToggleSelect?: () => void;
 }
 
 function VideoCard({
@@ -431,6 +501,9 @@ function VideoCard({
   isSelected,
   onToggleSelect,
   showSelection,
+  showPushSelection,
+  isPushSelected,
+  onPushToggleSelect,
 }: VideoCardProps) {
   const [isInView, setIsInView] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -463,7 +536,7 @@ function VideoCard({
     setIsPlaying(true);
     // Auto-play after state updates
     setTimeout(() => {
-      videoRef.current?.play();
+      void videoRef.current?.play();
     }, 0);
   };
 
@@ -472,15 +545,19 @@ function VideoCard({
     video.thumbnailUrl !== "manual_upload" &&
     video.thumbnailUrl !== "direct_upload";
 
+  // Determine if any selection checkbox should be shown
+  const hasAnySelection = showSelection || showPushSelection;
+  const isAnySelected = isSelected || isPushSelected;
+
   return (
     <div
       ref={containerRef}
       className={cn(
         "group relative aspect-[9/16] rounded-lg overflow-hidden bg-muted border transition-all",
-        isSelected && "ring-2 ring-primary border-primary"
+        isAnySelected && "ring-2 ring-primary border-primary"
       )}
     >
-      {/* Selection Checkbox (ready variant only) */}
+      {/* Selection Checkbox - Ready variant publish selection */}
       {showSelection && onToggleSelect && (
         <div
           className="absolute top-2 left-2 z-20"
@@ -495,8 +572,23 @@ function VideoCard({
         </div>
       )}
 
+      {/* Push to Analytics Selection Checkbox */}
+      {showPushSelection && onPushToggleSelect && !showSelection && (
+        <div
+          className="absolute top-2 left-2 z-20"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={isPushSelected}
+            onCheckedChange={() => onPushToggleSelect()}
+            className="bg-background/80 backdrop-blur-sm border-2"
+            aria-label={`Select video ${video.id} for analytics`}
+          />
+        </div>
+      )}
+
       {/* Status Badge */}
-      <div className={cn("absolute top-2 z-10", showSelection ? "left-8" : "left-2")}>
+      <div className={cn("absolute top-2 z-10", hasAnySelection ? "left-8" : "left-2")}>
         <div className="flex items-center gap-1">
           <Badge variant="secondary" className={cn("flex items-center", config.badgeClass)}>
             <StatusIcon className="size-3 mr-1" />

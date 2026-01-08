@@ -13,6 +13,7 @@ import { CampaignInfoSection } from "./CampaignInfoSection";
 import { KPIMetrics } from "./KPIMetrics";
 import { MetricsChart } from "./MetricsChart";
 import { VideoPerformanceTable } from "./VideoPerformanceTable";
+import { VideoSamplesSection } from "./VideoSamplesSection";
 import { staggerContainer } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
 import type { AnalyticsSettingsValues } from "./AnalyticsSettings";
@@ -152,6 +153,9 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
             isPublic={isPublic}
           />
         </div>
+
+        {/* Content Samples Section */}
+        <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
       </motion.div>
     </div>
   );

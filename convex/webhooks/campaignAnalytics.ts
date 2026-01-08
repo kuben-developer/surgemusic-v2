@@ -170,6 +170,12 @@ export const getCampaignAnalyticsPublic = httpAction(async (ctx, request) => {
       postUrl: video.videoUrl || video.mediaUrl || null,
     }));
 
+    // Build content samples array
+    const contentSamples = (analyticsData.contentSamples ?? []).map((sample: { videoUrl: string; thumbnailUrl: string }) => ({
+      videoUrl: sample.videoUrl,
+      thumbnailUrl: sample.thumbnailUrl,
+    }));
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -183,6 +189,7 @@ export const getCampaignAnalyticsPublic = httpAction(async (ctx, request) => {
           totalShares: analyticsData.totalShares,
           cpm: Number(cpm.toFixed(4)),
           topPerformingPosts,
+          contentSamples,
         },
       }),
       {
