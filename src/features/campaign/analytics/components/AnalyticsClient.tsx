@@ -37,7 +37,7 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
   const currentSettings = localSettings ?? settingsData ?? {
     minViewsFilter: 0,
     currencySymbol: "USD" as const,
-    manualCpmMultiplier: 0.5,
+    manualCpmMultiplier: 1,
     apiCpmMultiplier: 0.5,
   };
 

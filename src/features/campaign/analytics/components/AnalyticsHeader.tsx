@@ -38,7 +38,7 @@ export function AnalyticsHeader({
   hideBackButton = false,
   minViewsFilter = 0,
   currencySymbol = "USD",
-  manualCpmMultiplier = 0.5,
+  manualCpmMultiplier = 1,
   apiCpmMultiplier = 0.5,
   onSettingsChange,
 }: AnalyticsHeaderProps) {

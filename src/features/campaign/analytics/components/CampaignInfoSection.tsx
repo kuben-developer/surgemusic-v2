@@ -36,7 +36,7 @@ export function CampaignInfoSection({
   campaignMetadata,
   totals,
   currencySymbol = "USD",
-  manualCpmMultiplier = 0.5,
+  manualCpmMultiplier = 1,
   apiCpmMultiplier = 0.5,
 }: CampaignInfoSectionProps) {
   // Only show artist/song if they have valid data

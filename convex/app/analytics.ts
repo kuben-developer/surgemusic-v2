@@ -1328,7 +1328,7 @@ export const getCampaignAnalyticsSettings = query({
       return {
         minViewsFilter: 0,
         currencySymbol: "USD" as const,
-        manualCpmMultiplier: 0.5,
+        manualCpmMultiplier: 1,
         apiCpmMultiplier: 0.5,
       };
     }
@@ -1336,7 +1336,7 @@ export const getCampaignAnalyticsSettings = query({
     return {
       minViewsFilter: analytics.minViewsFilter ?? 0,
       currencySymbol: analytics.currencySymbol ?? ("USD" as const),
-      manualCpmMultiplier: analytics.manualCpmMultiplier ?? 0.5,
+      manualCpmMultiplier: analytics.manualCpmMultiplier ?? 1,
       apiCpmMultiplier: analytics.apiCpmMultiplier ?? 0.5,
     };
   },
@@ -1347,7 +1347,7 @@ export const getCampaignAnalyticsSettings = query({
  * This allows logged-in users to configure:
  * - minViewsFilter: Hide posts with fewer than X views (0 = show all)
  * - currencySymbol: Currency for CPM display (USD or GBP)
- * - manualCpmMultiplier: CPM rate for manual posts (default: 0.50)
+ * - manualCpmMultiplier: CPM rate for manual posts (default: 1.00)
  * - apiCpmMultiplier: CPM rate for API posts (default: 0.50)
  */
 export const updateCampaignAnalyticsSettings = mutation({
@@ -1401,7 +1401,7 @@ export const updateCampaignAnalyticsSettings = mutation({
       success: true,
       minViewsFilter: minViewsFilter ?? analytics.minViewsFilter ?? 0,
       currencySymbol: currencySymbol ?? analytics.currencySymbol ?? "USD",
-      manualCpmMultiplier: manualCpmMultiplier ?? analytics.manualCpmMultiplier ?? 0.5,
+      manualCpmMultiplier: manualCpmMultiplier ?? analytics.manualCpmMultiplier ?? 1,
       apiCpmMultiplier: apiCpmMultiplier ?? analytics.apiCpmMultiplier ?? 0.5,
     };
   },

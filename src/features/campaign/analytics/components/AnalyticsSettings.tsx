@@ -55,7 +55,7 @@ export function AnalyticsSettings({
 
   const handleSave = useCallback(async () => {
     const minViews = parseInt(localMinViews, 10) || 0;
-    const manualCpm = parseFloat(localManualCpm) || 0.5;
+    const manualCpm = parseFloat(localManualCpm) || 1;
     const apiCpm = parseFloat(localApiCpm) || 0.5;
 
     setIsSaving(true);
