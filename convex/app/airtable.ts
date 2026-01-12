@@ -354,7 +354,7 @@ export const deleteContentByPostId = internalMutation({
 });
 
 /**
- * Upsert campaign with name, artist, song, and sync statistics
+ * Upsert campaign with name, artist, song, status, and sync statistics
  */
 export const upsertAirtableCampaign = internalMutation({
     args: {
@@ -362,10 +362,11 @@ export const upsertAirtableCampaign = internalMutation({
         campaignName: v.string(),
         artist: v.string(),
         song: v.string(),
+        status: v.string(),
         total: v.number(),
         published: v.number(),
     },
-    handler: async (ctx, { campaignId, campaignName, artist, song, total, published }) => {
+    handler: async (ctx, { campaignId, campaignName, artist, song, status, total, published }) => {
         // Check if campaign record exists
         const existing = await ctx.db
             .query("airtableCampaigns")
@@ -378,6 +379,7 @@ export const upsertAirtableCampaign = internalMutation({
                 campaignName,
                 artist,
                 song,
+                status,
                 total,
                 published,
             });
@@ -388,6 +390,7 @@ export const upsertAirtableCampaign = internalMutation({
                 campaignName,
                 artist,
                 song,
+                status,
                 total,
                 published,
             });
@@ -416,6 +419,7 @@ export const syncAirtableCampaign = internalAction({
                         campaignName: campaign.campaign_id, // campaign_id field value
                         artist: campaign.artist,
                         song: campaign.song,
+                        status: campaign.status,
                         total: 0,
                         published: 0,
                     });
@@ -547,6 +551,7 @@ export const syncAirtableContentByCampaign = internalAction({
                     campaignName: campaign.campaign_id,
                     artist: campaign.artist,
                     song: campaign.song,
+                    status: campaign.status,
                     total: totalCount,
                     published: publishedCount,
                 });

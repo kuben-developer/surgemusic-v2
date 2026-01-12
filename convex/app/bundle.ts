@@ -3,7 +3,11 @@ import { api, internal } from "../_generated/api";
 import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
-const CONCURRENT_LIMIT = 25;
+const CONCURRENT_LIMIT = 50;
+
+// Error handling constants
+const PERMANENT_ERRORS = ["Post not found", "Team does not have a Tiktok account"];
+const ERROR_RETRY_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -47,28 +51,26 @@ async function fetchBundleSocialPost(postId: string): Promise<BundleSocialPost |
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.log(`Bundle Social API error for post ${postId}: ${errorData}`);
-      // Check for "Post not found" error
+      // Check for permanent errors that should be thrown
       if (response.status === 404) {
         if (errorData.includes("Post not found")) {
           throw new Error("Post not found");
         }
       }
-
-      // Don't log 400 errors - they're expected for scheduled posts
-      if (response.status !== 400) {
-        console.error(`Bundle Social API error for post ${postId}: ${response.status}`);
+      if (errorData.includes("Team does not have a Tiktok account")) {
+        throw new Error("Team does not have a Tiktok account");
       }
+      // All other errors: return null silently (will be counted in summary)
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    // Re-throw "Post not found" errors
-    if (error instanceof Error && error.message === "Post not found") {
+    // Re-throw permanent errors
+    if (error instanceof Error && PERMANENT_ERRORS.includes(error.message)) {
       throw error;
     }
-    console.error(`Error fetching Bundle Social post ${postId}:`, error);
+    // All other errors: return null silently
     return null;
   }
 }
@@ -87,7 +89,7 @@ export const getUniqueCampaignIdsFromAirtable = internalQuery({
   },
 });
 
-// Get airtable contents for a campaign where error is empty
+// Get airtable contents for a campaign, with smart error retry logic
 export const getAirtableContentsByCampaign = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
@@ -96,8 +98,28 @@ export const getAirtableContentsByCampaign = internalQuery({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    // Filter to only those with postId and no error
-    return allContents.filter(content => content.postId && !content.error);
+    const now = Date.now();
+
+    // Filter logic:
+    // - Must have postId
+    // - No error = include
+    // - Permanent error = exclude forever
+    // - Temporary error = retry after 6 hours
+    return allContents.filter(content => {
+      if (!content.postId) return false;
+      if (!content.error) return true;
+
+      // Never retry permanent errors
+      if (PERMANENT_ERRORS.includes(content.error)) return false;
+
+      // Retry temporary errors after 6 hours
+      if (content.errorAt) {
+        return now - content.errorAt > ERROR_RETRY_INTERVAL;
+      }
+
+      // Legacy errors without errorAt: include for retry (will get errorAt on next failure)
+      return true;
+    });
   },
 });
 
@@ -160,10 +182,11 @@ export const getPostsToSkip = internalQuery({
       const postAgeSeconds = nowSeconds - post.postedAt;
       const timeSinceUpdate = now - post.updatedAt;
 
-      // Never skip posts with zero views that are within 48 hours
-      // These need to be retried with TikTok API fallback
+      // For 0-view posts within 48 hours, retry but with a minimum interval
+      // to avoid hammering APIs for posts that legitimately have 0 views
       if (postAgeSeconds <= HOURS_48 && post.views === 0) {
-        return false;
+        const MIN_RETRY_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+        return timeSinceUpdate < MIN_RETRY_INTERVAL; // Skip if checked within 2 hours
       }
 
       // Determine required update interval based on post age
@@ -196,7 +219,7 @@ export const getPostsToSkip = internalQuery({
 // INTERNAL MUTATIONS
 // ============================================================================
 
-// Update error field in airtableContents
+// Update error field in airtableContents (with timestamp for retry logic)
 export const updateAirtableContentError = internalMutation({
   args: {
     campaignId: v.string(),
@@ -211,7 +234,32 @@ export const updateAirtableContentError = internalMutation({
       .first();
 
     if (content) {
-      await ctx.db.patch(content._id, { error });
+      await ctx.db.patch(content._id, {
+        error,
+        errorAt: Date.now(), // Timestamp for retry logic
+      });
+    }
+  },
+});
+
+// Clear error from airtableContents (called on successful processing)
+export const clearAirtableContentError = internalMutation({
+  args: {
+    campaignId: v.string(),
+    postId: v.string(),
+  },
+  handler: async (ctx, { campaignId, postId }) => {
+    const content = await ctx.db
+      .query("airtableContents")
+      .withIndex("by_postId", (q) => q.eq("postId", postId))
+      .filter((q) => q.eq(q.field("campaignId"), campaignId))
+      .first();
+
+    if (content && content.error) {
+      await ctx.db.patch(content._id, {
+        error: undefined,
+        errorAt: undefined,
+      });
     }
   },
 });
@@ -422,7 +470,7 @@ export const refreshTiktokStatsByCampaign = internalAction({
       const today = new Date();
       const date = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
 
-      // Get all airtable contents for this campaign where error is empty and postId exists
+      // Get all airtable contents for this campaign (filtered by error retry logic)
       const allContents = await ctx.runQuery(internal.app.bundle.getAirtableContentsByCampaign, { campaignId });
 
       // Filter to UUID format postIds (Bundle Social) OR manual posts with tiktokId
@@ -432,19 +480,33 @@ export const refreshTiktokStatsByCampaign = internalAction({
       );
 
       // Fetch posts to skip based on tiered monitoring schedule
-      // We'll skip Bundle Social API calls for these to save API requests
       const postsToSkipIds = await ctx.runQuery(internal.app.bundle.getPostsToSkip, { campaignId });
       const postsToSkipSet = new Set(postsToSkipIds);
-      console.log(`[refreshTiktokStats] Found ${postsToSkipSet.size} posts to skip (based on tiered monitoring schedule) - will save ${postsToSkipSet.size} API calls`);
 
-      // Also fetch ALL existing posted videos to check if we should insert or update
+      // Fetch ALL existing posted videos to check if we should insert or update
       const existingPostIds = await ctx.runQuery(internal.app.bundle.getExistingPostedVideos, { campaignId });
       const existingPostIdsSet = new Set(existingPostIds);
-      console.log(`[refreshTiktokStats] Found ${existingPostIdsSet.size} total existing posts in database`);
 
-      // Filter out posts to skip BEFORE batching (optimization!)
-      const contentsToProcess = contents.filter((content: { postId: string; campaignId: string; }) => !postsToSkipSet.has(content.postId)).slice(0, 400);
-      console.log(`[refreshTiktokStats] Filtered to ${contentsToProcess.length} contents to process (skipped ${contents.length - contentsToProcess.length} already tracked posts)`);
+      // Filter out posts to skip BEFORE batching
+      const BATCH_LIMIT = 300;
+      const contentsNeedingUpdate = contents.filter((c: { postId: string }) => !postsToSkipSet.has(c.postId));
+      const contentsToProcess = contentsNeedingUpdate.slice(0, BATCH_LIMIT);
+
+      // Calculate stats for logging (all relative to eligible posts)
+      const totalEligible = contents.length;
+      const newPosts = contents.filter((c: { postId: string }) => !existingPostIdsSet.has(c.postId)).length;
+      const recentlyUpdated = contents.filter((c: { postId: string }) => postsToSkipSet.has(c.postId)).length;
+      const needsUpdate = contentsNeedingUpdate.length;
+      const remaining = needsUpdate - contentsToProcess.length;
+
+      // Clear progress logging
+      console.log(`\n========== Campaign ${campaignId} ==========`);
+      console.log(`📊 TOTAL: ${totalEligible} eligible posts`);
+      console.log(`   ├─ 🆕 ${newPosts} never scraped`);
+      console.log(`   ├─ ⏭️  ${recentlyUpdated} recently updated (skip)`);
+      console.log(`   └─ 🔄 ${needsUpdate} need update now`);
+      console.log(`📋 THIS RUN: ${contentsToProcess.length} posts | ${remaining} remaining after`);
+      console.log(`================================================\n`);
 
       // Collect all successful data for bulk operations
       const postsToInsert: Array<{
@@ -556,6 +618,12 @@ export const refreshTiktokStatsByCampaign = internalAction({
 
             console.log(`[refreshTiktokStats] Successfully processed manual post ${content.postId}: ${stats.views} views`);
 
+            // Clear any previous error on successful processing
+            await ctx.runMutation(internal.app.bundle.clearAirtableContentError, {
+              campaignId: content.campaignId,
+              postId: content.postId,
+            });
+
             return {
               postId: content.postId,
               success: true,
@@ -566,6 +634,13 @@ export const refreshTiktokStatsByCampaign = internalAction({
           const bundleData = await fetchBundleSocialPost(content.postId);
 
           if (!bundleData || !bundleData.items || bundleData.items.length === 0) {
+            // Mark this error so it's retried after 6 hours (not every run)
+            await ctx.runMutation(internal.app.bundle.updateAirtableContentError, {
+              campaignId: content.campaignId,
+              postId: content.postId,
+              error: 'Bundle Social API error',
+            });
+
             return {
               postId: content.postId,
               success: false,
@@ -575,6 +650,13 @@ export const refreshTiktokStatsByCampaign = internalAction({
 
           const stats = bundleData.items[0];
           if (!stats) {
+            // Mark this error so it's retried after 6 hours (not every run)
+            await ctx.runMutation(internal.app.bundle.updateAirtableContentError, {
+              campaignId: content.campaignId,
+              postId: content.postId,
+              error: 'Bundle Social API error',
+            });
+
             return {
               postId: content.postId,
               success: false,
@@ -586,7 +668,6 @@ export const refreshTiktokStatsByCampaign = internalAction({
           let finalStats = stats;
           if (stats.views === 0 && bundleData.post.externalData.TIKTOK?.id) {
             const tiktokVideoId = bundleData.post.externalData.TIKTOK.id;
-            console.log(`Bundle Social returned 0 views for post ${content.postId}, fetching from TikTok API (video: ${tiktokVideoId})`);
 
             const tiktokResult = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
               videoId: tiktokVideoId,
@@ -600,11 +681,8 @@ export const refreshTiktokStatsByCampaign = internalAction({
                 shares: tiktokResult.video.shares,
                 saves: tiktokResult.video.saves,
               };
-              console.log(`Successfully fetched TikTok stats: ${finalStats.views} views`);
-            } else {
-              console.log(`TikTok API fallback failed for video ${tiktokVideoId}: ${tiktokResult.error}`);
-              // Keep using Bundle Social's zero stats as fallback
             }
+            // Silently fall back to Bundle Social's zero stats if TikTok API fails
           }
 
           // Extract posted date
@@ -651,24 +729,29 @@ export const refreshTiktokStatsByCampaign = internalAction({
             saves: finalStats.saves,
           });
 
+          // Clear any previous error on successful processing
+          await ctx.runMutation(internal.app.bundle.clearAirtableContentError, {
+            campaignId: content.campaignId,
+            postId: content.postId,
+          });
+
           return {
             postId: content.postId,
             success: true,
           };
         } catch (error) {
-          // Check if error is "Post not found"
-          if (error instanceof Error && error.message === "Post not found") {
-            // Update airtableContents with error
+          // Check for permanent errors that should never be retried
+          if (error instanceof Error && PERMANENT_ERRORS.includes(error.message)) {
             await ctx.runMutation(internal.app.bundle.updateAirtableContentError, {
               campaignId: content.campaignId,
               postId: content.postId,
-              error: "Post not found",
+              error: error.message,
             });
 
             return {
               postId: content.postId,
               success: false,
-              error: "Post not found - marked in airtableContents",
+              error: `${error.message} - marked as permanent error`,
             };
           }
 
@@ -686,13 +769,17 @@ export const refreshTiktokStatsByCampaign = internalAction({
         error?: string;
       }> = [];
 
-      console.log(`[refreshTiktokStats] Processing ${contentsToProcess.length} contents for campaign ${campaignId} with concurrency limit of ${CONCURRENT_LIMIT}`);
+      const totalBatches = Math.ceil(contentsToProcess.length / CONCURRENT_LIMIT);
 
       // Process in batches (API calls only, no DB writes yet)
       for (let i = 0; i < contentsToProcess.length; i += CONCURRENT_LIMIT) {
         const batch = contentsToProcess.slice(i, i + CONCURRENT_LIMIT);
+        const batchNum = Math.floor(i / CONCURRENT_LIMIT) + 1;
         const batchStartTime = Date.now();
-        console.log(`[refreshTiktokStats] Processing batch ${Math.floor(i / CONCURRENT_LIMIT) + 1}/${Math.ceil(contentsToProcess.length / CONCURRENT_LIMIT)} (${batch.length} items)`);
+        const processed = i;
+        const progressPct = Math.round((processed / contentsToProcess.length) * 100);
+
+        console.log(`⏳ Batch ${batchNum}/${totalBatches} | Progress: ${processed}/${contentsToProcess.length} (${progressPct}%)`);
 
         const batchResults = await Promise.allSettled(
           batch.map((content: { postId: string; campaignId: string; isManual?: boolean; tiktokId?: string; }) => processContent(content))
@@ -702,7 +789,7 @@ export const refreshTiktokStatsByCampaign = internalAction({
           if (result.status === 'fulfilled') {
             results.push(result.value);
           } else {
-            console.error(`[refreshTiktokStats] Unexpected error in batch processing:`, result.reason);
+            console.error(`❌ Unexpected error:`, result.reason);
             results.push({
               postId: 'unknown',
               success: false,
@@ -711,15 +798,15 @@ export const refreshTiktokStatsByCampaign = internalAction({
           }
         });
 
-        console.log(`[refreshTiktokStats] Batch ${Math.floor(i / CONCURRENT_LIMIT) + 1} completed in ${Date.now() - batchStartTime}ms`);
+        const batchTime = ((Date.now() - batchStartTime) / 1000).toFixed(1);
+        console.log(`✅ Batch ${batchNum} done in ${batchTime}s`);
       }
 
-      // Bulk database operations - much more efficient!
-      console.log(`[refreshTiktokStats] Starting bulk database operations...`);
+      // Bulk database operations
+      console.log(`\n💾 Saving to database...`);
 
       // Bulk insert new posts (single mutation)
       if (postsToInsert.length > 0) {
-        console.log(`[refreshTiktokStats] Bulk inserting ${postsToInsert.length} new posts...`);
         await ctx.runMutation(internal.app.bundle.bulkInsertPostedVideos, {
           posts: postsToInsert,
         });
@@ -727,7 +814,6 @@ export const refreshTiktokStatsByCampaign = internalAction({
 
       // Bulk update existing posts (single mutation)
       if (postsToUpdate.length > 0) {
-        console.log(`[refreshTiktokStats] Bulk updating ${postsToUpdate.length} existing posts...`);
         await ctx.runMutation(internal.app.bundle.bulkUpdatePostedVideoStats, {
           updates: postsToUpdate,
         });
@@ -735,7 +821,6 @@ export const refreshTiktokStatsByCampaign = internalAction({
 
       // Bulk upsert snapshots (single mutation)
       if (snapshotsToUpsert.length > 0) {
-        console.log(`[refreshTiktokStats] Bulk upserting ${snapshotsToUpsert.length} snapshots...`);
         await ctx.runMutation(internal.app.bundle.bulkUpsertDailySnapshots, {
           campaignId,
           date,
@@ -743,13 +828,23 @@ export const refreshTiktokStatsByCampaign = internalAction({
         });
       }
 
+      // Calculate final stats
       const totalTime = Date.now() - startTime;
-      const updatedCount = results.filter(r => r.success).length;
-      const errorCount = results.filter(r => !r.success && !r.error?.includes("skipped")).length;
-      const postNotFoundCount = results.filter(r => r.error?.includes("Post not found")).length;
-      const skippedCount = results.filter(r => r.error?.includes("skipped")).length;
+      const totalTimeSec = (totalTime / 1000).toFixed(1);
+      const successCount = results.filter(r => r.success).length;
+      const errorResults = results.filter(r => !r.success);
+      const permanentErrors = errorResults.filter(r => PERMANENT_ERRORS.some(e => r.error?.includes(e))).length;
+      const temporaryErrors = errorResults.length - permanentErrors;
 
-      console.log(`Refresh TikTok stats for campaign ${campaignId}: ${updatedCount} posts refreshed (${postsToInsert.length} new, ${postsToUpdate.length} updated), ${skippedCount} skipped (tiered schedule) - saved ${skippedCount} API calls, ${errorCount} errors (${postNotFoundCount} post not found) in ${totalTime}ms`);
+      // Final summary
+      console.log(`\n========== COMPLETE ==========`);
+      console.log(`✅ Success: ${successCount} posts (${postsToInsert.length} new, ${postsToUpdate.length} updated)`);
+      if (errorResults.length > 0) {
+        console.log(`❌ Errors: ${errorResults.length} (${permanentErrors} permanent, ${temporaryErrors} temporary - will retry in 6h)`);
+      }
+      console.log(`⏱️  Time: ${totalTimeSec}s`);
+      console.log(`📋 Remaining: ${remaining} posts to process in next run`);
+      console.log(`================================\n`);
     } catch (error) {
       console.error(`Error refreshing TikTok stats for campaign ${campaignId}:`, error);
       throw error;

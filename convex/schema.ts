@@ -28,6 +28,7 @@ export default defineSchema({
     postId: v.string(), // from airtable api_post_id column in Content base or tiktok_id for manual posts
     caption: v.optional(v.string()),
     error: v.optional(v.string()),
+    errorAt: v.optional(v.number()), // Timestamp when error was set (for retry logic)
     isManual: v.optional(v.boolean()), // true if manually posted (not through Bundle Social API)
     tiktokId: v.optional(v.string()), // TikTok video ID for manual posts
   })
@@ -40,10 +41,12 @@ export default defineSchema({
     campaignName: v.string(),
     artist: v.string(),
     song: v.string(),
+    status: v.optional(v.string()), // Campaign status: "Active", "Planned", "Done"
     total: v.number(), // Total content records from Airtable for this campaign
     published: v.number(), // Number of rows with valid api_post_id
   })
-    .index("by_campaignId", ["campaignId"]),
+    .index("by_campaignId", ["campaignId"])
+    .index("by_status", ["status"]),
 
   campaignAssets: defineTable({
     campaignId: v.string(), // airtable campaign id
