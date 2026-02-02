@@ -149,6 +149,34 @@ export const getExistingPostedVideos = internalQuery({
   },
 });
 
+// Get all posted videos for a campaign with pagination support
+// Used by forceRefreshTiktokStatsByCampaign
+export const getAllPostedVideosForCampaign = internalQuery({
+  args: {
+    campaignId: v.string(),
+    cursor: v.optional(v.number()), // offset for pagination
+    limit: v.number(),
+  },
+  handler: async (ctx, { campaignId, cursor = 0, limit }) => {
+    const posts = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Apply pagination
+    const paginatedPosts = posts.slice(cursor, cursor + limit);
+    const hasMore = cursor + limit < posts.length;
+    const totalCount = posts.length;
+
+    return {
+      posts: paginatedPosts,
+      hasMore,
+      nextCursor: hasMore ? cursor + limit : null,
+      totalCount,
+    };
+  },
+});
+
 // Get posts to skip based on tiered monitoring schedule:
 // - 0-30 days: monitor daily (skip if updated within 12 hours)
 // - 30-90 days: monitor every 3 days
@@ -880,5 +908,297 @@ export const refreshTiktokStats = internalAction({
       console.error('Error scheduling TikTok stats refresh:', error);
       throw error;
     }
+  },
+});
+
+// ============================================================================
+// FORCE REFRESH FUNCTIONS (Monthly full refresh - Tokapi only)
+// ============================================================================
+
+// Type for force refresh result
+interface ForceRefreshResult {
+  campaignId: string;
+  processed: number;
+  success: number;
+  errors: number;
+  hasMore: boolean;
+  nextCursor?: number | null;
+  totalCount?: number;
+}
+
+// Force refresh TikTok stats for a single campaign - Worker
+// Refreshes ALL posts (no tiered monitoring skipping)
+// Uses Tokapi API only (not Bundle Social)
+// Processes 300 posts at a time, self-retriggering for remaining posts
+export const forceRefreshTiktokStatsByCampaign = internalAction({
+  args: {
+    campaignId: v.string(),
+    cursor: v.optional(v.number()), // Starting offset for pagination
+  },
+  handler: async (ctx, { campaignId, cursor = 0 }): Promise<ForceRefreshResult> => {
+    const BATCH_LIMIT = 300;
+    const FORCE_REFRESH_CONCURRENT_LIMIT = 5; // Lower concurrency to avoid Tokapi rate limits
+    const startTime = Date.now();
+
+    // Get today's date in DD-MM-YYYY format
+    const today = new Date();
+    const date = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+
+    console.log(`\n========== FORCE REFRESH: Campaign ${campaignId} ==========`);
+    console.log(`📅 Starting at cursor: ${cursor}`);
+
+    // Get posts from bundleSocialPostedVideos (already have videoId)
+    const queryResult = await ctx.runQuery(
+      internal.app.bundle.getAllPostedVideosForCampaign,
+      { campaignId, cursor, limit: BATCH_LIMIT }
+    );
+    const posts = queryResult.posts;
+    const hasMore = queryResult.hasMore;
+    const nextCursor = queryResult.nextCursor;
+    const totalCount = queryResult.totalCount;
+
+    console.log(`📊 TOTAL: ${totalCount} posts in campaign`);
+    console.log(`📋 THIS RUN: ${posts.length} posts (offset ${cursor} to ${cursor + posts.length})`);
+    console.log(`📋 REMAINING: ${hasMore ? totalCount - (cursor + posts.length) : 0} posts after this run`);
+
+    if (posts.length === 0) {
+      console.log(`⏭️ No posts to process at this cursor`);
+      return {
+        campaignId,
+        processed: 0,
+        success: 0,
+        errors: 0,
+        hasMore: false,
+      };
+    }
+
+    // Collect data for bulk operations
+    const postsToUpdate: Array<{
+      postId: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    }> = [];
+
+    const snapshotsToUpsert: Array<{
+      postId: string;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    }> = [];
+
+    // Process a single post using Tokapi API only
+    const processPost = async (post: {
+      postId: string;
+      videoId: string;
+      campaignId: string;
+    }) => {
+      try {
+        // Skip posts without videoId (shouldn't happen, but safety check)
+        if (!post.videoId) {
+          return {
+            postId: post.postId,
+            success: false,
+            error: 'No videoId stored - post must be processed by regular refresh first',
+          };
+        }
+
+        // Call Tokapi API directly
+        const tiktokResult = await ctx.runAction(internal.app.tiktok.getTikTokVideoById, {
+          videoId: post.videoId,
+        });
+
+        if (!tiktokResult.success || !tiktokResult.video) {
+          return {
+            postId: post.postId,
+            success: false,
+            error: `Tokapi API error: ${tiktokResult.error || 'Unknown error'}`,
+          };
+        }
+
+        const stats = tiktokResult.video;
+
+        // Collect data for bulk update
+        postsToUpdate.push({
+          postId: post.postId,
+          views: stats.views,
+          likes: stats.likes,
+          comments: stats.comments,
+          shares: stats.shares,
+          saves: stats.saves,
+        });
+
+        // Collect snapshot data
+        snapshotsToUpsert.push({
+          postId: post.postId,
+          views: stats.views,
+          likes: stats.likes,
+          comments: stats.comments,
+          shares: stats.shares,
+          saves: stats.saves,
+        });
+
+        return {
+          postId: post.postId,
+          success: true,
+        };
+      } catch (error) {
+        return {
+          postId: post.postId,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    };
+
+    // Process in concurrent batches
+    const results: Array<{
+      postId: string;
+      success: boolean;
+      error?: string;
+    }> = [];
+
+    const totalBatches = Math.ceil(posts.length / FORCE_REFRESH_CONCURRENT_LIMIT);
+
+    for (let i = 0; i < posts.length; i += FORCE_REFRESH_CONCURRENT_LIMIT) {
+      const batch = posts.slice(i, i + FORCE_REFRESH_CONCURRENT_LIMIT);
+      const batchNum = Math.floor(i / FORCE_REFRESH_CONCURRENT_LIMIT) + 1;
+      const batchStartTime = Date.now();
+      const progressPct = Math.round((i / posts.length) * 100);
+
+      console.log(`⏳ Batch ${batchNum}/${totalBatches} | Progress: ${i}/${posts.length} (${progressPct}%)`);
+
+      const batchResults = await Promise.allSettled(
+        batch.map((post) => processPost({
+          postId: post.postId,
+          videoId: post.videoId,
+          campaignId: post.campaignId,
+        }))
+      );
+
+      batchResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          console.error(`❌ Unexpected error:`, result.reason);
+          results.push({
+            postId: 'unknown',
+            success: false,
+            error: 'Unexpected error during processing',
+          });
+        }
+      });
+
+      const batchTime = ((Date.now() - batchStartTime) / 1000).toFixed(1);
+      console.log(`✅ Batch ${batchNum} done in ${batchTime}s`);
+    }
+
+    // Bulk database operations
+    console.log(`\n💾 Saving to database...`);
+
+    // Bulk update posts (single mutation)
+    if (postsToUpdate.length > 0) {
+      await ctx.runMutation(internal.app.bundle.bulkUpdatePostedVideoStats, {
+        updates: postsToUpdate,
+      });
+      console.log(`   ├─ Updated ${postsToUpdate.length} posts`);
+    }
+
+    // Bulk upsert snapshots (single mutation)
+    if (snapshotsToUpsert.length > 0) {
+      await ctx.runMutation(internal.app.bundle.bulkUpsertDailySnapshots, {
+        campaignId,
+        date,
+        snapshots: snapshotsToUpsert,
+      });
+      console.log(`   └─ Upserted ${snapshotsToUpsert.length} snapshots`);
+    }
+
+    // Calculate stats
+    const totalTime = Date.now() - startTime;
+    const totalTimeSec = (totalTime / 1000).toFixed(1);
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+
+    // Final summary for this run
+    console.log(`\n========== RUN COMPLETE ==========`);
+    console.log(`✅ Success: ${successCount}/${posts.length} posts`);
+    if (errorCount > 0) {
+      console.log(`❌ Errors: ${errorCount}`);
+    }
+    console.log(`⏱️  Time: ${totalTimeSec}s`);
+
+    // Self-retrigger if more posts remain
+    if (hasMore && nextCursor !== null) {
+      console.log(`🔄 Scheduling next batch at cursor ${nextCursor}...`);
+      await ctx.scheduler.runAfter(1000, internal.app.bundle.forceRefreshTiktokStatsByCampaign, {
+        campaignId,
+        cursor: nextCursor,
+      });
+    } else {
+      console.log(`🏁 Campaign ${campaignId} force refresh complete!`);
+    }
+
+    console.log(`==================================\n`);
+
+    return {
+      campaignId,
+      processed: posts.length,
+      success: successCount,
+      errors: errorCount,
+      hasMore,
+      nextCursor,
+      totalCount,
+    };
+  },
+});
+
+// Type for force refresh orchestrator result
+interface ForceRefreshOrchestratorResult {
+  scheduledCount: number;
+  campaignIds: string[];
+}
+
+// Force refresh TikTok stats - Orchestrator
+// Entry point for monthly forced full refresh of all campaign posts
+// Can refresh a single campaign or all campaigns
+export const forceRefreshTiktokStats = internalAction({
+  args: {
+    campaignId: v.optional(v.string()), // Optional: refresh specific campaign only
+  },
+  handler: async (ctx, { campaignId }): Promise<ForceRefreshOrchestratorResult> => {
+    if (campaignId) {
+      // Refresh single campaign
+      console.log(`[forceRefreshTiktokStats] Starting force refresh for campaign: ${campaignId}`);
+      await ctx.scheduler.runAfter(0, internal.app.bundle.forceRefreshTiktokStatsByCampaign, {
+        campaignId,
+        cursor: 0,
+      });
+      return { scheduledCount: 1, campaignIds: [campaignId] };
+    }
+
+    // Refresh all campaigns with staggered scheduling
+    const campaignIds: string[] = await ctx.runQuery(
+      internal.app.bundle.getUniqueCampaignIdsFromAirtable, {}
+    );
+
+    console.log(`[forceRefreshTiktokStats] Starting force refresh for ${campaignIds.length} campaigns`);
+
+    let offset = 0;
+    for (const id of campaignIds) {
+      await ctx.scheduler.runAfter(offset, internal.app.bundle.forceRefreshTiktokStatsByCampaign, {
+        campaignId: id,
+        cursor: 0,
+      });
+      // 10 minute spacing between campaigns (longer than normal since we process all posts)
+      offset += 10 * 60 * 1000;
+    }
+
+    console.log(`[forceRefreshTiktokStats] Scheduled ${campaignIds.length} campaigns with 10 minute spacing`);
+    return { scheduledCount: campaignIds.length, campaignIds };
   },
 });
