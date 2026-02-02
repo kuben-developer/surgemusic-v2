@@ -304,14 +304,29 @@ export const updateVideoOutputs = internalMutation({
       throw new Error(`Video not found: ${args.videoId}`);
     }
 
-    // Calculate how many new active clips are being added
+    // Create map of existing clips by clipNumber for efficient lookup
+    const existingClipsMap = new Map<number, typeof video.outputUrls[number]>();
+    for (const clip of video.outputUrls) {
+      existingClipsMap.set(clip.clipNumber, clip);
+    }
+
+    // Merge new clips: update existing or add new
+    for (const newClip of args.outputUrls) {
+      existingClipsMap.set(newClip.clipNumber, newClip);
+    }
+
+    // Convert map back to sorted array
+    const mergedOutputUrls = Array.from(existingClipsMap.values())
+      .sort((a, b) => a.clipNumber - b.clipNumber);
+
+    // Calculate clip count delta using merged array
     const oldActiveClipCount = video.outputUrls.filter((c) => !c.isDeleted).length;
-    const newActiveClipCount = args.outputUrls.filter((c) => !c.isDeleted).length;
+    const newActiveClipCount = mergedOutputUrls.filter((c) => !c.isDeleted).length;
     const clipCountDelta = newActiveClipCount - oldActiveClipCount;
 
-    // Update the video
+    // Update the video with merged outputUrls
     await ctx.db.patch(args.videoId, {
-      outputUrls: args.outputUrls,
+      outputUrls: mergedOutputUrls,
       status: "processed",
     });
 
@@ -712,20 +727,35 @@ export const updateVideoOutputsExternal = internalMutation({
       throw new Error(`Video not found: ${args.videoId}`);
     }
 
-    // Normalize outputUrls - set isDeleted to false if not provided
-    const normalizedOutputUrls = args.outputUrls.map((clip) => ({
+    // Normalize new outputUrls - set isDeleted to false if not provided
+    const normalizedNewClips = args.outputUrls.map((clip) => ({
       ...clip,
       isDeleted: clip.isDeleted ?? false,
     }));
 
-    // Calculate clip count delta
+    // Create map of existing clips by clipNumber for efficient lookup
+    const existingClipsMap = new Map<number, typeof video.outputUrls[number]>();
+    for (const clip of video.outputUrls) {
+      existingClipsMap.set(clip.clipNumber, clip);
+    }
+
+    // Merge new clips: update existing or add new
+    for (const newClip of normalizedNewClips) {
+      existingClipsMap.set(newClip.clipNumber, newClip);
+    }
+
+    // Convert map back to sorted array
+    const mergedOutputUrls = Array.from(existingClipsMap.values())
+      .sort((a, b) => a.clipNumber - b.clipNumber);
+
+    // Calculate clip count delta using merged array
     const oldActiveClipCount = video.outputUrls.filter((c) => !c.isDeleted).length;
-    const newActiveClipCount = normalizedOutputUrls.filter((c) => !c.isDeleted).length;
+    const newActiveClipCount = mergedOutputUrls.filter((c) => !c.isDeleted).length;
     const clipCountDelta = newActiveClipCount - oldActiveClipCount;
 
-    // Update the video with new outputUrls and status
+    // Update the video with merged outputUrls
     await ctx.db.patch(args.videoId, {
-      outputUrls: normalizedOutputUrls,
+      outputUrls: mergedOutputUrls,
       status: "processed",
     });
 
@@ -742,7 +772,7 @@ export const updateVideoOutputsExternal = internalMutation({
     return {
       success: true,
       videoId: args.videoId,
-      clipCount: normalizedOutputUrls.length,
+      clipCount: mergedOutputUrls.length,
     };
   },
 });
