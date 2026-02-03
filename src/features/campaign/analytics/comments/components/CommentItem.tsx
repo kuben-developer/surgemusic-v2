@@ -42,7 +42,7 @@ export function CommentItem({ comment, isSelectable = false, isChecked = false, 
     <div
       className={cn(
         "flex gap-3 p-3 rounded-lg border bg-card transition-colors",
-        comment.isSelected && "border-primary/30 bg-primary/5",
+        isSelectable && comment.isSelected && "border-primary/30 bg-primary/5",
         isSelectable && "hover:bg-accent/50 cursor-pointer"
       )}
       onClick={() => isSelectable && onToggle?.(comment._id)}
