@@ -155,15 +155,15 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
           />
         </div>
 
-        {/* Content Samples Section */}
-        <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
-
         {/* Comments Section */}
         {isPublic ? (
           <SelectedCommentsDisplay campaignId={campaignId} />
         ) : (
           <CommentCurationSection campaignId={campaignId} />
         )}
+
+        {/* Content Samples Section */}
+        <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
       </motion.div>
     </div>
   );
