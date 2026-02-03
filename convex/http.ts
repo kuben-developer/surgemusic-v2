@@ -4,7 +4,7 @@ import { testWebhook } from "./webhooks/test";
 import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/clipper";
 import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/montager";
 import { getPendingVideosForProcessing, updateProcessedVideos } from "./webhooks/montagerVideos";
-import { getAllCampaignsPublic, getCampaignAnalyticsPublic } from "./webhooks/campaignAnalytics";
+import { getAllCampaignsPublic, getCampaignAnalyticsPublic, getCampaignDetailedAnalyticsPublic } from "./webhooks/campaignAnalytics";
 
 const http = httpRouter();
 
@@ -81,6 +81,13 @@ http.route({
   path: "/api/campaign-analytics",
   method: "GET",
   handler: getCampaignAnalyticsPublic,
+});
+
+// Campaign Analytics API - Public endpoint to get detailed campaign analytics with all video stats
+http.route({
+  path: "/api/campaign-analytics-detailed",
+  method: "GET",
+  handler: getCampaignDetailedAnalyticsPublic,
 });
 
 export default http;

@@ -13,6 +13,12 @@ interface TopVideoData {
   mediaUrl?: string;
 }
 
+interface VideoData extends TopVideoData {
+  postedAt: number;
+  updatedAt: number;
+  isManual: boolean;
+}
+
 /**
  * GET /api/campaigns
  *
@@ -199,6 +205,147 @@ export const getCampaignAnalyticsPublic = httpAction(async (ctx, request) => {
     );
   } catch (error) {
     console.error("Error in getCampaignAnalyticsPublic:", error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+});
+
+/**
+ * GET /api/campaign-analytics-detailed
+ *
+ * Public API endpoint to fetch detailed campaign analytics with all video stats.
+ *
+ * Query parameters:
+ *   - campaignId (required): Airtable campaign ID
+ *
+ * Response format:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "artistName": "Artist Name",
+ *     "songName": "Song Name",
+ *     "totalPosts": 100,
+ *     "totalViews": 1000000,
+ *     "totalLikes": 50000,
+ *     "totalComments": 5000,
+ *     "totalShares": 2000,
+ *     "cpm": 0.05,
+ *     "videos": [
+ *       {
+ *         "videoId": "...",
+ *         "postId": "...",
+ *         "views": 100000,
+ *         "likes": 5000,
+ *         "shares": 200,
+ *         "comments": 500,
+ *         "saves": 100,
+ *         "postUrl": "https://...",
+ *         "postedAt": 1234567890,
+ *         "updatedAt": 1234567890,
+ *         "isManual": false
+ *       }
+ *     ],
+ *     "contentSamples": [...]
+ *   }
+ * }
+ */
+export const getCampaignDetailedAnalyticsPublic = httpAction(async (ctx, request) => {
+  try {
+    // Parse campaign ID from query parameters
+    const url = new URL(request.url);
+    const campaignId = url.searchParams.get("campaignId");
+
+    if (!campaignId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing required query parameter: campaignId",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Fetch campaign analytics and all videos
+    const [analyticsData, allVideos] = await Promise.all([
+      ctx.runQuery(internal.webhooks.campaignAnalyticsQueries.getCampaignAnalyticsInternal, {
+        campaignId,
+      }),
+      ctx.runQuery(internal.webhooks.campaignAnalyticsQueries.getAllVideosInternal, {
+        campaignId,
+      }),
+    ]);
+
+    if (!analyticsData) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Campaign analytics not found for campaignId: ${campaignId}`,
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Calculate CPM
+    const cpm = calculateCPM(analyticsData.totalViews, analyticsData.totalPosts);
+
+    // Build videos array with all stats
+    const videos = allVideos.map((video: VideoData) => ({
+      videoId: video.videoId,
+      postId: video.postId,
+      views: video.views,
+      likes: video.likes,
+      shares: video.shares,
+      comments: video.comments,
+      saves: video.saves,
+      postUrl: video.videoUrl || video.mediaUrl || null,
+      postedAt: video.postedAt,
+      updatedAt: video.updatedAt,
+      isManual: video.isManual,
+    }));
+
+    // Build content samples array
+    const contentSamples = (analyticsData.contentSamples ?? []).map((sample: { videoUrl: string; thumbnailUrl: string }) => ({
+      videoUrl: sample.videoUrl,
+      thumbnailUrl: sample.thumbnailUrl,
+    }));
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: {
+          artistName: analyticsData.artist,
+          songName: analyticsData.song,
+          totalPosts: analyticsData.totalPosts,
+          totalViews: analyticsData.totalViews,
+          totalLikes: analyticsData.totalLikes,
+          totalComments: analyticsData.totalComments,
+          totalShares: analyticsData.totalShares,
+          cpm: Number(cpm.toFixed(4)),
+          videos,
+          contentSamples,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Error in getCampaignDetailedAnalyticsPublic:", error);
     return new Response(
       JSON.stringify({
         success: false,

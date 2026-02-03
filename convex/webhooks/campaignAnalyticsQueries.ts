@@ -120,6 +120,61 @@ export const getCampaignAnalyticsInternal = internalQuery({
 });
 
 /**
+ * Internal query to fetch all videos for a campaign with their stats
+ * Respects minViewsFilter setting to filter out posts with fewer views
+ */
+export const getAllVideosInternal = internalQuery({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, { campaignId }) => {
+    // Get minViewsFilter setting from campaign analytics
+    const analytics = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    const minViewsFilter = analytics?.minViewsFilter ?? 0;
+
+    // Get all posts for this campaign
+    const bundlePosts = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Get valid postIds from airtableContents
+    const airtablePosts = await ctx.db
+      .query("airtableContents")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    // Filter to only include posts that exist in airtableContents AND meet minViews threshold
+    const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
+    const filteredPosts = bundlePosts.filter((post) =>
+      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
+    );
+
+    // Sort by views descending and return all posts
+    return filteredPosts
+      .sort((a, b) => b.views - a.views)
+      .map((post) => ({
+        videoId: post.videoId,
+        postId: post.postId,
+        views: post.views,
+        likes: post.likes,
+        comments: post.comments,
+        shares: post.shares,
+        saves: post.saves,
+        videoUrl: post.videoUrl,
+        mediaUrl: post.mediaUrl,
+        postedAt: post.postedAt,
+        updatedAt: post.updatedAt,
+        isManual: post.isManual ?? false,
+      }));
+  },
+});
+
+/**
  * Internal query to fetch top performing videos for a campaign
  * Respects minViewsFilter setting to filter out posts with fewer views
  */
