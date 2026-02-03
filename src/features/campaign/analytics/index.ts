@@ -9,6 +9,20 @@ export { VideoPerformanceTable } from './components/VideoPerformanceTable';
 export { AnalyticsHeader } from './components/AnalyticsHeader';
 export { CampaignInfoSection } from './components/CampaignInfoSection';
 
+// Comments (sub-feature)
+export {
+  CommentCurationSection,
+  SelectedCommentsDisplay,
+  useCommentCuration,
+  useCommentScrape,
+  useSelectedComments,
+} from './comments';
+export type {
+  TikTokComment,
+  CommentSortBy,
+  CommentSortOrder,
+} from './comments';
+
 // Hooks
 export { useCampaignAnalytics } from './hooks/useCampaignAnalytics';
 

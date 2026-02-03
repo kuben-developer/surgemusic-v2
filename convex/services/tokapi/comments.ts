@@ -11,6 +11,7 @@ export type Comment = {
     id: string;
     text: string;
     likes: number;
+    createdAt: number;  // Unix timestamp from TikTok (create_time)
     user: CommentUser;
 };
 
@@ -27,10 +28,12 @@ function mapComment(rawComment: any): Comment {
         id: rawComment.cid || "",
         text: rawComment.text || "",
         likes: rawComment.digg_count || 0,
+        createdAt: rawComment.create_time || 0,  // Unix timestamp from TikTok
         user: {
             username: rawComment.user?.unique_id || "",
             nickname: rawComment.user?.nickname || "",
-            profilePicture: rawComment.user?.avatar_300x300?.url_list?.[0]
+            profilePicture: rawComment.user?.avatar_thumb?.url_list?.[0]
+                || rawComment.user?.avatar_300x300?.url_list?.[0]
                 || rawComment.user?.avatar_larger?.url_list?.[0]
                 || "",
             country: rawComment.user?.region || "",

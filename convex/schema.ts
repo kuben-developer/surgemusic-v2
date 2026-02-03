@@ -355,4 +355,63 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_status", ["status"]),
+
+  // TIKTOK COMMENTS (for campaign analytics curation)
+  tiktokComments: defineTable({
+    // Identifiers
+    commentId: v.string(),           // TikTok comment ID (cid) - for deduplication
+    postId: v.string(),              // Video postId
+    campaignId: v.string(),          // Airtable campaign ID
+
+    // Comment content
+    text: v.string(),
+    likes: v.number(),
+    createdAt: v.number(),           // Unix timestamp from TikTok (create_time)
+
+    // User info (denormalized)
+    authorUsername: v.string(),
+    authorNickname: v.string(),
+    authorProfilePictureStorageId: v.optional(v.id("_storage")), // Convex storage ID for profile picture
+    authorCountry: v.optional(v.string()),
+
+    // Curation status
+    isSelected: v.boolean(),         // true = display on public view
+    selectedAt: v.optional(v.number()),
+
+    // Metadata
+    scrapedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_postId", ["postId"])
+    .index("by_commentId", ["commentId"])
+    .index("by_campaignId_isSelected", ["campaignId", "isSelected"])
+    .index("by_campaignId_createdAt", ["campaignId", "createdAt"])
+    .index("by_campaignId_likes", ["campaignId", "likes"]),
+
+  // COMMENT SCRAPE JOBS (background job tracking)
+  commentScrapeJobs: defineTable({
+    campaignId: v.string(),
+    maxCommentsPerVideo: v.number(),
+
+    status: v.union(
+      v.literal("pending"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+
+    progress: v.object({
+      totalVideos: v.number(),
+      processedVideos: v.number(),
+      totalCommentsScraped: v.number(),
+      totalCommentsUpdated: v.number(),
+    }),
+
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_status", ["status"]),
 })

@@ -14,6 +14,7 @@ import { KPIMetrics } from "./KPIMetrics";
 import { MetricsChart } from "./MetricsChart";
 import { VideoPerformanceTable } from "./VideoPerformanceTable";
 import { VideoSamplesSection } from "./VideoSamplesSection";
+import { CommentCurationSection, SelectedCommentsDisplay } from "../comments";
 import { staggerContainer } from "../constants/metrics";
 import type { MetricType } from "../types/analytics.types";
 import type { AnalyticsSettingsValues } from "./AnalyticsSettings";
@@ -156,6 +157,13 @@ export function AnalyticsClient({ campaignId, hideBackButton = false }: Analytic
 
         {/* Content Samples Section */}
         <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
+
+        {/* Comments Section */}
+        {isPublic ? (
+          <SelectedCommentsDisplay campaignId={campaignId} />
+        ) : (
+          <CommentCurationSection campaignId={campaignId} />
+        )}
       </motion.div>
     </div>
   );
