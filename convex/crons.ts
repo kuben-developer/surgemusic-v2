@@ -17,11 +17,11 @@ crons.hourly(
     {}
 );
 
-crons.cron(
-    "refreshTiktokStats",
-    "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
-    internal.app.bundle.refreshTiktokStats,
-);
+// crons.cron(
+//     "refreshTiktokStats",
+//     "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
+//     internal.app.bundle.refreshTiktokStats,
+// );
 
 // crons.cron(
 //     "refreshTiktokStatsByCampaign",

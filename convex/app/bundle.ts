@@ -89,6 +89,18 @@ export const getUniqueCampaignIdsFromAirtable = internalQuery({
   },
 });
 
+// Get only active campaign IDs from airtableCampaigns
+export const getActiveCampaignIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const campaigns = await ctx.db
+      .query("airtableCampaigns")
+      .withIndex("by_status", (q) => q.eq("status", "Active"))
+      .collect();
+    return campaigns.map(campaign => campaign.campaignId);
+  },
+});
+
 // Get airtable contents for a campaign, with smart error retry logic
 export const getAirtableContentsByCampaign = internalQuery({
   args: { campaignId: v.string() },
@@ -1181,12 +1193,12 @@ export const forceRefreshTiktokStats = internalAction({
       return { scheduledCount: 1, campaignIds: [campaignId] };
     }
 
-    // Refresh all campaigns with staggered scheduling
+    // Refresh only active campaigns with staggered scheduling
     const campaignIds: string[] = await ctx.runQuery(
-      internal.app.bundle.getUniqueCampaignIdsFromAirtable, {}
+      internal.app.bundle.getActiveCampaignIds, {}
     );
 
-    console.log(`[forceRefreshTiktokStats] Starting force refresh for ${campaignIds.length} campaigns`);
+    console.log(`[forceRefreshTiktokStats] Starting force refresh for ${campaignIds.length} active campaigns`);
 
     let offset = 0;
     for (const id of campaignIds) {
@@ -1198,7 +1210,7 @@ export const forceRefreshTiktokStats = internalAction({
       offset += 10 * 60 * 1000;
     }
 
-    console.log(`[forceRefreshTiktokStats] Scheduled ${campaignIds.length} campaigns with 10 minute spacing`);
+    console.log(`[forceRefreshTiktokStats] Scheduled ${campaignIds.length} active campaigns with 10 minute spacing`);
     return { scheduledCount: campaignIds.length, campaignIds };
   },
 });
