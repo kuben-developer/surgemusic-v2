@@ -295,6 +295,110 @@ export const addFailedUrls = internalMutation({
 });
 
 /**
+ * Append batch download results to a job (internal)
+ * Used by chunked download processing to incrementally add results
+ */
+export const appendBatchResults = internalMutation({
+  args: {
+    jobId: v.id("bulkDownloadJobs"),
+    videos: v.array(
+      v.object({
+        filename: v.string(),
+        url: v.string(),
+        size: v.number(),
+      })
+    ),
+    failedUrls: v.array(
+      v.object({
+        url: v.string(),
+        reason: v.string(),
+      })
+    ),
+    progress: v.object({
+      totalItems: v.number(),
+      processedItems: v.number(),
+      downloadedVideos: v.number(),
+      failedVideos: v.number(),
+      currentPhase: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    // Append new videos to existing result (initialize if null)
+    const existingVideos = job.result?.videos ?? [];
+    const allVideos = [...existingVideos, ...args.videos];
+
+    const existingFailedUrls = job.failedUrls ?? [];
+    const allFailedUrls = [...existingFailedUrls, ...args.failedUrls];
+
+    const totalSize = allVideos.reduce((sum, v) => sum + v.size, 0);
+
+    await ctx.db.patch(args.jobId, {
+      result: {
+        videos: allVideos,
+        totalVideos: allVideos.length,
+        totalSize,
+      },
+      failedUrls: allFailedUrls.length > 0 ? allFailedUrls : undefined,
+      progress: args.progress,
+    });
+  },
+});
+
+/**
+ * Cancel a running job (user-facing)
+ * Sets status to failed so chunked processing stops picking up next batch
+ */
+export const cancelJob = mutation({
+  args: {
+    jobId: v.id("bulkDownloadJobs"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    const job = await ctx.db.get(args.jobId);
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    // Verify ownership
+    if (job.userId !== user._id) {
+      throw new Error("Unauthorized");
+    }
+
+    // Only cancel jobs that are still processing
+    const cancellableStatuses = ["pending", "fetching", "downloading", "zipping", "uploading"];
+    if (!cancellableStatuses.includes(job.status)) {
+      throw new Error(`Cannot cancel job with status: ${job.status}`);
+    }
+
+    await ctx.db.patch(args.jobId, {
+      status: "failed",
+      error: "Cancelled by user",
+      completedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
  * Delete a job (user-facing)
  * Does not delete the S3 file - that should be handled separately or via cleanup job
  */

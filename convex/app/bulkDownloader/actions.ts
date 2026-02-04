@@ -35,6 +35,7 @@ const s3Client = new S3Client({
 const URL_EXPIRY_HOURS = 24;
 const VIDEO_DOWNLOAD_TIMEOUT = 30000; // 30 seconds
 const MAX_CONCURRENT_DOWNLOADS = 5;
+const VIDEOS_PER_CHUNK = 10;
 
 /**
  * Fetch a single TikTok video by ID
@@ -242,7 +243,8 @@ export const startJob = action({
 });
 
 /**
- * Process video URLs job
+ * Process video URLs job - fetching phase only
+ * Fetches video metadata, then schedules chunked download processing
  */
 export const processVideoUrls = internalAction({
   args: {
@@ -259,7 +261,6 @@ export const processVideoUrls = internalAction({
     }
 
     const failedUrls: Array<{ url: string; reason: string }> = [];
-    const uploadedVideos: Array<{ filename: string; url: string; size: number }> = [];
 
     try {
       // Update status to fetching
@@ -352,109 +353,7 @@ export const processVideoUrls = internalAction({
         }
       );
 
-      // Download and upload videos in parallel batches
-      let completedDownloads = 0;
-
-      for (let i = 0; i < videosToDownload.length; i += MAX_CONCURRENT_DOWNLOADS) {
-        const batch = videosToDownload.slice(i, i + MAX_CONCURRENT_DOWNLOADS);
-
-        // Update progress at start of each batch
-        await ctx.runMutation(
-          internal.app.bulkDownloader.mutations.updateJobProgress,
-          {
-            jobId: args.jobId,
-            progress: {
-              totalItems: job.progress.totalItems,
-              processedItems: videoIds.length,
-              downloadedVideos: uploadedVideos.length,
-              failedVideos: failedUrls.length,
-              currentPhase: `Downloading videos ${completedDownloads + 1}-${Math.min(completedDownloads + batch.length, videosToDownload.length)} of ${videosToDownload.length}...`,
-            },
-          }
-        );
-
-        // Download and upload batch in parallel
-        const batchResults = await Promise.all(
-          batch.map(async (video) => {
-            const downloadResult = await downloadVideo(video.mediaUrl);
-
-            if (downloadResult.success && downloadResult.buffer) {
-              const safeDesc = video.desc
-                .replace(/[^a-zA-Z0-9\s-]/g, "")
-                .substring(0, 50)
-                .trim();
-              const filename = `${video.videoId}_${safeDesc || "video"}.mp4`;
-
-              try {
-                const uploaded = await uploadVideoToS3(
-                  downloadResult.buffer,
-                  job.userId,
-                  args.jobId,
-                  filename
-                );
-                return { success: true as const, ...uploaded, filename };
-              } catch (uploadError) {
-                return {
-                  success: false as const,
-                  url: video.url,
-                  reason: `Upload failed: ${String(uploadError)}`,
-                };
-              }
-            } else {
-              return {
-                success: false as const,
-                url: video.url,
-                reason: downloadResult.error || "Download failed",
-              };
-            }
-          })
-        );
-
-        // Process batch results
-        for (const result of batchResults) {
-          if (result.success) {
-            uploadedVideos.push({
-              filename: result.filename,
-              url: result.url,
-              size: result.size,
-            });
-          } else {
-            failedUrls.push({ url: result.url, reason: result.reason });
-          }
-        }
-
-        completedDownloads += batch.length;
-      }
-
-      if (uploadedVideos.length === 0) {
-        await ctx.runMutation(internal.app.bulkDownloader.mutations.failJob, {
-          jobId: args.jobId,
-          error: "Failed to download any videos",
-          failedUrls,
-        });
-        return;
-      }
-
-      // Mark as completed with video URLs
-      const totalSize = uploadedVideos.reduce((sum, v) => sum + v.size, 0);
-
-      await ctx.runMutation(internal.app.bulkDownloader.mutations.completeJob, {
-        jobId: args.jobId,
-        result: {
-          videos: uploadedVideos,
-          totalVideos: uploadedVideos.length,
-          totalSize,
-        },
-        progress: {
-          totalItems: job.progress.totalItems,
-          processedItems: videoIds.length,
-          downloadedVideos: uploadedVideos.length,
-          failedVideos: failedUrls.length,
-          currentPhase: "Complete!",
-        },
-      });
-
-      // Add any failed URLs
+      // Store any failed URLs from fetching phase
       if (failedUrls.length > 0) {
         await ctx.runMutation(
           internal.app.bulkDownloader.mutations.addFailedUrls,
@@ -464,12 +363,187 @@ export const processVideoUrls = internalAction({
           }
         );
       }
+
+      // Schedule chunked download processing
+      await ctx.scheduler.runAfter(
+        0,
+        internal.app.bulkDownloader.actions.downloadVideosBatch,
+        {
+          jobId: args.jobId,
+          videosToDownload,
+          totalFetched: videoIds.length,
+          totalItems: job.progress.totalItems,
+        }
+      );
     } catch (error) {
       await ctx.runMutation(internal.app.bulkDownloader.mutations.failJob, {
         jobId: args.jobId,
         error: `Processing error: ${String(error)}`,
         failedUrls,
       });
+    }
+  },
+});
+
+/**
+ * Download videos in chunked batches
+ * Processes VIDEOS_PER_CHUNK videos, then schedules itself for the remaining
+ * This prevents exceeding Convex's 10-minute action timeout for large jobs
+ */
+export const downloadVideosBatch = internalAction({
+  args: {
+    jobId: v.id("bulkDownloadJobs"),
+    videosToDownload: v.array(
+      v.object({
+        url: v.string(),
+        videoId: v.string(),
+        mediaUrl: v.string(),
+        desc: v.string(),
+      })
+    ),
+    totalFetched: v.number(),
+    totalItems: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Check if job is still active (handles cancellation)
+    const job = await ctx.runQuery(
+      internal.app.bulkDownloader.queries.getJobInternal,
+      { jobId: args.jobId }
+    );
+
+    if (!job || job.status !== "downloading") {
+      return;
+    }
+
+    const chunk = args.videosToDownload.slice(0, VIDEOS_PER_CHUNK);
+    const remaining = args.videosToDownload.slice(VIDEOS_PER_CHUNK);
+
+    const batchSuccesses: Array<{ filename: string; url: string; size: number }> = [];
+    const batchFailures: Array<{ url: string; reason: string }> = [];
+
+    // Download in parallel sub-batches of MAX_CONCURRENT_DOWNLOADS
+    for (let i = 0; i < chunk.length; i += MAX_CONCURRENT_DOWNLOADS) {
+      const subBatch = chunk.slice(i, i + MAX_CONCURRENT_DOWNLOADS);
+
+      const results = await Promise.all(
+        subBatch.map(async (video) => {
+          const downloadResult = await downloadVideo(video.mediaUrl);
+
+          if (downloadResult.success && downloadResult.buffer) {
+            const safeDesc = video.desc
+              .replace(/[^a-zA-Z0-9\s-]/g, "")
+              .substring(0, 50)
+              .trim();
+            const filename = `${video.videoId}_${safeDesc || "video"}.mp4`;
+
+            try {
+              const uploaded = await uploadVideoToS3(
+                downloadResult.buffer,
+                job.userId,
+                args.jobId,
+                filename
+              );
+              return { success: true as const, ...uploaded, filename };
+            } catch (uploadError) {
+              return {
+                success: false as const,
+                url: video.url,
+                reason: `Upload failed: ${String(uploadError)}`,
+              };
+            }
+          } else {
+            return {
+              success: false as const,
+              url: video.url,
+              reason: downloadResult.error || "Download failed",
+            };
+          }
+        })
+      );
+
+      for (const result of results) {
+        if (result.success) {
+          batchSuccesses.push({
+            filename: result.filename,
+            url: result.url,
+            size: result.size,
+          });
+        } else {
+          batchFailures.push({ url: result.url, reason: result.reason });
+        }
+      }
+    }
+
+    // Calculate cumulative counts from job state + this batch
+    const previousDownloaded = job.result?.videos?.length ?? 0;
+    const previousFailed = job.failedUrls?.length ?? 0;
+    const cumulativeDownloaded = previousDownloaded + batchSuccesses.length;
+    const cumulativeFailed = previousFailed + batchFailures.length;
+    const totalToDownload = args.videosToDownload.length + previousDownloaded;
+
+    // Append this batch's results to the job
+    await ctx.runMutation(
+      internal.app.bulkDownloader.mutations.appendBatchResults,
+      {
+        jobId: args.jobId,
+        videos: batchSuccesses,
+        failedUrls: batchFailures,
+        progress: {
+          totalItems: args.totalItems,
+          processedItems: args.totalFetched,
+          downloadedVideos: cumulativeDownloaded,
+          failedVideos: cumulativeFailed,
+          currentPhase:
+            remaining.length > 0
+              ? `Downloading videos... ${cumulativeDownloaded}/${totalToDownload}`
+              : "Finalizing...",
+        },
+      }
+    );
+
+    if (remaining.length > 0) {
+      // Schedule next batch
+      await ctx.scheduler.runAfter(
+        0,
+        internal.app.bulkDownloader.actions.downloadVideosBatch,
+        {
+          jobId: args.jobId,
+          videosToDownload: remaining,
+          totalFetched: args.totalFetched,
+          totalItems: args.totalItems,
+        }
+      );
+    } else {
+      // All chunks processed - finalize job
+      if (cumulativeDownloaded === 0) {
+        await ctx.runMutation(internal.app.bulkDownloader.mutations.failJob, {
+          jobId: args.jobId,
+          error: "Failed to download any videos",
+        });
+      } else {
+        // Read the final job state to get all accumulated results
+        const finalJob = await ctx.runQuery(
+          internal.app.bulkDownloader.queries.getJobInternal,
+          { jobId: args.jobId }
+        );
+
+        if (finalJob?.result) {
+          await ctx.runMutation(
+            internal.app.bulkDownloader.mutations.completeJob,
+            {
+              jobId: args.jobId,
+              result: finalJob.result,
+              progress: {
+                totalItems: args.totalItems,
+                processedItems: args.totalFetched,
+                downloadedVideos: finalJob.result.totalVideos,
+                failedVideos: finalJob.failedUrls?.length ?? 0,
+                currentPhase: "Complete!",
+              },
+            }
+          );
+        }
+      }
     }
   },
 });

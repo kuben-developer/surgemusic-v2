@@ -16,6 +16,7 @@ import type {
 import type * as app_airtable from "../app/airtable.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_bulkDownloader_actions from "../app/bulkDownloader/actions.js";
+import type * as app_bulkDownloader_cleanup from "../app/bulkDownloader/cleanup.js";
 import type * as app_bulkDownloader_mutations from "../app/bulkDownloader/mutations.js";
 import type * as app_bulkDownloader_queries from "../app/bulkDownloader/queries.js";
 import type * as app_bulkDownloader_utils from "../app/bulkDownloader/utils.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "app/airtable": typeof app_airtable;
   "app/analytics": typeof app_analytics;
   "app/bulkDownloader/actions": typeof app_bulkDownloader_actions;
+  "app/bulkDownloader/cleanup": typeof app_bulkDownloader_cleanup;
   "app/bulkDownloader/mutations": typeof app_bulkDownloader_mutations;
   "app/bulkDownloader/queries": typeof app_bulkDownloader_queries;
   "app/bulkDownloader/utils": typeof app_bulkDownloader_utils;

@@ -37,4 +37,11 @@ crons.interval(
     {}
 );
 
+crons.interval(
+    "cleanupStaleBulkDownloads",
+    { minutes: 30 },
+    internal.app.bulkDownloader.cleanup.cleanupStaleJobs,
+    {}
+);
+
 export default crons;

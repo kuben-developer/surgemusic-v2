@@ -1,8 +1,24 @@
 "use client";
 
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "convex/_generated/api";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   CheckCircle2,
   Clock,
@@ -10,6 +26,7 @@ import {
   FileArchive,
   Loader2,
   Search,
+  Square,
   Upload,
   XCircle,
 } from "lucide-react";
@@ -38,6 +55,21 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
   const isProcessing = !["completed", "failed"].includes(job.status);
+  const cancelJobMutation = useMutation(api.app.bulkDownloader.mutations.cancelJob);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    setIsCancelling(true);
+    try {
+      await cancelJobMutation({ jobId: job._id });
+      toast.success("Download job cancelled");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to cancel job";
+      toast.error(message);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   // Calculate overall progress
   const overallProgress =
@@ -65,9 +97,43 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
             </CardTitle>
             <CardDescription>{job.progress.currentPhase}</CardDescription>
           </div>
-          <Badge variant={job.type === "videos" ? "default" : "secondary"}>
-            {job.type === "videos" ? "Video URLs" : "Profile URLs"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isProcessing && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isCancelling}
+                  >
+                    {isCancelling ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Square className="h-4 w-4 mr-1" />
+                    )}
+                    Cancel
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel download job?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will stop the download. Videos already downloaded will still be available.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep running</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCancel}>
+                      Cancel job
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Badge variant={job.type === "videos" ? "default" : "secondary"}>
+              {job.type === "videos" ? "Video URLs" : "Profile URLs"}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
