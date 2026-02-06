@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Video, X, Loader2 } from "lucide-react";
+import { Video, CheckSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { fadeInUp } from "../constants/metrics";
-import { cn } from "@/lib/utils";
+import { VideoSampleCard } from "./VideoSampleCard";
+import { BulkRemoveBar } from "./BulkRemoveBar";
+import { useContentSampleSelection } from "../hooks/useContentSampleSelection";
 
 interface VideoSamplesSectionProps {
   campaignId: string;
@@ -31,6 +33,9 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
   const removeContentSamples = useMutation(api.app.analytics.removeContentSamples);
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
+  const [isBulkRemoving, setIsBulkRemoving] = useState(false);
+
+  const selection = useContentSampleSelection();
 
   const handleRemoveClick = (index: number) => {
     setConfirmDeleteIndex(index);
@@ -57,18 +62,30 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
     }
   };
 
-  const handleCancelRemove = () => {
-    setConfirmDeleteIndex(null);
+  const handleBulkRemove = async () => {
+    if (selection.selectedCount === 0) return;
+
+    setIsBulkRemoving(true);
+    try {
+      await removeContentSamples({
+        campaignId,
+        indicesToRemove: Array.from(selection.selectedIndices),
+      });
+      toast.success(`${selection.selectedCount} video${selection.selectedCount > 1 ? "s" : ""} removed from content samples`);
+      selection.exitSelectMode();
+    } catch (error) {
+      console.error("Failed to remove content samples:", error);
+      toast.error("Failed to remove videos");
+    } finally {
+      setIsBulkRemoving(false);
+    }
   };
 
-  // Don't render if loading or no samples
-  if (contentSamples === undefined) {
+  if (contentSamples === undefined || contentSamples.length === 0) {
     return null;
   }
 
-  if (contentSamples.length === 0) {
-    return null;
-  }
+  const allSelected = selection.selectedCount === contentSamples.length;
 
   return (
     <motion.div variants={fadeInUp}>
@@ -86,6 +103,43 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
               </p>
             </div>
           </div>
+
+          {/* Select / Select All / Cancel buttons (logged-in only) */}
+          {!isPublic && (
+            <div className="flex items-center gap-2">
+              {selection.isSelectMode ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      allSelected
+                        ? selection.deselectAll()
+                        : selection.selectAll(contentSamples.length)
+                    }
+                  >
+                    {allSelected ? "Deselect All" : "Select All"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={selection.exitSelectMode}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={selection.enterSelectMode}
+                >
+                  <CheckSquare className="size-4 mr-1.5" />
+                  Select
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Videos */}
@@ -109,6 +163,9 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
                     onRemoveClick={isPublic ? undefined : handleRemoveClick}
                     isRemoving={removingIndex === index}
                     isMobile
+                    isSelectMode={selection.isSelectMode}
+                    isSelected={selection.isSelected(index)}
+                    onToggleSelect={selection.toggleSelection}
                   />
                 </motion.div>
               ))}
@@ -132,6 +189,9 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
                     index={index}
                     onRemoveClick={isPublic ? undefined : handleRemoveClick}
                     isRemoving={removingIndex === index}
+                    isSelectMode={selection.isSelectMode}
+                    isSelected={selection.isSelected(index)}
+                    onToggleSelect={selection.toggleSelection}
                   />
                 </motion.div>
               ))}
@@ -140,8 +200,16 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
         </div>
       </Card>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={confirmDeleteIndex !== null} onOpenChange={(open) => !open && handleCancelRemove()}>
+      {/* Bulk Remove Bar */}
+      <BulkRemoveBar
+        selectedCount={selection.selectedCount}
+        onRemove={handleBulkRemove}
+        onClear={selection.exitSelectMode}
+        isLoading={isBulkRemoving}
+      />
+
+      {/* Single-item Confirmation Dialog */}
+      <AlertDialog open={confirmDeleteIndex !== null} onOpenChange={(open) => !open && setConfirmDeleteIndex(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove video from samples?</AlertDialogTitle>
@@ -161,151 +229,5 @@ export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSampl
         </AlertDialogContent>
       </AlertDialog>
     </motion.div>
-  );
-}
-
-interface VideoSampleCardProps {
-  sample: {
-    videoUrl: string;
-    thumbnailUrl: string;
-    addedAt: number;
-  };
-  index: number;
-  onRemoveClick?: (index: number) => void;
-  isRemoving?: boolean;
-  isMobile?: boolean;
-}
-
-function VideoSampleCard({ sample, index, onRemoveClick, isRemoving, isMobile }: VideoSampleCardProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: "200px",
-        threshold: 0.01,
-      }
-    );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  const handlePlayClick = () => {
-    setIsPlaying(true);
-    setTimeout(() => {
-      void videoRef.current?.play();
-    }, 0);
-  };
-
-  const handleRemoveButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onRemoveClick?.(index);
-  };
-
-  const hasThumbnail = sample.thumbnailUrl &&
-    sample.thumbnailUrl !== "manual_upload" &&
-    sample.thumbnailUrl !== "direct_upload" &&
-    sample.thumbnailUrl !== "";
-
-  return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative rounded-lg overflow-hidden bg-muted border border-border",
-        "hover:border-primary/20 transition-colors group",
-        isMobile ? "w-[120px] aspect-[9/16]" : "aspect-[9/16]",
-        isRemoving && "opacity-50 pointer-events-none"
-      )}
-    >
-      {/* Remove button */}
-      {onRemoveClick && (
-        <div className={cn(
-          "absolute top-1.5 right-1.5 z-20 transition-opacity",
-          isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        )}>
-          <Button
-            size="icon"
-            variant="secondary"
-            className={cn(
-              "rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground",
-              isMobile ? "size-7" : "size-6"
-            )}
-            onClick={handleRemoveButtonClick}
-            disabled={isRemoving}
-          >
-            {isRemoving ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <X className="size-3" />
-            )}
-          </Button>
-        </div>
-      )}
-
-      {/* Video content */}
-      {isInView ? (
-        isPlaying ? (
-          <video
-            ref={videoRef}
-            src={sample.videoUrl}
-            className="absolute inset-0 w-full h-full object-cover"
-            controls
-            loop
-            playsInline
-          />
-        ) : (
-          <div
-            className="absolute inset-0 cursor-pointer"
-            onClick={handlePlayClick}
-          >
-            {hasThumbnail ? (
-              <img
-                src={sample.thumbnailUrl}
-                alt="Video thumbnail"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-muted flex items-center justify-center">
-                <Video className="size-8 text-muted-foreground/40" />
-              </div>
-            )}
-
-            {/* Play button overlay */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
-              <div className={cn(
-                "rounded-full bg-background/90 flex items-center justify-center shadow-md",
-                "transition-transform group-hover:scale-105",
-                isMobile ? "size-10" : "size-12"
-              )}>
-                <Play
-                  className={cn(
-                    "text-foreground ml-0.5",
-                    isMobile ? "size-4" : "size-5"
-                  )}
-                  fill="currentColor"
-                />
-              </div>
-            </div>
-          </div>
-        )
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted">
-          <Video className="size-6 text-muted-foreground/30 animate-pulse" />
-        </div>
-      )}
-    </div>
   );
 }

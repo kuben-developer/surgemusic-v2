@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 /**
@@ -1183,7 +1183,15 @@ export const getVideosByIds = internalQuery({
     const videos = await Promise.all(
       args.videoIds.map(async (videoId) => {
         const video = await ctx.db.get(videoId);
-        return video;
+        if (!video) return null;
+
+        let folderName: string | undefined;
+        if (video.montagerFolderId) {
+          const folder = await ctx.db.get(video.montagerFolderId);
+          folderName = folder?.folderName;
+        }
+
+        return { ...video, folderName };
       })
     );
     return videos.filter((v) => v !== null);
@@ -1217,12 +1225,11 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "";
 const AIRTABLE_CONTENT_TABLE_ID = "tbleqHUKb7il998rO";
 
 /**
- * Helper function to update an Airtable record with video URL, thumbnail URL, and status
+ * Helper function to update an Airtable record with arbitrary fields
  */
 async function updateAirtableRecord(
   recordId: string,
-  videoUrl: string,
-  thumbnailUrl?: string
+  fields: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}/${recordId}`;
 
@@ -1233,13 +1240,7 @@ async function updateAirtableRecord(
         Authorization: `Bearer ${AIRTABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        fields: {
-          video_url: videoUrl,
-          status: "done",
-          ...(thumbnailUrl && { thumbnail_url: thumbnailUrl }),
-        },
-      }),
+      body: JSON.stringify({ fields }),
     });
 
     if (!response.ok) {
@@ -1310,8 +1311,16 @@ export const publishVideosToAirtable = action({
           ? video.thumbnailUrl
           : undefined;
 
+      // Build fields object for Airtable update
+      const fields: Record<string, string> = {
+        video_url: videoUrl,
+        status: "done",
+      };
+      if (thumbnailUrl) fields.thumbnail_url = thumbnailUrl;
+      if (video.folderName) fields.video_bucket = video.folderName;
+
       // Update Airtable record
-      const result = await updateAirtableRecord(video.airtableRecordId, videoUrl, thumbnailUrl);
+      const result = await updateAirtableRecord(video.airtableRecordId, fields);
 
       if (result.success) {
         published++;
@@ -1341,5 +1350,169 @@ export const publishVideosToAirtable = action({
       failed,
       skipped,
     };
+  },
+});
+
+// =====================================================
+// AIRTABLE BACKFILL FUNCTIONS
+// =====================================================
+
+/**
+ * Internal query to get backfill records, optionally filtered by campaign ID
+ * Each chunk re-queries to avoid passing large arrays between scheduled actions
+ */
+export const getBackfillRecords = internalQuery({
+  args: {
+    campaignId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const videos = args.campaignId
+      ? await ctx.db
+          .query("montagerVideos")
+          .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+          .collect()
+      : await ctx.db.query("montagerVideos").collect();
+
+    const results: { airtableRecordId: string; folderName: string }[] = [];
+
+    for (const video of videos) {
+      if (!video.airtableRecordId || !video.montagerFolderId) continue;
+
+      const folder = await ctx.db.get(video.montagerFolderId);
+      if (!folder?.folderName) continue;
+
+      results.push({
+        airtableRecordId: video.airtableRecordId,
+        folderName: folder.folderName,
+      });
+    }
+
+    return results;
+  },
+});
+
+/**
+ * Chunked internal action to backfill video_bucket in Airtable records
+ * Each invocation re-queries for its chunk to avoid passing large arrays as args
+ * Self-schedules the next chunk until all records are processed
+ */
+export const backfillAirtableVideoBuckets = internalAction({
+  args: {
+    campaignId: v.optional(v.string()),
+    offset: v.number(),
+    total: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const CHUNK_SIZE = 50;
+
+    // Re-query to get records for this chunk
+    const allRecords = await ctx.runQuery(
+      internal.app.montagerDb.getBackfillRecords,
+      { campaignId: args.campaignId }
+    );
+
+    const total = args.total ?? allRecords.length;
+    const chunk = allRecords.slice(args.offset, args.offset + CHUNK_SIZE);
+
+    if (chunk.length === 0) {
+      console.log(`Backfill complete. Processed all ${total} records.`);
+      return;
+    }
+
+    console.log(
+      `Backfill: processing records ${args.offset + 1}-${args.offset + chunk.length} of ${total}`
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const record of chunk) {
+      const result = await updateAirtableRecord(record.airtableRecordId, {
+        video_bucket: record.folderName,
+      });
+
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(
+          `Backfill failed for ${record.airtableRecordId}: ${result.error}`
+        );
+      }
+
+      // Rate limiting: wait 100ms between requests
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    console.log(
+      `Backfill chunk done: ${successCount} success, ${failCount} failed`
+    );
+
+    // Schedule next chunk if there are more records
+    const nextOffset = args.offset + CHUNK_SIZE;
+    if (nextOffset < total) {
+      await ctx.scheduler.runAfter(0, internal.app.montagerDb.backfillAirtableVideoBuckets, {
+        campaignId: args.campaignId,
+        offset: nextOffset,
+        total,
+      });
+    } else {
+      console.log(`Backfill complete. Processed all ${total} records.`);
+    }
+  },
+});
+
+/**
+ * Start backfill for a specific campaign
+ * Run via: npx convex run app/montagerDb:startAirtableBackfillByCampaign '{"campaignId":"rec..."}'
+ */
+export const startAirtableBackfillByCampaign = internalAction({
+  args: {
+    campaignId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const records = await ctx.runQuery(
+      internal.app.montagerDb.getBackfillRecords,
+      { campaignId: args.campaignId }
+    );
+
+    if (records.length === 0) {
+      console.log(`No records to backfill for campaign ${args.campaignId}.`);
+      return;
+    }
+
+    console.log(`Starting backfill for ${records.length} records in campaign ${args.campaignId}...`);
+
+    await ctx.scheduler.runAfter(0, internal.app.montagerDb.backfillAirtableVideoBuckets, {
+      campaignId: args.campaignId,
+      offset: 0,
+      total: records.length,
+    });
+  },
+});
+
+/**
+ * Start backfill for ALL records
+ * Run via: npx convex run app/montagerDb:startAirtableBackfill
+ */
+export const startAirtableBackfill = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const records = await ctx.runQuery(
+      internal.app.montagerDb.getBackfillRecords,
+      {}
+    );
+
+    if (records.length === 0) {
+      console.log("No records to backfill.");
+      return;
+    }
+
+    console.log(`Starting backfill for ${records.length} records...`);
+
+    await ctx.scheduler.runAfter(0, internal.app.montagerDb.backfillAirtableVideoBuckets, {
+      offset: 0,
+      total: records.length,
+    });
   },
 });
