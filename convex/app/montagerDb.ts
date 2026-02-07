@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { action, internalAction, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 
 /**
  * Get all montager folders for the current user
@@ -555,79 +556,136 @@ export const getMontagerVideosByCampaignId = query({
 // =====================================================
 
 /**
- * Internal query to get all pending configs with randomly selected clips
- * Used by the external API endpoint GET /api/montager/pending
+ * Internal query to get all pending (unprocessed) config metadata.
+ * Lightweight — does not read clips.
  */
 export const getPendingConfigsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    // Get all unprocessed configs
     const pendingConfigs = await ctx.db
       .query("montageConfigs")
       .withIndex("by_isProcessed", (q) => q.eq("isProcessed", false))
       .collect();
 
-    if (pendingConfigs.length === 0) {
-      return [];
+    const results = [];
+    for (const config of pendingConfigs) {
+      const folder = await ctx.db.get(config.montagerFolderId);
+      results.push({
+        configId: config._id,
+        montagerFolderId: config.montagerFolderId,
+        folderName: folder?.folderName || "Unknown",
+        clipperFolderIds: config.clipperFolderIds,
+        numberOfMontages: config.numberOfMontages,
+      });
+    }
+    return results;
+  },
+});
+
+/**
+ * Internal query to get clip URLs for a single clipper folder.
+ * Each call gets its own 16MB read budget.
+ */
+export const getClipUrlsForFolder = internalQuery({
+  args: { clipperFolderId: v.id("clipperFolders"), maxClips: v.number() },
+  handler: async (ctx, { clipperFolderId, maxClips }) => {
+    const clips: string[] = [];
+    let isDone = false;
+    let cursor: string | null = null;
+
+    // Read in small batches and stop once we have enough clips
+    while (!isDone && clips.length < maxClips) {
+      const page = await ctx.db
+        .query("clippedVideoUrls")
+        .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", clipperFolderId))
+        .paginate({ numItems: 20, cursor: cursor === null ? null : cursor });
+
+      for (const video of page.page) {
+        for (const clip of video.outputUrls) {
+          if (!clip.isDeleted) {
+            clips.push(clip.videoUrl);
+            if (clips.length >= maxClips) break;
+          }
+        }
+        if (clips.length >= maxClips) break;
+      }
+
+      isDone = page.isDone;
+      cursor = page.continueCursor;
     }
 
-    // Process each config
-    const results = await Promise.all(
-      pendingConfigs.map(async (config) => {
-        // Get folder info
-        const folder = await ctx.db.get(config.montagerFolderId);
-        const folderName = folder?.folderName || "Unknown";
+    return clips;
+  },
+});
 
-        // Gather all available clips from selected clipper folders
-        const allClips: string[] = [];
+/**
+ * Internal action to build pending configs with randomly selected clips.
+ * Uses separate query calls per folder so each stays under the 16MB read limit.
+ * Used by the external API endpoint GET /api/montager/pending
+ */
+export const buildPendingConfigsWithClips = internalAction({
+  args: {},
+  handler: async (ctx): Promise<Array<{
+    configId: Id<"montageConfigs">;
+    montagerFolderId: Id<"montagerFolders">;
+    folderName: string;
+    clipperFolderIds: Id<"clipperFolders">[];
+    numberOfMontages: number;
+    totalClipsAvailable: number;
+    montages: { clips: string[] }[];
+  }>> => {
+    const configs = await ctx.runQuery(
+      internal.app.montagerDb.getPendingConfigsInternal
+    );
 
-        for (const clipperFolderId of config.clipperFolderIds) {
-          const videos = await ctx.db
-            .query("clippedVideoUrls")
-            .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", clipperFolderId))
-            .collect();
+    if (configs.length === 0) return [];
 
-          for (const video of videos) {
-            // Filter out deleted clips and add to pool
-            const activeClips = video.outputUrls
-              .filter((clip) => !clip.isDeleted)
-              .map((clip) => clip.videoUrl);
-            allClips.push(...activeClips);
-          }
-        }
+    const CLIPS_PER_MONTAGE = 14;
+    const results = [];
 
-        // Generate montages with random clip selection
-        const CLIPS_PER_MONTAGE = 14;
-        const montages: { clips: string[] }[] = [];
+    for (const config of configs) {
+      const clipsNeeded = config.numberOfMontages * CLIPS_PER_MONTAGE;
+      const clipsPerFolder = Math.max(
+        100,
+        Math.ceil(clipsNeeded / Math.max(1, config.clipperFolderIds.length))
+      );
 
-        for (let i = 0; i < config.numberOfMontages; i++) {
-          const montageClips: string[] = [];
+      // Fetch clips from each folder in a separate query call
+      const allClips: string[] = [];
+      for (const clipperFolderId of config.clipperFolderIds) {
+        const folderClips = await ctx.runQuery(
+          internal.app.montagerDb.getClipUrlsForFolder,
+          { clipperFolderId, maxClips: clipsPerFolder }
+        );
+        allClips.push(...folderClips);
+      }
 
-          // Randomly select 14 clips (with replacement allowed)
-          for (let j = 0; j < CLIPS_PER_MONTAGE; j++) {
-            if (allClips.length > 0) {
-              const randomIndex = Math.floor(Math.random() * allClips.length);
-              const clip = allClips[randomIndex];
-              if (clip) {
-                montageClips.push(clip);
-              }
+      // Generate montages with random clip selection
+      const montages: { clips: string[] }[] = [];
+      for (let i = 0; i < config.numberOfMontages; i++) {
+        const montageClips: string[] = [];
+        for (let j = 0; j < CLIPS_PER_MONTAGE; j++) {
+          if (allClips.length > 0) {
+            const randomIndex = Math.floor(Math.random() * allClips.length);
+            const clip = allClips[randomIndex];
+            if (clip) {
+              montageClips.push(clip);
             }
           }
-
-          montages.push({ clips: montageClips });
         }
+        montages.push({ clips: montageClips });
+      }
 
-        return {
-          configId: config._id,
-          montagerFolderId: config.montagerFolderId,
-          folderName,
-          clipperFolderIds: config.clipperFolderIds,
-          numberOfMontages: config.numberOfMontages,
-          totalClipsAvailable: allClips.length,
-          montages,
-        };
-      })
-    );
+      results.push({
+        configId: config.configId,
+        montagerFolderId: config.montagerFolderId,
+        folderName: config.folderName,
+        clipperFolderIds: config.clipperFolderIds,
+        numberOfMontages: config.numberOfMontages,
+        totalClipsAvailable: allClips.length,
+        montages,
+      });
+    }
 
     return results;
   },

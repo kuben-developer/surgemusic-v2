@@ -28,8 +28,8 @@ import type { Id } from "../_generated/dataModel";
  */
 export const getPendingMontagerConfigs = httpAction(async (ctx) => {
   try {
-    const pendingConfigs = await ctx.runQuery(
-      internal.app.montagerDb.getPendingConfigsInternal
+    const pendingConfigs = await ctx.runAction(
+      internal.app.montagerDb.buildPendingConfigsWithClips
     );
 
     return new Response(
