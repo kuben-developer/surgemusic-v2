@@ -346,6 +346,7 @@ export default defineSchema({
     videoUrl: v.string(),
     thumbnailUrl: v.string(),
     processedVideoUrl: v.optional(v.string()),
+    caption: v.optional(v.string()), // The exact caption used when processing this video
 
     status: v.union(
       v.literal("pending"),

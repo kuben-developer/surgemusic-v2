@@ -770,6 +770,7 @@ export const updateProcessedVideoExternal = internalMutation({
     videoId: v.id("montagerVideos"),
     processedVideoUrl: v.string(),
     thumbnailUrl: v.optional(v.string()),
+    caption: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Verify video exists
@@ -790,6 +791,7 @@ export const updateProcessedVideoExternal = internalMutation({
       processedVideoUrl: args.processedVideoUrl,
       status: "processed",
       ...(args.thumbnailUrl && { thumbnailUrl: args.thumbnailUrl }),
+      ...(args.caption && { caption: args.caption }),
     });
 
     return {

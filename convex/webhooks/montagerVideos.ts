@@ -68,7 +68,8 @@ export const getPendingVideosForProcessing = httpAction(async (ctx) => {
  *     {
  *       "videoId": "j572...",
  *       "processedVideoUrl": "https://...",
- *       "thumbnailUrl": "https://..." // optional
+ *       "thumbnailUrl": "https://...", // optional
+ *       "caption": "The exact caption used" // optional
  *     }
  *   ]
  * }
@@ -136,13 +137,14 @@ export const updateProcessedVideos = httpAction(async (ctx, request) => {
     // Process each update
     const results = await Promise.allSettled(
       body.updates.map(
-        async (update: { videoId: string; processedVideoUrl: string; thumbnailUrl?: string }) => {
+        async (update: { videoId: string; processedVideoUrl: string; thumbnailUrl?: string; caption?: string }) => {
           const result = await ctx.runMutation(
             internal.app.montagerDb.updateProcessedVideoExternal,
             {
               videoId: update.videoId as Id<"montagerVideos">,
               processedVideoUrl: update.processedVideoUrl,
               thumbnailUrl: update.thumbnailUrl,
+              caption: update.caption,
             }
           );
           return result;
