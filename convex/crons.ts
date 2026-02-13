@@ -17,11 +17,11 @@ crons.hourly(
     {}
 );
 
-crons.cron(
-    "refreshTiktokStats",
-    "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
-    internal.app.bundle.refreshTiktokStats,
-);
+// crons.cron(
+//     "refreshTiktokStats",
+//     "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
+//     internal.app.bundle.refreshTiktokStats,
+// );
 
 // crons.cron(
 //     "refreshTiktokStatsByCampaign",
@@ -30,12 +30,12 @@ crons.cron(
 //     { campaignId: "recK2FEC9YDXc0BKs" }
 // );
 
-crons.interval(
-    "calculateCampaignAnalytics",
-    { minutes: 120 }, // Every 2 hours
-    internal.app.analytics.calculateCampaignAnalytics,
-    {}
-);
+// crons.interval(
+//     "calculateCampaignAnalytics",
+//     { minutes: 120 }, // Every 2 hours
+//     internal.app.analytics.calculateCampaignAnalytics,
+//     {}
+// );
 
 crons.interval(
     "cleanupStaleBulkDownloads",
