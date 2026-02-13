@@ -340,16 +340,17 @@ export const insertContent = internalMutation({
 export const deleteContentByPostId = internalMutation({
     args: { postId: v.string() },
     handler: async (ctx, { postId }) => {
-        const content = await ctx.db
-            .query("airtableContents")
-            .withIndex("by_postId", (q) => q.eq("postId", postId))
-            .first();
-
-        if (content) {
-            await ctx.db.delete(content._id);
-            return true;
-        }
         return false;
+        // const content = await ctx.db
+        //     .query("airtableContents")
+        //     .withIndex("by_postId", (q) => q.eq("postId", postId))
+        //     .first();
+
+        // if (content) {
+        //     await ctx.db.delete(content._id);
+        //     return true;
+        // }
+        // return false;
     },
 });
 
