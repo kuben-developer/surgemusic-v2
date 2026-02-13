@@ -44,4 +44,25 @@ crons.interval(
     {}
 );
 
+// // V2 Analytics Crons
+crons.hourly(
+    "snapshotCampaignStatsV2",
+    { minuteUTC: 45 }, // Every hour at :45
+    internal.app.analyticsV2.snapshotCampaignStats,
+    {}
+);
+
+// crons.cron(
+//     "populateAllCampaignsV2",
+//     "0 */3 * * *", // Every 3 hours at :00
+//     internal.app.analyticsV2.populateAllCampaigns,
+// );
+
+crons.interval(
+    "recalculateMinViewsExcluded",
+    { minutes: 60 }, // Every 1 hours
+    internal.app.analyticsV2.recalculateAllMinViewsExcluded,
+    {}
+);
+
 export default crons;

@@ -74,6 +74,89 @@ export default defineSchema({
   })
     .index("by_campaignId", ["campaignId"]),
 
+  tiktokVideoStats: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    tiktokAuthorId: v.string(), // TikTok author ID
+    tiktokVideoId: v.string(), // TikTok video ID
+    mediaUrl: v.string(),
+    postedAt: v.number(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+    isManual: v.boolean(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_tiktokAuthorId", ["tiktokAuthorId"])
+    .index("by_campaignId_postedAt", ["campaignId", "postedAt"])
+    .index("by_tiktokVideoId", ["tiktokVideoId"]),
+
+  tiktokVideoSnapshots: defineTable({
+    tiktokVideoId: v.string(), // TikTok video ID
+    intervalId: v.string(), // Format: "tiktokVideoId_YYYYMMDDHH" e.g., "video123_2025090114" (hourly intervals)
+    snapshotAt: v.number(), // YYYYMMDDHH
+    hour: v.number(), // Hour of the day (0-23)
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.number(),
+  })
+    .index("by_intervalId", ["intervalId"])
+    .index("by_tiktokVideoId", ["tiktokVideoId"])
+    .index("by_snapshotAt", ["snapshotAt"])
+    .index("by_hour", ["hour"]),
+
+  campaigns: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    campaignName: v.string(),
+    artist: v.string(),
+    song: v.string(),
+
+    minViewsExcludedStats: v.object({
+      totalPosts: v.number(),
+      totalViews: v.number(),
+      totalLikes: v.number(),
+      totalComments: v.number(),
+      totalShares: v.number(),
+      totalSaves: v.number(),
+    }),
+
+    // Display settings (controlled from logged-in view only)
+    minViewsFilter: v.optional(v.number()), // Filter out posts with fewer than X views (0 = show all)
+    currencySymbol: v.optional(v.union(v.literal("USD"), v.literal("GBP"))), // Currency for CPM display
+    manualCpmMultiplier: v.optional(v.number()), // CPM rate for manual posts (default: 0.50)
+    apiCpmMultiplier: v.optional(v.number()), // CPM rate for API posts (default: 0.50)
+
+    // Content samples for analytics dashboard display
+    contentSamples: v.optional(v.array(v.object({
+      videoUrl: v.string(),
+      thumbnailUrl: v.string(),
+      addedAt: v.number(),
+      sourceVideoId: v.optional(v.string()),
+    }))),
+  })
+    .index("by_campaignId", ["campaignId"]),
+
+  campaignSnapshots: defineTable({
+    campaignId: v.string(), // airtable campaign id
+    intervalId: v.string(), // Format: "campaignId_YYYYMMDDHH" e.g., "campaign123_2025090114" (hourly intervals)
+    snapshotAt: v.number(), // YYYYMMDDHH
+    hour: v.number(), // Hour of the day (0-23)
+    totalPosts: v.number(),
+    totalViews: v.number(),
+    totalLikes: v.number(),
+    totalComments: v.number(),
+    totalShares: v.number(),
+    totalSaves: v.number(),
+  })
+    .index("by_intervalId", ["intervalId"])
+    .index("by_campaignId", ["campaignId"])
+    .index("by_snapshotAt", ["snapshotAt"])
+    .index("by_hour", ["hour"]),
+
+
   // BUNDLE SOCIAL
   bundleSocialPostedVideos: defineTable({
     campaignId: v.string(), // airtable campaign id

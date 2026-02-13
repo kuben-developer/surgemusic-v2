@@ -5,6 +5,7 @@ import { getPendingClipperVideos, updateClipperVideoOutputs } from "./webhooks/c
 import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/montager";
 import { getPendingVideosForProcessing, updateProcessedVideos } from "./webhooks/montagerVideos";
 import { getAllCampaignsPublic, getCampaignAnalyticsPublic, getCampaignDetailedAnalyticsPublic } from "./webhooks/campaignAnalytics";
+import { updateVideoStats, getCampaignVideos, getActiveCampaigns } from "./webhooks/analyticsV2";
 
 const http = httpRouter();
 
@@ -88,6 +89,27 @@ http.route({
   path: "/api/campaign-analytics-detailed",
   method: "GET",
   handler: getCampaignDetailedAnalyticsPublic,
+});
+
+// Analytics V2 API - List active campaigns
+http.route({
+  path: "/api/analytics/campaigns",
+  method: "GET",
+  handler: getActiveCampaigns,
+});
+
+// Analytics V2 API - External scraper pushes updated video stats
+http.route({
+  path: "/api/analytics/videos",
+  method: "POST",
+  handler: updateVideoStats,
+});
+
+// Analytics V2 API - External scraper discovers videos to scrape
+http.route({
+  path: "/api/analytics/campaign-videos",
+  method: "GET",
+  handler: getCampaignVideos,
 });
 
 export default http;
