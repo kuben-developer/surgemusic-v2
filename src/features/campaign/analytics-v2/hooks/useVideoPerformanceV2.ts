@@ -19,9 +19,11 @@ export type SnapshotPoint = {
 
 interface UseVideoPerformanceV2Options {
   campaignId: string;
+  dateFrom?: number;
+  dateTo?: number;
 }
 
-export function useVideoPerformanceV2({ campaignId }: UseVideoPerformanceV2Options) {
+export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo }: UseVideoPerformanceV2Options) {
   const [currentPage, setCurrentPage] = useState(1);
   const [backendOffset, setBackendOffset] = useState(0);
   const [viewsFilter, setViewsFilter] = useState<ViewsFilter>({});
@@ -36,6 +38,8 @@ export function useVideoPerformanceV2({ campaignId }: UseVideoPerformanceV2Optio
     maxViews: viewsFilter.maxViews,
     sortOrder,
     isManualOnly: viewsFilter.isManualOnly,
+    dateFrom,
+    dateTo,
   });
 
   const allVideos = (data?.videos ?? []) as VideoPerformanceRow[];

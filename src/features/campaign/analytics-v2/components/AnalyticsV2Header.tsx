@@ -17,12 +17,18 @@ import type { DateRange, DayButtonProps } from "react-day-picker";
 import { fadeInUp } from "../constants/metrics-v2";
 import type { CampaignSettings } from "../types/analytics-v2.types";
 
+export interface DateRangeFilter {
+  from: number; // unix seconds
+  to: number;   // unix seconds
+}
+
 interface AnalyticsV2HeaderProps {
   campaignId: string;
   postCountsByDate: Record<string, number>;
   settings: CampaignSettings;
   isPublic?: boolean;
   hideBackButton?: boolean;
+  onDateRangeChange: (range: DateRangeFilter | undefined) => void;
 }
 
 const QUICK_MIN_VIEWS_OPTIONS = [
@@ -39,8 +45,10 @@ export function AnalyticsV2Header({
   settings,
   isPublic = false,
   hideBackButton = false,
+  onDateRangeChange,
 }: AnalyticsV2HeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [localMinViews, setLocalMinViews] = useState(settings.minViewsFilter.toString());
   const [localCurrency, setLocalCurrency] = useState(settings.currencySymbol);
@@ -156,7 +164,7 @@ export function AnalyticsV2Header({
       {!isPublic && (
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Calendar filter */}
-          <Popover>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -195,7 +203,11 @@ export function AnalyticsV2Header({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setTempDateRange(undefined)}
+                  onClick={() => {
+                    setTempDateRange(undefined);
+                    onDateRangeChange(undefined);
+                    setCalendarOpen(false);
+                  }}
                   className="flex-1"
                 >
                   Clear
@@ -203,6 +215,20 @@ export function AnalyticsV2Header({
                 <Button
                   size="sm"
                   disabled={!tempDateRange?.from}
+                  onClick={() => {
+                    if (tempDateRange?.from) {
+                      const fromDate = tempDateRange.from;
+                      const toDate = tempDateRange.to ?? tempDateRange.from;
+                      // Use UTC boundaries to match backend's UTC date grouping
+                      const fromTimestamp = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0) / 1000;
+                      const toTimestamp = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59) / 1000;
+                      onDateRangeChange({
+                        from: fromTimestamp,
+                        to: toTimestamp,
+                      });
+                      setCalendarOpen(false);
+                    }
+                  }}
                   className="flex-1"
                 >
                   Apply
@@ -215,7 +241,10 @@ export function AnalyticsV2Header({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTempDateRange(undefined)}
+              onClick={() => {
+                setTempDateRange(undefined);
+                onDateRangeChange(undefined);
+              }}
               className="h-10 w-10"
             >
               <X className="h-4 w-4" />

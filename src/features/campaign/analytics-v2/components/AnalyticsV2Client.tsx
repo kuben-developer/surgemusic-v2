@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -8,6 +8,7 @@ import { useCampaignAnalyticsV2 } from "../hooks/useCampaignAnalyticsV2";
 import { useChartDataV2 } from "../hooks/useChartDataV2";
 import { useVideoPerformanceV2 } from "../hooks/useVideoPerformanceV2";
 import { AnalyticsV2Header } from "./AnalyticsV2Header";
+import type { DateRangeFilter } from "./AnalyticsV2Header";
 import { KPIMetricsV2 } from "./KPIMetricsV2";
 import { MetricsChartV2 } from "./MetricsChartV2";
 import { VideoPerformanceTableV2 } from "./VideoPerformanceTableV2";
@@ -29,6 +30,11 @@ export function AnalyticsV2Client({
   const { userId } = useAuth();
   const isPublic = !userId;
   const [activeMetric, setActiveMetric] = useState<MetricType>("views");
+  const [dateRange, setDateRange] = useState<DateRangeFilter | undefined>();
+
+  const handleDateRangeChange = useCallback((range: DateRangeFilter | undefined) => {
+    setDateRange(range);
+  }, []);
 
   const {
     isLoading,
@@ -39,11 +45,26 @@ export function AnalyticsV2Client({
     minViewsExcludedStats,
     settings,
     postCountsByDate,
-  } = useCampaignAnalyticsV2(campaignId);
+    dailyStatsByDate,
+  } = useCampaignAnalyticsV2({
+    campaignId,
+    dateFrom: dateRange?.from,
+    dateTo: dateRange?.to,
+  });
 
-  const { chartData } = useChartDataV2(campaignId, adjustedTotals, minViewsExcludedStats);
+  const { chartData } = useChartDataV2(
+    campaignId,
+    adjustedTotals,
+    minViewsExcludedStats,
+    dateRange,
+    dailyStatsByDate,
+  );
 
-  const videoPerformance = useVideoPerformanceV2({ campaignId });
+  const videoPerformance = useVideoPerformanceV2({
+    campaignId,
+    dateFrom: dateRange?.from,
+    dateTo: dateRange?.to,
+  });
 
   if (isLoading) {
     return (
@@ -81,6 +102,7 @@ export function AnalyticsV2Client({
         settings={settings}
         isPublic={isPublic}
         hideBackButton={hideBackButton}
+        onDateRangeChange={handleDateRangeChange}
       />
 
       <motion.div

@@ -5,9 +5,21 @@ import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
 import type { AdjustedTotals, CampaignSettings } from "../types/analytics-v2.types";
 
-export function useCampaignAnalyticsV2(campaignId: string) {
+interface UseCampaignAnalyticsV2Options {
+  campaignId: string;
+  dateFrom?: number;
+  dateTo?: number;
+}
+
+export function useCampaignAnalyticsV2({
+  campaignId,
+  dateFrom,
+  dateTo,
+}: UseCampaignAnalyticsV2Options) {
   const data = useQuery(api.app.analyticsV2.getCampaignAnalyticsV2, {
     campaignId,
+    dateFrom,
+    dateTo,
   });
 
   const dailySnapshots = useQuery(
@@ -51,6 +63,12 @@ export function useCampaignAnalyticsV2(campaignId: string) {
     return result;
   }, [dailySnapshots]);
 
+  // Full daily stats sorted by date (for chart when date-filtered)
+  const dailyStatsByDate = useMemo(() => {
+    if (!dailySnapshots) return [];
+    return [...dailySnapshots].sort((a, b) => a.postDate.localeCompare(b.postDate));
+  }, [dailySnapshots]);
+
   return {
     isLoading: data === undefined,
     campaignName: data?.campaignName ?? "",
@@ -62,5 +80,6 @@ export function useCampaignAnalyticsV2(campaignId: string) {
     settings,
     contentSamples: data?.contentSamples ?? [],
     postCountsByDate,
+    dailyStatsByDate,
   };
 }

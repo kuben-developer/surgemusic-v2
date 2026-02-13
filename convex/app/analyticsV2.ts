@@ -846,37 +846,78 @@ export const removeContentSamplesV2 = mutation({
 // =============================================================================
 
 export const getCampaignAnalyticsV2 = query({
-  args: { campaignId: v.string() },
-  handler: async (ctx, { campaignId }) => {
-    // Read aggregates (real-time)
-    const [viewsResult, likesResult, commentsResult, sharesResult, savesResult] =
-      await Promise.all([
-        aggregateViews.sum(ctx, { namespace: campaignId, bounds: {} }),
-        aggregateLikes.sum(ctx, { namespace: campaignId, bounds: {} }),
-        aggregateComments.sum(ctx, { namespace: campaignId, bounds: {} }),
-        aggregateShares.sum(ctx, { namespace: campaignId, bounds: {} }),
-        aggregateSaves.sum(ctx, { namespace: campaignId, bounds: {} }),
-      ]);
-
-    const totalPosts = await aggregateViews.count(ctx, {
-      namespace: campaignId,
-      bounds: {},
-    });
-
+  args: {
+    campaignId: v.string(),
+    dateFrom: v.optional(v.number()),
+    dateTo: v.optional(v.number()),
+  },
+  handler: async (ctx, { campaignId, dateFrom, dateTo }) => {
     // Read campaign record for settings and excluded stats
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
 
-    const excluded = campaign?.minViewsExcludedStats ?? {
-      totalPosts: 0,
-      totalViews: 0,
-      totalLikes: 0,
-      totalComments: 0,
-      totalShares: 0,
-      totalSaves: 0,
-    };
+    const settingsMinViewsFilter = campaign?.minViewsFilter ?? 0;
+    const hasDateFilter = dateFrom !== undefined || dateTo !== undefined;
+
+    let totalPosts: number;
+    let viewsResult: number;
+    let likesResult: number;
+    let commentsResult: number;
+    let sharesResult: number;
+    let savesResult: number;
+
+    if (hasDateFilter) {
+      // Date filter active: compute from filtered tiktokVideoStats
+      let videos = await ctx.db
+        .query("tiktokVideoStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      if (settingsMinViewsFilter > 0) {
+        videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+      }
+      if (dateFrom !== undefined) {
+        videos = videos.filter((v) => v.postedAt >= dateFrom);
+      }
+      if (dateTo !== undefined) {
+        videos = videos.filter((v) => v.postedAt <= dateTo);
+      }
+
+      totalPosts = videos.length;
+      viewsResult = videos.reduce((sum, v) => sum + v.views, 0);
+      likesResult = videos.reduce((sum, v) => sum + v.likes, 0);
+      commentsResult = videos.reduce((sum, v) => sum + v.comments, 0);
+      sharesResult = videos.reduce((sum, v) => sum + v.shares, 0);
+      savesResult = videos.reduce((sum, v) => sum + v.saves, 0);
+    } else {
+      // No date filter: use real-time aggregates (fast path)
+      [viewsResult, likesResult, commentsResult, sharesResult, savesResult] =
+        await Promise.all([
+          aggregateViews.sum(ctx, { namespace: campaignId, bounds: {} }),
+          aggregateLikes.sum(ctx, { namespace: campaignId, bounds: {} }),
+          aggregateComments.sum(ctx, { namespace: campaignId, bounds: {} }),
+          aggregateShares.sum(ctx, { namespace: campaignId, bounds: {} }),
+          aggregateSaves.sum(ctx, { namespace: campaignId, bounds: {} }),
+        ]);
+
+      totalPosts = await aggregateViews.count(ctx, {
+        namespace: campaignId,
+        bounds: {},
+      });
+    }
+
+    const excluded = hasDateFilter
+      ? { totalPosts: 0, totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0 }
+      : (campaign?.minViewsExcludedStats ?? {
+          totalPosts: 0,
+          totalViews: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalShares: 0,
+          totalSaves: 0,
+        });
 
     return {
       campaignId,
@@ -920,6 +961,8 @@ export const getVideoPerformanceV2 = query({
     maxViews: v.optional(v.number()),
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
     isManualOnly: v.optional(v.boolean()),
+    dateFrom: v.optional(v.number()),
+    dateTo: v.optional(v.number()),
   },
   handler: async (
     ctx,
@@ -931,6 +974,8 @@ export const getVideoPerformanceV2 = query({
       maxViews,
       sortOrder = "desc",
       isManualOnly,
+      dateFrom,
+      dateTo,
     },
   ) => {
     // Get settings-level minViewsFilter
@@ -949,6 +994,14 @@ export const getVideoPerformanceV2 = query({
     // Apply settings-level filter
     if (settingsMinViewsFilter > 0) {
       videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+    }
+
+    // Apply date range filter (postedAt is unix seconds)
+    if (dateFrom !== undefined) {
+      videos = videos.filter((v) => v.postedAt >= dateFrom);
+    }
+    if (dateTo !== undefined) {
+      videos = videos.filter((v) => v.postedAt <= dateTo);
     }
 
     // Apply user filters
@@ -1074,11 +1127,23 @@ export const getCampaignSnapshots = query({
 export const getDailySnapshotsByDate = query({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
+    // Get settings-level minViewsFilter
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+    const settingsMinViewsFilter = campaign?.minViewsFilter ?? 0;
+
     // Compute daily stats in real-time from tiktokVideoStats
-    const videos = await ctx.db
+    let videos = await ctx.db
       .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
+
+    // Apply minViewsFilter so calendar counts match Content Performance
+    if (settingsMinViewsFilter > 0) {
+      videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+    }
 
     const byDate: Record<string, {
       totalPosts: number;
