@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -18,6 +18,8 @@ import { VideoSamplesSection } from "../../analytics/components/VideoSamplesSect
 import { staggerContainer } from "../constants/metrics-v2";
 import type { MetricType } from "../types/analytics-v2.types";
 
+type ChartMode = "area" | "bar" | "dailyGain";
+
 interface AnalyticsV2ClientProps {
   campaignId: string;
   hideBackButton?: boolean;
@@ -31,9 +33,13 @@ export function AnalyticsV2Client({
   const isPublic = !userId;
   const [activeMetric, setActiveMetric] = useState<MetricType>("views");
   const [dateRange, setDateRange] = useState<DateRangeFilter | undefined>();
+  const [chartMode, setChartMode] = useState<ChartMode>("area");
+  const hasLoadedOnce = useRef(false);
 
   const handleDateRangeChange = useCallback((range: DateRangeFilter | undefined) => {
     setDateRange(range);
+    // Auto-switch to bar chart when date filter applied, back to area when cleared
+    setChartMode(range ? "bar" : "area");
   }, []);
 
   const {
@@ -52,7 +58,7 @@ export function AnalyticsV2Client({
     dateTo: dateRange?.to,
   });
 
-  const { chartData } = useChartDataV2(
+  const { growthChartData, barChartData, dailyGainChartData } = useChartDataV2(
     campaignId,
     adjustedTotals,
     minViewsExcludedStats,
@@ -66,7 +72,13 @@ export function AnalyticsV2Client({
     dateTo: dateRange?.to,
   });
 
-  if (isLoading) {
+  // Track first successful load
+  if (!isLoading) {
+    hasLoadedOnce.current = true;
+  }
+
+  // Only show full-page spinner on initial load, not on filter changes
+  if (isLoading && !hasLoadedOnce.current) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -93,6 +105,13 @@ export function AnalyticsV2Client({
     shares: adjustedTotals.totalShares,
     saves: adjustedTotals.totalSaves,
   };
+
+  const chartData =
+    chartMode === "bar"
+      ? barChartData
+      : chartMode === "dailyGain"
+        ? dailyGainChartData
+        : growthChartData;
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
@@ -127,6 +146,8 @@ export function AnalyticsV2Client({
             chartData={chartData}
             activeMetric={activeMetric}
             onActiveMetricChange={setActiveMetric}
+            chartMode={chartMode}
+            onChartModeChange={setChartMode}
           />
 
           <VideoPerformanceTableV2

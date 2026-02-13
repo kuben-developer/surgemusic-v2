@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +49,9 @@ export function AnalyticsV2Header({
   onDateRangeChange,
 }: AnalyticsV2HeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>();
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const hasAppliedFilter = !!appliedDateRange?.from;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [localMinViews, setLocalMinViews] = useState(settings.minViewsFilter.toString());
   const [localCurrency, setLocalCurrency] = useState(settings.currencySymbol);
@@ -98,6 +101,32 @@ export function AnalyticsV2Header({
     );
   };
 
+  const clearDateFilter = useCallback(() => {
+    setTempDateRange(undefined);
+    setAppliedDateRange(undefined);
+    onDateRangeChange(undefined);
+  }, [onDateRangeChange]);
+
+  const applyDateFilter = useCallback(() => {
+    if (tempDateRange?.from) {
+      const fromDate = tempDateRange.from;
+      const toDate = tempDateRange.to ?? tempDateRange.from;
+      const fromTimestamp = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0) / 1000;
+      const toTimestamp = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59) / 1000;
+      setAppliedDateRange(tempDateRange);
+      onDateRangeChange({ from: fromTimestamp, to: toTimestamp });
+      setCalendarOpen(false);
+    }
+  }, [tempDateRange, onDateRangeChange]);
+
+  const getDateDisplayText = () => {
+    if (!appliedDateRange?.from) return "Filter by post date";
+    if (appliedDateRange.to && appliedDateRange.from.getTime() !== appliedDateRange.to.getTime()) {
+      return `${format(appliedDateRange.from, "MMM d")} - ${format(appliedDateRange.to, "MMM d, yyyy")}`;
+    }
+    return format(appliedDateRange.from, "MMM d, yyyy");
+  };
+
   const handleSaveSettings = useCallback(async () => {
     const minViews = parseInt(localMinViews, 10) || 0;
     const manualCpm = parseFloat(localManualCpm) || 1;
@@ -105,19 +134,15 @@ export function AnalyticsV2Header({
 
     setIsSaving(true);
     try {
-      // Update minViewsFilter (triggers recalculation)
       if (minViews !== settings.minViewsFilter) {
         await updateMinViewsFilter({ campaignId, minViewsFilter: minViews });
       }
-
-      // Update other settings
       await updateCampaignSettings({
         campaignId,
         currencySymbol: localCurrency,
         manualCpmMultiplier: manualCpm,
         apiCpmMultiplier: apiCpm,
       });
-
       toast.success("Settings saved");
       setSettingsOpen(false);
     } catch (error) {
@@ -163,21 +188,31 @@ export function AnalyticsV2Header({
 
       {!isPublic && (
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Calendar filter */}
+          {/* Date filter */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full sm:w-[260px] justify-start text-left font-normal"
+                className={`w-full sm:w-[280px] justify-start text-left font-normal ${
+                  hasAppliedFilter
+                    ? "border-primary/50 bg-primary/5 text-foreground"
+                    : "text-muted-foreground"
+                }`}
               >
-                <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="truncate">
-                  {tempDateRange?.from
-                    ? tempDateRange.to
-                      ? `${format(tempDateRange.from, "MMM d")} - ${format(tempDateRange.to, "MMM d, yyyy")}`
-                      : format(tempDateRange.from, "MMM d, yyyy")
-                    : "Filter by post date"}
-                </span>
+                <CalendarIcon className={`mr-2 h-4 w-4 flex-shrink-0 ${hasAppliedFilter ? "text-primary" : ""}`} />
+                <span className="truncate flex-1">{getDateDisplayText()}</span>
+                {hasAppliedFilter && (
+                  <span
+                    role="button"
+                    className="ml-1 rounded-full p-0.5 hover:bg-muted transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearDateFilter();
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -204,8 +239,7 @@ export function AnalyticsV2Header({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setTempDateRange(undefined);
-                    onDateRangeChange(undefined);
+                    clearDateFilter();
                     setCalendarOpen(false);
                   }}
                   className="flex-1"
@@ -215,20 +249,7 @@ export function AnalyticsV2Header({
                 <Button
                   size="sm"
                   disabled={!tempDateRange?.from}
-                  onClick={() => {
-                    if (tempDateRange?.from) {
-                      const fromDate = tempDateRange.from;
-                      const toDate = tempDateRange.to ?? tempDateRange.from;
-                      // Use UTC boundaries to match backend's UTC date grouping
-                      const fromTimestamp = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0) / 1000;
-                      const toTimestamp = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59) / 1000;
-                      onDateRangeChange({
-                        from: fromTimestamp,
-                        to: toTimestamp,
-                      });
-                      setCalendarOpen(false);
-                    }
-                  }}
+                  onClick={applyDateFilter}
                   className="flex-1"
                 >
                   Apply
@@ -237,24 +258,17 @@ export function AnalyticsV2Header({
             </PopoverContent>
           </Popover>
 
-          {tempDateRange?.from && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setTempDateRange(undefined);
-                onDateRangeChange(undefined);
-              }}
-              className="h-10 w-10"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          {/* Min views badge */}
+          {settings.minViewsFilter > 0 && (
+            <Badge variant="secondary" className="text-xs whitespace-nowrap">
+              {settings.minViewsFilter.toLocaleString()}+ views
+            </Badge>
           )}
 
           {/* Settings */}
           <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="h-10 w-10">
+              <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0">
                 <Settings className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
