@@ -18,7 +18,7 @@ import {
 const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2";
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
 const CHUNK_SIZE = 200; // Airtable contents per action invocation
-const CONCURRENCY = 20; // Parallel HTTP requests within a chunk
+const CONCURRENCY = 5; // Parallel HTTP requests within a chunk
 const POPULATE_STAGGER_MS = 5 * 60 * 1000; // 5 minutes between campaigns
 
 // =============================================================================
@@ -1015,6 +1015,38 @@ export const getVideoSnapshots = query({
   },
 });
 
+export const getBatchVideoSnapshots = query({
+  args: { tiktokVideoIds: v.array(v.string()) },
+  handler: async (ctx, { tiktokVideoIds }) => {
+    const result: Record<string, Array<{ snapshotAt: number; views: number; likes: number; comments: number; shares: number; saves: number }>> = {};
+
+    await Promise.all(
+      tiktokVideoIds.map(async (videoId) => {
+        const snapshots = await ctx.db
+          .query("tiktokVideoSnapshots")
+          .withIndex("by_tiktokVideoId", (q) =>
+            q.eq("tiktokVideoId", videoId),
+          )
+          .collect();
+
+        result[videoId] = snapshots
+          .sort((a, b) => a.snapshotAt - b.snapshotAt)
+          .slice(-48)
+          .map((s) => ({
+            snapshotAt: s.snapshotAt,
+            views: s.views,
+            likes: s.likes,
+            comments: s.comments,
+            shares: s.shares,
+            saves: s.saves,
+          }));
+      }),
+    );
+
+    return result;
+  },
+});
+
 export const getCampaignSnapshots = query({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
@@ -1354,6 +1386,342 @@ export const migrateCampaignData = internalAction({
     }
 
     console.log(`[V2 Migrate] Migrated ${campaignIds.length} campaigns`);
+  },
+});
+
+// -----------------------------------------------------------------------------
+// Backfill campaignSnapshots from V1 dailySnapshots
+// -----------------------------------------------------------------------------
+
+export const backfillCampaignSnapshotsFromV1 = internalMutation({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const v1 = await ctx.db
+      .query("campaignAnalytics")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!v1) return { inserted: 0 };
+
+    const dailySnapshots = v1.dailySnapshots ?? {};
+    const dailySnapshotsByDate = v1.dailySnapshotsByDate ?? {};
+
+    // Build cumulative post count by date
+    // dailySnapshotsByDate keys are post dates (DD-MM-YYYY), each has totalPosts
+    const postDateEntries = Object.entries(dailySnapshotsByDate).map(
+      ([dateStr, data]) => ({ dateStr, totalPosts: data.totalPosts }),
+    );
+
+    // Parse DD-MM-YYYY to sortable YYYY-MM-DD
+    function parseDDMMYYYY(s: string): string {
+      const [d, m, y] = s.split("-");
+      return `${y}-${m}-${d}`;
+    }
+
+    postDateEntries.sort(
+      (a, b) => parseDDMMYYYY(a.dateStr).localeCompare(parseDDMMYYYY(b.dateStr)),
+    );
+
+    // Cumulative post counts: for snapshot date D, totalPosts = sum of posts from all post dates <= D
+    const cumulativePostsByDate: Record<string, number> = {};
+    let runningPosts = 0;
+    for (const entry of postDateEntries) {
+      runningPosts += entry.totalPosts;
+      cumulativePostsByDate[parseDDMMYYYY(entry.dateStr)] = runningPosts;
+    }
+
+    // Get sorted snapshot dates for lookup
+    const sortedPostDates = Object.keys(cumulativePostsByDate).sort();
+
+    function getPostCountForDate(isoDate: string): number {
+      // Find the latest post date <= isoDate
+      let result = 0;
+      for (const pd of sortedPostDates) {
+        if (pd <= isoDate) result = cumulativePostsByDate[pd]!;
+        else break;
+      }
+      return result;
+    }
+
+    let inserted = 0;
+
+    for (const [dateStr, stats] of Object.entries(dailySnapshots)) {
+      const isoDate = parseDDMMYYYY(dateStr); // "YYYY-MM-DD"
+      const [y, m, d] = isoDate.split("-");
+      const hour = 12; // Use noon since V1 only has daily granularity
+      const snapshotAt =
+        Number(y) * 1000000 + Number(m) * 10000 + Number(d) * 100 + hour;
+      const intervalId = `${campaignId}_${y}${m}${d}${String(hour).padStart(2, "0")}`;
+
+      // Skip if already exists
+      const existing = await ctx.db
+        .query("campaignSnapshots")
+        .withIndex("by_intervalId", (q) => q.eq("intervalId", intervalId))
+        .first();
+
+      if (existing) continue;
+
+      await ctx.db.insert("campaignSnapshots", {
+        campaignId,
+        intervalId,
+        snapshotAt,
+        hour,
+        totalPosts: getPostCountForDate(isoDate),
+        totalViews: stats.totalViews,
+        totalLikes: stats.totalLikes,
+        totalComments: stats.totalComments,
+        totalShares: stats.totalShares,
+        totalSaves: stats.totalSaves,
+      });
+      inserted++;
+    }
+
+    return { inserted };
+  },
+});
+
+export const backfillAllCampaignSnapshots = internalAction({
+  args: { campaignId: v.optional(v.string()) },
+  handler: async (ctx, { campaignId }) => {
+    if (campaignId) {
+      const result = await ctx.runMutation(
+        internal.app.analyticsV2.backfillCampaignSnapshotsFromV1,
+        { campaignId },
+      );
+      console.log(
+        `[V2 Backfill] Campaign ${campaignId}: ${result.inserted} snapshots inserted`,
+      );
+      return;
+    }
+
+    const campaignIds = await ctx.runQuery(
+      internal.app.analyticsV2.getAllCampaignIds,
+      {},
+    );
+
+    for (const id of campaignIds) {
+      const result = await ctx.runMutation(
+        internal.app.analyticsV2.backfillCampaignSnapshotsFromV1,
+        { campaignId: id },
+      );
+      console.log(
+        `[V2 Backfill] Campaign ${id}: ${result.inserted} snapshots inserted`,
+      );
+    }
+
+    console.log(
+      `[V2 Backfill] Done. Processed ${campaignIds.length} campaigns`,
+    );
+  },
+});
+
+// -----------------------------------------------------------------------------
+// Backfill tiktokVideoSnapshots from bundleSocialSnapshots
+// -----------------------------------------------------------------------------
+
+export const getVideoMappingsForBackfill = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const postedVideos = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    return postedVideos.map((pv) => ({
+      postId: pv.postId,
+      videoId: pv.videoId,
+    }));
+  },
+});
+
+export const getBundleSnapshotsBatch = internalQuery({
+  args: {
+    campaignId: v.string(),
+    cursor: v.optional(v.number()),
+    limit: v.number(),
+  },
+  handler: async (ctx, { campaignId, cursor, limit }) => {
+    let q = ctx.db
+      .query("bundleSocialSnapshots")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId));
+
+    if (cursor !== undefined) {
+      // Filter to docs created after the cursor
+      q = q.filter((q2) => q2.gt(q2.field("_creationTime"), cursor));
+    }
+
+    const batch = await q.take(limit);
+    const nextCursor =
+      batch.length === limit
+        ? batch[batch.length - 1]!._creationTime
+        : undefined;
+
+    return { batch, nextCursor };
+  },
+});
+
+export const backfillVideoSnapshotsBatch = internalMutation({
+  args: {
+    entries: v.array(
+      v.object({
+        tiktokVideoId: v.string(),
+        intervalId: v.string(),
+        snapshotAt: v.number(),
+        hour: v.number(),
+        views: v.number(),
+        likes: v.number(),
+        comments: v.number(),
+        shares: v.number(),
+        saves: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, { entries }) => {
+    let inserted = 0;
+    for (const entry of entries) {
+      const existing = await ctx.db
+        .query("tiktokVideoSnapshots")
+        .withIndex("by_intervalId", (q) => q.eq("intervalId", entry.intervalId))
+        .first();
+
+      if (existing) continue;
+
+      await ctx.db.insert("tiktokVideoSnapshots", entry);
+      inserted++;
+    }
+    return { inserted };
+  },
+});
+
+export const backfillVideoSnapshotsFromBundleSocial = internalAction({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    // 1. Get video mappings
+    const videoMappings = await ctx.runQuery(
+      internal.app.analyticsV2.getVideoMappingsForBackfill,
+      { campaignId },
+    );
+
+    const postIdToVideoId = new Map<string, string>();
+    for (const { postId, videoId } of videoMappings) {
+      postIdToVideoId.set(postId, videoId);
+    }
+
+    function parseDDMMYYYY(s: string): { y: string; m: string; d: string } | null {
+      const parts = s.split("-");
+      if (parts.length !== 3) return null;
+      return { d: parts[0]!, m: parts[1]!, y: parts[2]! };
+    }
+
+    // 2. Process snapshots in paginated batches
+    const PAGE_SIZE = 2000;
+    const DB_BATCH = 200;
+    let cursor: number | undefined;
+    let totalInserted = 0;
+    let skippedNoVideo = 0;
+    let skippedBadDate = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const result = await ctx.runQuery(
+        internal.app.analyticsV2.getBundleSnapshotsBatch,
+        { campaignId, cursor, limit: PAGE_SIZE },
+      );
+      const snapshots = result.batch;
+      const nextCursor: number | undefined = result.nextCursor;
+
+      const entries: Array<{
+        tiktokVideoId: string;
+        intervalId: string;
+        snapshotAt: number;
+        hour: number;
+        views: number;
+        likes: number;
+        comments: number;
+        shares: number;
+        saves: number;
+      }> = [];
+
+      for (const snap of snapshots) {
+        const tiktokVideoId = postIdToVideoId.get(snap.postId);
+        if (!tiktokVideoId) {
+          skippedNoVideo++;
+          continue;
+        }
+
+        const parsed = parseDDMMYYYY(snap.date);
+        if (!parsed) {
+          skippedBadDate++;
+          continue;
+        }
+
+        const { y, m, d } = parsed;
+        const hour = 12;
+        const snapshotAt =
+          Number(y) * 1000000 + Number(m) * 10000 + Number(d) * 100 + hour;
+        const intervalId = `${tiktokVideoId}_${y}${m}${d}${String(hour).padStart(2, "0")}`;
+
+        entries.push({
+          tiktokVideoId,
+          intervalId,
+          snapshotAt,
+          hour,
+          views: snap.views,
+          likes: snap.likes,
+          comments: snap.comments,
+          shares: snap.shares,
+          saves: snap.saves,
+        });
+      }
+
+      // Write entries in mutation-safe batches
+      for (let i = 0; i < entries.length; i += DB_BATCH) {
+        const result = await ctx.runMutation(
+          internal.app.analyticsV2.backfillVideoSnapshotsBatch,
+          { entries: entries.slice(i, i + DB_BATCH) },
+        );
+        totalInserted += result.inserted;
+      }
+
+      cursor = nextCursor;
+      hasMore = nextCursor !== undefined;
+    }
+
+    console.log(
+      `[V2 Backfill Video Snapshots] Campaign ${campaignId}: ${totalInserted} inserted, ${skippedNoVideo} skipped (no video mapping), ${skippedBadDate} skipped (bad date)`,
+    );
+  },
+});
+
+export const backfillAllVideoSnapshots = internalAction({
+  args: { campaignId: v.optional(v.string()) },
+  handler: async (ctx, { campaignId }) => {
+    if (campaignId) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.app.analyticsV2.backfillVideoSnapshotsFromBundleSocial,
+        { campaignId },
+      );
+      console.log(`[V2 Backfill Video Snapshots] Scheduled campaign ${campaignId}`);
+      return;
+    }
+
+    const campaignIds = await ctx.runQuery(
+      internal.app.analyticsV2.getAllCampaignIds,
+      {},
+    );
+
+    for (let i = 0; i < campaignIds.length; i++) {
+      await ctx.scheduler.runAfter(
+        i * 5000, // 5s stagger to avoid overwhelming
+        internal.app.analyticsV2.backfillVideoSnapshotsFromBundleSocial,
+        { campaignId: campaignIds[i]! },
+      );
+    }
+
+    console.log(
+      `[V2 Backfill Video Snapshots] Scheduled ${campaignIds.length} campaigns`,
+    );
   },
 });
 

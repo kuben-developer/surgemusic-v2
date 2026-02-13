@@ -1,25 +1,21 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
 
 interface VideoSparkChartProps {
   tiktokVideoId: string;
+  snapshots?: SnapshotPoint[];
 }
 
-function VideoSparkChartInner({ tiktokVideoId }: VideoSparkChartProps) {
-  const snapshots = useQuery(api.app.analyticsV2.getVideoSnapshots, {
-    tiktokVideoId,
-  });
-
+function VideoSparkChartInner({ snapshots }: VideoSparkChartProps) {
   const { data, color } = useMemo(() => {
     if (!snapshots || snapshots.length < 2) {
       return { data: [], color: "#9CA3AF" }; // gray
     }
 
-    const chartData = snapshots.map((s: { views: number }) => ({ v: s.views }));
+    const chartData = snapshots.map((s) => ({ v: s.views }));
 
     // Determine trend color
     const first = snapshots[0];
@@ -45,18 +41,13 @@ function VideoSparkChartInner({ tiktokVideoId }: VideoSparkChartProps) {
     <div className="w-16 h-8">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
-          <defs>
-            <linearGradient id={`spark-${tiktokVideoId}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
           <Area
             type="monotone"
             dataKey="v"
             stroke={color}
             strokeWidth={1.5}
-            fill={`url(#spark-${tiktokVideoId})`}
+            fill="none"
+            isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -64,8 +55,10 @@ function VideoSparkChartInner({ tiktokVideoId }: VideoSparkChartProps) {
   );
 }
 
-// Memoize with custom comparator: only re-render if tiktokVideoId changes
+// Memoize: only re-render if snapshots reference changes
 export const VideoSparkChart = React.memo(
   VideoSparkChartInner,
-  (prev, next) => prev.tiktokVideoId === next.tiktokVideoId,
+  (prev, next) =>
+    prev.tiktokVideoId === next.tiktokVideoId &&
+    prev.snapshots === next.snapshots,
 );

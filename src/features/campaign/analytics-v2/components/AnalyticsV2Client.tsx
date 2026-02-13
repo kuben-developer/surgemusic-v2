@@ -109,6 +109,7 @@ export function AnalyticsV2Client({
 
           <VideoPerformanceTableV2
             videos={videoPerformance.videos}
+            snapshotsMap={videoPerformance.snapshotsMap}
             currentPage={videoPerformance.currentPage}
             totalPages={videoPerformance.totalPages}
             totalCount={videoPerformance.totalCount}

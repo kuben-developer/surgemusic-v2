@@ -10,9 +10,11 @@ import type {
   ViewsFilter,
   SortOrder,
 } from "../types/analytics-v2.types";
+import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
 
 interface VideoPerformanceTableV2Props {
   videos: VideoPerformanceRow[];
+  snapshotsMap: Record<string, SnapshotPoint[]>;
   currentPage: number;
   totalPages: number;
   totalCount: number;
@@ -29,6 +31,7 @@ interface VideoPerformanceTableV2Props {
 
 export function VideoPerformanceTableV2({
   videos,
+  snapshotsMap,
   currentPage,
   totalPages,
   totalCount,
@@ -124,7 +127,7 @@ export function VideoPerformanceTableV2({
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((video) => (
-              <VideoPerformanceRowV2 key={video._id} video={video} />
+              <VideoPerformanceRowV2 key={video._id} video={video} snapshots={snapshotsMap[video.tiktokVideoId]} />
             ))
           ) : (
             <div className="py-8 text-center text-muted-foreground">

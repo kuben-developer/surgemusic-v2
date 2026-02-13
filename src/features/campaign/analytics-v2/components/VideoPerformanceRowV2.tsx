@@ -6,9 +6,11 @@ import { Eye, Heart, MessageCircle, Share2, ExternalLink, Bookmark } from "lucid
 import { VideoSparkChart } from "./VideoSparkChart";
 import { useCounterAnimation } from "../hooks/useCounterAnimation";
 import type { VideoPerformanceRow } from "../types/analytics-v2.types";
+import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
 
 interface VideoPerformanceRowV2Props {
   video: VideoPerformanceRow;
+  snapshots?: SnapshotPoint[];
 }
 
 function AnimatedMetric({
@@ -29,7 +31,7 @@ function AnimatedMetric({
   );
 }
 
-function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
+function VideoPerformanceRowV2Inner({ video, snapshots }: VideoPerformanceRowV2Props) {
   const videoUrl =
     video.mediaUrl ||
     `https://www.tiktok.com/@/video/${video.tiktokVideoId}`;
@@ -38,7 +40,7 @@ function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* Spark chart */}
-        <VideoSparkChart tiktokVideoId={video.tiktokVideoId} />
+        <VideoSparkChart tiktokVideoId={video.tiktokVideoId} snapshots={snapshots} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

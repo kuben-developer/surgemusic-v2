@@ -5,7 +5,17 @@ import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
 import type { ViewsFilter, SortOrder, VideoPerformanceRow } from "../types/analytics-v2.types";
 
-const ITEMS_PER_PAGE = 5;
+const BACKEND_PAGE_SIZE = 100;
+const FRONTEND_PAGE_SIZE = 5;
+
+export type SnapshotPoint = {
+  snapshotAt: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+};
 
 interface UseVideoPerformanceV2Options {
   campaignId: string;
@@ -13,28 +23,53 @@ interface UseVideoPerformanceV2Options {
 
 export function useVideoPerformanceV2({ campaignId }: UseVideoPerformanceV2Options) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [backendOffset, setBackendOffset] = useState(0);
   const [viewsFilter, setViewsFilter] = useState<ViewsFilter>({});
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-
+  // Fetch a batch of 100 items from the backend
   const data = useQuery(api.app.analyticsV2.getVideoPerformanceV2, {
     campaignId,
-    offset,
-    limit: ITEMS_PER_PAGE,
+    offset: backendOffset,
+    limit: BACKEND_PAGE_SIZE,
     minViews: viewsFilter.minViews,
     maxViews: viewsFilter.maxViews,
     sortOrder,
     isManualOnly: viewsFilter.isManualOnly,
   });
 
-  const videos: VideoPerformanceRow[] = useMemo(() => {
-    return (data?.videos ?? []) as VideoPerformanceRow[];
-  }, [data]);
-
+  const allVideos = (data?.videos ?? []) as VideoPerformanceRow[];
   const totalCount = data?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / FRONTEND_PAGE_SIZE));
   const isLoading = data === undefined;
+
+  // Preload spark chart snapshots for the entire 100-item batch
+  const batchVideoIds = useMemo(
+    () => allVideos.map((v) => v.tiktokVideoId),
+    [allVideos],
+  );
+
+  const batchSnapshots = useQuery(
+    api.app.analyticsV2.getBatchVideoSnapshots,
+    batchVideoIds.length > 0 ? { tiktokVideoIds: batchVideoIds } : "skip",
+  );
+
+  const snapshotsMap: Record<string, SnapshotPoint[]> = useMemo(
+    () => batchSnapshots ?? {},
+    [batchSnapshots],
+  );
+
+  // Slice the current 5-item page from the preloaded 100-item batch
+  const videos: VideoPerformanceRow[] = useMemo(() => {
+    const globalStartIndex = (currentPage - 1) * FRONTEND_PAGE_SIZE;
+    const localStartIndex = globalStartIndex - backendOffset;
+    const localEndIndex = localStartIndex + FRONTEND_PAGE_SIZE;
+
+    if (localStartIndex >= 0 && localStartIndex < allVideos.length) {
+      return allVideos.slice(localStartIndex, Math.min(localEndIndex, allVideos.length));
+    }
+    return [];
+  }, [allVideos, currentPage, backendOffset]);
 
   const hasActiveFilters =
     viewsFilter.minViews !== undefined ||
@@ -42,30 +77,43 @@ export function useVideoPerformanceV2({ campaignId }: UseVideoPerformanceV2Optio
     viewsFilter.isManualOnly === true;
 
   const goToPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  }, [totalPages]);
+    const clamped = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(clamped);
+
+    // Check if the requested page falls outside the current backend batch
+    const globalStartIndex = (clamped - 1) * FRONTEND_PAGE_SIZE;
+    const requiredBatchStart = Math.floor(globalStartIndex / BACKEND_PAGE_SIZE) * BACKEND_PAGE_SIZE;
+
+    if (requiredBatchStart !== backendOffset) {
+      setBackendOffset(requiredBatchStart);
+    }
+  }, [totalPages, backendOffset]);
 
   const updateViewsFilter = useCallback((filter: ViewsFilter) => {
     setViewsFilter(filter);
     setCurrentPage(1);
+    setBackendOffset(0);
   }, []);
 
   const clearFilters = useCallback(() => {
     setViewsFilter({});
     setCurrentPage(1);
+    setBackendOffset(0);
   }, []);
 
   const toggleSortOrder = useCallback(() => {
     setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
     setCurrentPage(1);
+    setBackendOffset(0);
   }, []);
 
   return {
     videos,
+    snapshotsMap,
     currentPage,
     totalPages,
     totalCount,
-    itemsPerPage: ITEMS_PER_PAGE,
+    itemsPerPage: FRONTEND_PAGE_SIZE,
     isLoading,
     viewsFilter,
     sortOrder,
