@@ -36,11 +36,12 @@ export function AnalyticsV2Client({
     artist,
     song,
     adjustedTotals,
+    minViewsExcludedStats,
     settings,
     postCountsByDate,
   } = useCampaignAnalyticsV2(campaignId);
 
-  const { chartData } = useChartDataV2(campaignId, adjustedTotals);
+  const { chartData } = useChartDataV2(campaignId, adjustedTotals, minViewsExcludedStats);
 
   const videoPerformance = useVideoPerformanceV2({ campaignId });
 

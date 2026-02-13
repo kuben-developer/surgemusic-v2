@@ -58,6 +58,7 @@ export function useCampaignAnalyticsV2(campaignId: string) {
     song: data?.song ?? "",
     adjustedTotals,
     aggregateTotals: data?.aggregateTotals,
+    minViewsExcludedStats: data?.minViewsExcludedStats,
     settings,
     contentSamples: data?.contentSamples ?? [],
     postCountsByDate,

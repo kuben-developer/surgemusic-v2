@@ -6,9 +6,17 @@ import { api } from "convex/_generated/api";
 import type { AdjustedTotals, ChartDataPoint } from "../types/analytics-v2.types";
 import { formatSnapshotDate } from "../utils/format.utils";
 
+interface ExcludedStats {
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  totalShares: number;
+}
+
 export function useChartDataV2(
   campaignId: string,
   adjustedTotals: AdjustedTotals,
+  excludedStats?: ExcludedStats,
 ) {
   const snapshots = useQuery(api.app.analyticsV2.getCampaignSnapshots, {
     campaignId,
@@ -16,7 +24,6 @@ export function useChartDataV2(
 
   const chartData: ChartDataPoint[] = useMemo(() => {
     if (!snapshots || snapshots.length === 0) {
-      // If no snapshots yet, show just the live point
       return [
         {
           label: "Now",
@@ -29,15 +36,19 @@ export function useChartDataV2(
       ];
     }
 
+    const exViews = excludedStats?.totalViews ?? 0;
+    const exLikes = excludedStats?.totalLikes ?? 0;
+    const exComments = excludedStats?.totalComments ?? 0;
+    const exShares = excludedStats?.totalShares ?? 0;
+
     const historical: ChartDataPoint[] = snapshots.map((s: { snapshotAt: number; totalViews: number; totalLikes: number; totalComments: number; totalShares: number }) => ({
       label: formatSnapshotDate(s.snapshotAt),
-      views: s.totalViews,
-      likes: s.totalLikes,
-      comments: s.totalComments,
-      shares: s.totalShares,
+      views: Math.max(0, s.totalViews - exViews),
+      likes: Math.max(0, s.totalLikes - exLikes),
+      comments: Math.max(0, s.totalComments - exComments),
+      shares: Math.max(0, s.totalShares - exShares),
     }));
 
-    // Add live "Now" point with real-time aggregate values
     historical.push({
       label: "Now",
       views: adjustedTotals.totalViews,
@@ -48,7 +59,7 @@ export function useChartDataV2(
     });
 
     return historical;
-  }, [snapshots, adjustedTotals]);
+  }, [snapshots, adjustedTotals, excludedStats]);
 
   return { chartData, isLoading: snapshots === undefined };
 }
