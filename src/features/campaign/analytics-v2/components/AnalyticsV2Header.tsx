@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -258,13 +257,6 @@ export function AnalyticsV2Header({
             </PopoverContent>
           </Popover>
 
-          {/* Min views badge */}
-          {settings.minViewsFilter > 0 && (
-            <Badge variant="secondary" className="text-xs whitespace-nowrap">
-              {settings.minViewsFilter.toLocaleString()}+ views
-            </Badge>
-          )}
-
           {/* Settings */}
           <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
             <PopoverTrigger asChild>
@@ -376,6 +368,13 @@ export function AnalyticsV2Header({
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* Advanced Analytics */}
+          <Button variant="outline" size="sm" className="h-10 flex-shrink-0 whitespace-nowrap" asChild>
+            <Link href={`/campaign/${campaignId}/advanced-analytics`}>
+              Advanced Analytics
+            </Link>
+          </Button>
         </div>
       )}
     </motion.div>

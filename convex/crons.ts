@@ -65,4 +65,20 @@ crons.interval(
     {}
 );
 
+// Advanced Analytics: link montagerVideos → tiktokVideoStats
+// crons.interval(
+//     "linkMontagerToTiktok",
+//     { minutes: 180 }, // Every 3 hours
+//     internal.app.advancedAnalytics.linkMontagerToTiktok,
+//     {}
+// );
+
+// Advanced Analytics: compute dimension stats
+crons.interval(
+    "computeDimensionStats",
+    { minutes: 180 }, // Every 3 hours
+    internal.app.advancedAnalytics.computeDimensionStats,
+    {}
+);
+
 export default crons;

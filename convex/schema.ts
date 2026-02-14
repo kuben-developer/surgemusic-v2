@@ -91,7 +91,8 @@ export default defineSchema({
     .index("by_campaignId", ["campaignId"])
     .index("by_tiktokAuthorId", ["tiktokAuthorId"])
     .index("by_campaignId_postedAt", ["campaignId", "postedAt"])
-    .index("by_tiktokVideoId", ["tiktokVideoId"]),
+    .index("by_tiktokVideoId", ["tiktokVideoId"])
+    .index("by_bundlePostId", ["bundlePostId"]),
 
   tiktokVideoSnapshots: defineTable({
     tiktokVideoId: v.string(), // TikTok video ID
@@ -360,6 +361,7 @@ export default defineSchema({
     airtableRecordId: v.optional(v.string()),
     campaignId: v.optional(v.string()), // Airtable campaign ID for fetching assets
     scheduledDate: v.optional(v.string()), // ISO date "YYYY-MM-DD" from Airtable
+    tiktokVideoId: v.optional(v.string()), // Resolved by linking cron (advanced analytics)
   })
     .index("by_montagerFolderId", ["montagerFolderId"])
     .index("by_montagerFolderId_status", ["montagerFolderId", "status"])
@@ -473,6 +475,24 @@ export default defineSchema({
     .index("by_campaignId_isSelected", ["campaignId", "isSelected"])
     .index("by_campaignId_createdAt", ["campaignId", "createdAt"])
     .index("by_campaignId_likes", ["campaignId", "likes"]),
+
+  // ADVANCED ANALYTICS (pre-computed dimension stats)
+  advancedAnalyticsDimensionStats: defineTable({
+    campaignId: v.string(),
+    dimension: v.string(),      // "caption" | "folder" | "overlayStyle"
+    dimensionValue: v.string(), // The actual caption text / folder name / style name
+    totalVideos: v.number(),
+    totalViews: v.number(),
+    totalLikes: v.number(),
+    totalComments: v.number(),
+    totalShares: v.number(),
+    totalSaves: v.number(),
+    avgViews: v.number(),
+    avgLikes: v.number(),
+    lastUpdated: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_dimension", ["campaignId", "dimension"]),
 
   // COMMENT SCRAPE JOBS (background job tracking)
   commentScrapeJobs: defineTable({

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as app_advancedAnalytics from "../app/advancedAnalytics.js";
 import type * as app_airtable from "../app/airtable.js";
 import type * as app_analytics from "../app/analytics.js";
 import type * as app_analyticsV2 from "../app/analyticsV2.js";
@@ -56,6 +57,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "app/advancedAnalytics": typeof app_advancedAnalytics;
   "app/airtable": typeof app_airtable;
   "app/analytics": typeof app_analytics;
   "app/analyticsV2": typeof app_analyticsV2;
