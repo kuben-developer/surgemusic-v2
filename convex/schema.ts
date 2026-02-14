@@ -86,6 +86,7 @@ export default defineSchema({
     shares: v.number(),
     saves: v.number(),
     isManual: v.boolean(),
+    bundlePostId: v.optional(v.string()), // Bundle Social post ID (for dedup on re-runs)
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_tiktokAuthorId", ["tiktokAuthorId"])

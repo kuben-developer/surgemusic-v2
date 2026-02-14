@@ -17,9 +17,9 @@ import {
 
 const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2";
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
-const CHUNK_SIZE = 200; // Airtable contents per action invocation
+const CHUNK_SIZE = 1000; // Airtable contents per action invocation
 const CONCURRENCY = 5; // Parallel HTTP requests within a chunk
-const POPULATE_STAGGER_MS = 5 * 60 * 1000; // 5 minutes between campaigns
+const POPULATE_STAGGER_MS = 0.1 * 60 * 1000; // 5 minutes between campaigns
 
 // =============================================================================
 // AGGREGATES
@@ -229,7 +229,12 @@ export const getExistingVideoIds = internalQuery({
       .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
-    return videos.map((v) => v.tiktokVideoId);
+    return {
+      tiktokVideoIds: videos.map((v) => v.tiktokVideoId),
+      bundlePostIds: videos
+        .map((v) => v.bundlePostId)
+        .filter((id): id is string => !!id),
+    };
   },
 });
 
@@ -330,6 +335,7 @@ export const upsertVideoStats = internalMutation({
         shares: v.number(),
         saves: v.number(),
         isManual: v.boolean(),
+        bundlePostId: v.optional(v.string()),
       }),
     ),
   },
@@ -355,6 +361,9 @@ export const upsertVideoStats = internalMutation({
           saves: video.saves,
           tiktokAuthorId: video.tiktokAuthorId,
           mediaUrl: video.mediaUrl,
+          ...(video.bundlePostId && !existing.bundlePostId
+            ? { bundlePostId: video.bundlePostId }
+            : {}),
         });
         updated++;
       } else {
@@ -1222,11 +1231,12 @@ export const populateTiktokVideoStats = internalAction({
 
     if (offset >= airtableContents.length) return;
 
-    const existingVideoIds = await ctx.runQuery(
+    const { tiktokVideoIds, bundlePostIds } = await ctx.runQuery(
       internal.app.analyticsV2.getExistingVideoIds,
       { campaignId },
     );
-    const existingSet = new Set(existingVideoIds);
+    const existingSet = new Set(tiktokVideoIds);
+    const existingPostIds = new Set(bundlePostIds);
 
     const chunk = airtableContents.slice(offset, offset + CHUNK_SIZE);
 
@@ -1244,7 +1254,10 @@ export const populateTiktokVideoStats = internalAction({
           pending.push({ tiktokId: content.tiktokId, isManual });
         }
       } else if (!isManual && content.postId) {
-        pending.push({ postId: content.postId, isManual });
+        // Skip if we already processed this Bundle post ID before
+        if (!existingPostIds.has(content.postId)) {
+          pending.push({ postId: content.postId, isManual });
+        }
       }
     }
 
@@ -1261,12 +1274,14 @@ export const populateTiktokVideoStats = internalAction({
       shares: number;
       saves: number;
       isManual: boolean;
+      bundlePostId?: string;
     };
 
     async function processItem(item: PendingItem): Promise<VideoResult | null> {
       let tiktokVideoId: string | null = item.tiktokId ?? null;
       let mediaUrl = "";
       let postedAt = 0;
+      let bundlePostId: string | undefined = undefined;
 
       // Resolve tiktokVideoId via Bundle Social if needed
       if (!tiktokVideoId && item.postId) {
@@ -1275,6 +1290,7 @@ export const populateTiktokVideoStats = internalAction({
         tiktokVideoId = bundleResult.tiktokVideoId;
         mediaUrl = bundleResult.mediaUrl;
         postedAt = bundleResult.postedAt;
+        bundlePostId = item.postId;
       }
 
       if (!tiktokVideoId || existingSet.has(tiktokVideoId)) return null;
@@ -1295,6 +1311,7 @@ export const populateTiktokVideoStats = internalAction({
         shares: details.shares,
         saves: details.saves,
         isManual: item.isManual,
+        bundlePostId,
       };
     }
 
@@ -1335,8 +1352,9 @@ export const populateTiktokVideoStats = internalAction({
       );
     }
 
+    const skipped = chunk.length - pending.length;
     console.log(
-      `[V2 Populate] Campaign ${campaignId} [${offset}..${offset + chunk.length - 1}/${airtableContents.length}]: ${videos.length} new, ${errors} errors (${pending.length} pending, ${CONCURRENCY} concurrency)`,
+      `[V2 Populate] Campaign ${campaignId} [${offset}..${offset + chunk.length - 1}/${airtableContents.length}]: ${videos.length} new, ${skipped} skipped, ${errors} errors (${pending.length} pending, ${CONCURRENCY} concurrency)`,
     );
 
     // Schedule next chunk
