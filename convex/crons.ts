@@ -52,11 +52,12 @@ crons.interval(
 //     {}
 // );
 
-// crons.cron(
-//     "populateAllCampaignsV2",
-//     "0 */3 * * *", // Every 3 hours at :00
-//     internal.app.analyticsV2.populateAllCampaigns,
-// );
+crons.cron(
+    "populateAllCampaignsV2",
+    "0 */3 * * *", // Every 3 hours at :00
+    internal.app.analyticsV2.populateAllCampaigns,
+    {}
+);
 
 crons.interval(
     "recalculateMinViewsExcluded",

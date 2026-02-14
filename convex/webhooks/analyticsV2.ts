@@ -20,7 +20,7 @@ export const updateVideoStats = httpAction(async (ctx, request) => {
       );
     }
 
-    console.log(`[V2 API] Updating ${videos.length} videos`);
+    // console.log(`[V2 API] Updating ${videos.length} videos`);
 
     const sanitized = videos.map((v: Record<string, unknown>) => ({
       tiktokVideoId: String(v.tiktokVideoId ?? ""),
