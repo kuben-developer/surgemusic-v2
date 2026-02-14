@@ -1828,3 +1828,20 @@ export const recalculateAllMinViewsExcluded = internalAction({
     );
   },
 });
+
+// One-time cleanup: delete campaignSnapshots with totalViews=0
+export const deleteEmptySnapshots = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const snapshots = await ctx.db.query("campaignSnapshots").collect();
+    let deleted = 0;
+    for (const s of snapshots) {
+      if (s.totalViews === 0) {
+        await ctx.db.delete(s._id);
+        deleted++;
+      }
+    }
+    console.log(`[V2 Cleanup] Deleted ${deleted}/${snapshots.length} empty campaignSnapshots`);
+    return { deleted, total: snapshots.length };
+  },
+});
