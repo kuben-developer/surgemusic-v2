@@ -1,6 +1,10 @@
-import { CampaignAnalyticsPage } from '@/features/campaign/analytics';
+import { AnalyticsV2Page } from "@/features/campaign/analytics-v2";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
-  return <CampaignAnalyticsPage campaignId={id} />;
+  return <AnalyticsV2Page campaignId={id} />;
 }

@@ -651,14 +651,6 @@ export const calculateMinViewsExcludedStats = internalMutation({
 export const migrateSingleCampaign = internalMutation({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    // Check if already migrated
-    const existing = await ctx.db
-      .query("campaigns")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .first();
-
-    if (existing) return;
-
     // Get campaign info from airtableCampaigns
     const airtableCampaign = await ctx.db
       .query("airtableCampaigns")
@@ -666,6 +658,27 @@ export const migrateSingleCampaign = internalMutation({
       .first();
 
     if (!airtableCampaign) return;
+
+    const existing = await ctx.db
+      .query("campaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (existing) {
+      // Sync metadata from airtableCampaigns if it has changed
+      if (
+        existing.campaignName !== airtableCampaign.campaignName ||
+        existing.artist !== airtableCampaign.artist ||
+        existing.song !== airtableCampaign.song
+      ) {
+        await ctx.db.patch(existing._id, {
+          campaignName: airtableCampaign.campaignName,
+          artist: airtableCampaign.artist,
+          song: airtableCampaign.song,
+        });
+      }
+      return;
+    }
 
     // Get settings from campaignAnalytics (V1)
     const v1Analytics = await ctx.db
@@ -1224,6 +1237,13 @@ export const populateTiktokVideoStats = internalAction({
     ctx,
     { campaignId, offset = 0 },
   ): Promise<void> => {
+    // Ensure the campaigns row exists on first chunk (no-op if already created)
+    if (offset === 0) {
+      await ctx.runMutation(internal.app.analyticsV2.migrateSingleCampaign, {
+        campaignId,
+      });
+    }
+
     const airtableContents = await ctx.runQuery(
       internal.app.analytics.getAirtablePostsByCampaign,
       { campaignId },

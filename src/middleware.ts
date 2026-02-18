@@ -17,7 +17,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/public/(.*)',
   '/trpc/public.(.*)',
   '/campaign-v2/(.*)/analytics',  // Campaign V2 analytics (public access)
-  '/campaign/(.*)/analytics'       // Campaign analytics (public access)
+  '/campaign/(.*)/analytics',      // Campaign analytics (public access)
+  '/campaign/(.*)/analytics-old'   // Campaign analytics v1 (public access)
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
