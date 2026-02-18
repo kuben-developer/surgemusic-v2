@@ -95,6 +95,18 @@ export const findStatsByBundlePostId = internalQuery({
   },
 });
 
+/** Find tiktokVideoId via bundleSocialPostedVideos (postId → videoId) */
+export const findVideoIdFromBundleSocialPosted = internalQuery({
+  args: { postId: v.string() },
+  handler: async (ctx, { postId }) => {
+    const posted = await ctx.db
+      .query("bundleSocialPostedVideos")
+      .withIndex("by_postId", (q) => q.eq("postId", postId))
+      .first();
+    return posted ? { tiktokVideoId: posted.videoId } : null;
+  },
+});
+
 /** Find tiktokVideoStats by tiktokVideoId */
 export const findStatsByTiktokVideoId = internalQuery({
   args: { tiktokVideoId: v.string() },
@@ -142,6 +154,18 @@ export const getAllCampaignIds = internalQuery({
   handler: async (ctx) => {
     const campaigns = await ctx.db.query("airtableCampaigns").collect();
     return campaigns.map((c) => c.campaignId);
+  },
+});
+
+/** Get campaign name (campaignName) by campaignId (Airtable record ID) */
+export const getCampaignName = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const campaign = await ctx.db
+      .query("airtableCampaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+    return campaign?.campaignName ?? null;
   },
 });
 
@@ -202,9 +226,12 @@ export const replaceDimensionStats = internalMutation({
 /**
  * Fetches Airtable content table for a campaign, returns mapping:
  * airtableRecordId → { apiPostId, tiktokId }
+ *
+ * Filters by campaignName (the text campaign_id field in Airtable)
+ * to avoid fetching the entire content table.
  */
 async function fetchAirtableMappings(
-  campaignId: string,
+  campaignName: string,
 ): Promise<Map<string, { apiPostId?: string; tiktokId?: string }>> {
   const mapping = new Map<
     string,
@@ -218,11 +245,12 @@ async function fetchAirtableMappings(
       `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}`,
     );
 
-    // Get the campaign name from airtableCampaigns to filter
-    // The content table uses campaign_id field which maps to campaignName
+    url.searchParams.append(
+      "filterByFormula",
+      `{campaign_id} = '${campaignName}'`,
+    );
     url.searchParams.append("fields[]", "api_post_id");
     url.searchParams.append("fields[]", "tiktok_id");
-    url.searchParams.append("fields[]", "campaign_id");
 
     if (offset) url.searchParams.append("offset", offset);
 
@@ -301,46 +329,77 @@ export const linkMontagerToTiktok = internalAction({
 /**
  * Link montagerVideos to tiktokVideoStats for a single campaign.
  * Uses indexed query (by_campaignId) to avoid full table scans.
+ * Can be called directly from the Convex dashboard.
  */
 export const linkSingleCampaignMontagerVideos = internalAction({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
+    console.log(`[Link] Starting for campaign ${campaignId}`);
+
     // Get unlinked videos for this campaign (indexed query)
     const unlinked = await ctx.runQuery(
       internal.app.advancedAnalytics.getUnlinkedByCampaign,
       { campaignId },
     );
 
-    if (unlinked.length === 0) return;
+    if (unlinked.length === 0) {
+      console.log(`[Link] Campaign ${campaignId}: no unlinked videos, skipping`);
+      return;
+    }
 
-    // Fetch Airtable mapping for this campaign
+    console.log(`[Link] Campaign ${campaignId}: found ${unlinked.length} unlinked montagerVideos`);
+
+    // Look up campaign name to filter Airtable content table
+    const campaignName = await ctx.runQuery(
+      internal.app.advancedAnalytics.getCampaignName,
+      { campaignId },
+    );
+
+    if (!campaignName) {
+      console.error(`[Link] Campaign ${campaignId}: campaign name not found in airtableCampaigns, aborting`);
+      return;
+    }
+
+    console.log(`[Link] Campaign ${campaignId} = "${campaignName}", fetching Airtable content...`);
+
+    // Fetch Airtable mapping for this campaign (filtered by campaign name)
     let airtableMapping: Map<
       string,
       { apiPostId?: string; tiktokId?: string }
     >;
     try {
-      airtableMapping = await fetchAirtableMappings(campaignId);
+      airtableMapping = await fetchAirtableMappings(campaignName);
     } catch (error) {
-      console.error(
-        `[AdvancedAnalytics] Error fetching Airtable for campaign ${campaignId}:`,
-        error,
-      );
+      console.error(`[Link] Campaign ${campaignId}: Airtable fetch failed:`, error);
       return;
     }
 
+    console.log(`[Link] Campaign ${campaignId}: fetched ${airtableMapping.size} Airtable content records`);
+
     let linked = 0;
-    let notFound = 0;
+    let noAirtableMatch = 0;
+    let noApiPostId = 0;
+    let hasAirtableButNoStats = 0;
+    let resolvedViaTiktokId = 0;
+    let resolvedViaBundlePostId = 0;
+    let resolvedViaBundleSocialPosted = 0;
 
     for (const video of unlinked) {
       const mapping = airtableMapping.get(video.airtableRecordId);
       if (!mapping) {
-        notFound++;
+        noAirtableMatch++;
+        continue;
+      }
+
+      // Skip records with no api_post_id and no tiktok_id (not yet posted)
+      if (!mapping.apiPostId && !mapping.tiktokId) {
+        noApiPostId++;
         continue;
       }
 
       let resolvedTiktokVideoId: string | null = null;
 
-      // Try tiktok_id first
+      // Path 1: tiktok_id → tiktokVideoStats.tiktokVideoId
       if (mapping.tiktokId) {
         const stat = await ctx.runQuery(
           internal.app.advancedAnalytics.findStatsByTiktokVideoId,
@@ -348,10 +407,11 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         );
         if (stat) {
           resolvedTiktokVideoId = stat.tiktokVideoId;
+          resolvedViaTiktokId++;
         }
       }
 
-      // Fall back to api_post_id (bundlePostId)
+      // Path 2: api_post_id → tiktokVideoStats.bundlePostId
       if (!resolvedTiktokVideoId && mapping.apiPostId) {
         const stat = await ctx.runQuery(
           internal.app.advancedAnalytics.findStatsByBundlePostId,
@@ -359,6 +419,19 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         );
         if (stat) {
           resolvedTiktokVideoId = stat.tiktokVideoId;
+          resolvedViaBundlePostId++;
+        }
+      }
+
+      // Path 3: api_post_id → bundleSocialPostedVideos.postId → videoId
+      if (!resolvedTiktokVideoId && mapping.apiPostId) {
+        const posted = await ctx.runQuery(
+          internal.app.advancedAnalytics.findVideoIdFromBundleSocialPosted,
+          { postId: mapping.apiPostId },
+        );
+        if (posted) {
+          resolvedTiktokVideoId = posted.tiktokVideoId;
+          resolvedViaBundleSocialPosted++;
         }
       }
 
@@ -372,15 +445,19 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         );
         linked++;
       } else {
-        notFound++;
+        hasAirtableButNoStats++;
       }
     }
 
-    if (linked > 0 || notFound > 0) {
-      console.log(
-        `[AdvancedAnalytics] Campaign ${campaignId}: ${linked} linked, ${notFound} not found (${unlinked.length} unlinked)`,
-      );
-    }
+    console.log(
+      `[Link] Campaign ${campaignId} ("${campaignName}") DONE:\n` +
+      `  Total unlinked: ${unlinked.length}\n` +
+      `  Airtable records fetched: ${airtableMapping.size}\n` +
+      `  Linked: ${linked} (via tiktokId: ${resolvedViaTiktokId}, via bundlePostId: ${resolvedViaBundlePostId}, via bundleSocialPosted: ${resolvedViaBundleSocialPosted})\n` +
+      `  No Airtable match: ${noAirtableMatch}\n` +
+      `  No api_post_id/tiktok_id (not yet posted): ${noApiPostId}\n` +
+      `  Has api_post_id but no stats found: ${hasAirtableButNoStats}`,
+    );
   },
 });
 

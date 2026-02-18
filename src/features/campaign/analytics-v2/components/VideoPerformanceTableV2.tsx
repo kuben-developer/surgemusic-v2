@@ -27,6 +27,7 @@ interface VideoPerformanceTableV2Props {
   sortOrder: SortOrder;
   onToggleSortOrder: () => void;
   isLoading: boolean;
+  isPublic?: boolean;
 }
 
 export function VideoPerformanceTableV2({
@@ -44,6 +45,7 @@ export function VideoPerformanceTableV2({
   sortOrder,
   onToggleSortOrder,
   isLoading,
+  isPublic = false,
 }: VideoPerformanceTableV2Props) {
   const startIndex = (currentPage - 1) * itemsPerPage + 1;
   const endIndex = Math.min(currentPage * itemsPerPage, totalCount);
@@ -58,29 +60,31 @@ export function VideoPerformanceTableV2({
             {totalCount.toLocaleString()} videos
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <ViewsRangeFilter
-            minViews={viewsFilter.minViews}
-            maxViews={viewsFilter.maxViews}
-            isManualOnly={viewsFilter.isManualOnly}
-            onFilterChange={onViewsFilterChange}
-            onClear={onClearFilters}
-            hasActiveFilters={hasActiveFilters}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onToggleSortOrder}
-            className="h-8 gap-1.5"
-          >
-            {sortOrder === "desc" ? (
-              <ArrowDown className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowUp className="h-3.5 w-3.5" />
-            )}
-            <span className="text-xs">Views</span>
-          </Button>
-        </div>
+        {!isPublic && (
+          <div className="flex items-center gap-2">
+            <ViewsRangeFilter
+              minViews={viewsFilter.minViews}
+              maxViews={viewsFilter.maxViews}
+              isManualOnly={viewsFilter.isManualOnly}
+              onFilterChange={onViewsFilterChange}
+              onClear={onClearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleSortOrder}
+              className="h-8 gap-1.5"
+            >
+              {sortOrder === "desc" ? (
+                <ArrowDown className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowUp className="h-3.5 w-3.5" />
+              )}
+              <span className="text-xs">Views</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}

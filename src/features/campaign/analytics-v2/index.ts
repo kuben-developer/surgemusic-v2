@@ -1,6 +1,5 @@
 // Main page components
 export { AnalyticsV2Page } from "./AnalyticsV2Page";
-export { AdvancedAnalyticsPage } from "./AdvancedAnalyticsPage";
 
 // Components
 export { AnalyticsV2Client } from "./components/AnalyticsV2Client";

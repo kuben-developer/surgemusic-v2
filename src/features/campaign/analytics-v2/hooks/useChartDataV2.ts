@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
 import type { AdjustedTotals, ChartDataPoint } from "../types/analytics-v2.types";
-import { formatSnapshotDate } from "../utils/format.utils";
+import { formatSnapshotDate, formatSnapshotLabel } from "../utils/format.utils";
 
 interface ExcludedStats {
   totalViews: number;
@@ -59,8 +59,43 @@ export function useChartDataV2(
     const exComments = excludedStats?.totalComments ?? 0;
     const exShares = excludedStats?.totalShares ?? 0;
 
-    const historical: ChartDataPoint[] = snapshots.map((s: { snapshotAt: number; totalViews: number; totalLikes: number; totalComments: number; totalShares: number }) => ({
-      label: formatSnapshotDate(s.snapshotAt),
+    // Determine if we should show hourly or daily data
+    // snapshotAt is YYYYMMDDHH — parse first and last to check span
+    const firstAt = snapshots[0]!.snapshotAt;
+    const lastAt = snapshots[snapshots.length - 1]!.snapshotAt;
+    const parseSnapshotToMs = (at: number) => {
+      const str = at.toString().padStart(10, "0");
+      return Date.UTC(
+        parseInt(str.slice(0, 4), 10),
+        parseInt(str.slice(4, 6), 10) - 1,
+        parseInt(str.slice(6, 8), 10),
+        parseInt(str.slice(8, 10), 10),
+      );
+    };
+    const spanMs = parseSnapshotToMs(lastAt) - parseSnapshotToMs(firstAt);
+    const isHourly = spanMs <= 24 * 60 * 60 * 1000;
+
+    let pointsToPlot: Array<{ snapshotAt: number; totalViews: number; totalLikes: number; totalComments: number; totalShares: number }>;
+
+    if (isHourly) {
+      // Show all hourly snapshots
+      pointsToPlot = snapshots;
+    } else {
+      // Group by day, keep the last snapshot per day
+      const byDate = new Map<string, typeof snapshots[number]>();
+      for (const s of snapshots) {
+        const str = s.snapshotAt.toString().padStart(10, "0");
+        const key = `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+        const existing = byDate.get(key);
+        if (!existing || s.snapshotAt > existing.snapshotAt) {
+          byDate.set(key, s);
+        }
+      }
+      pointsToPlot = [...byDate.values()].sort((a, b) => a.snapshotAt - b.snapshotAt);
+    }
+
+    const historical: ChartDataPoint[] = pointsToPlot.map((s) => ({
+      label: isHourly ? formatSnapshotLabel(s.snapshotAt) : formatSnapshotDate(s.snapshotAt),
       views: Math.max(0, s.totalViews - exViews),
       likes: Math.max(0, s.totalLikes - exLikes),
       comments: Math.max(0, s.totalComments - exComments),

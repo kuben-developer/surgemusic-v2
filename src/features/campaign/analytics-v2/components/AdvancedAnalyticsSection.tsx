@@ -23,20 +23,20 @@ const DIMENSION_TABS: Array<{
   label: string;
   dimensionLabel: string;
 }> = [
-  { value: "caption", label: "Caption Performance", dimensionLabel: "Caption" },
   { value: "folder", label: "Folder Performance", dimensionLabel: "Folder" },
   {
     value: "overlayStyle",
     label: "Overlay Style",
     dimensionLabel: "Overlay Style",
   },
+  { value: "caption", label: "Caption Performance", dimensionLabel: "Caption" },
 ];
 
 export function AdvancedAnalyticsSection({
   campaignId,
 }: AdvancedAnalyticsSectionProps) {
   const [activeDimension, setActiveDimension] =
-    useState<DimensionType>("caption");
+    useState<DimensionType>("folder");
 
   const {
     stats,

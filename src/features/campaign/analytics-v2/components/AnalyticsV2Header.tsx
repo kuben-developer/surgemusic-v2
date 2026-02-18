@@ -369,12 +369,6 @@ export function AnalyticsV2Header({
             </PopoverContent>
           </Popover>
 
-          {/* Advanced Analytics */}
-          <Button variant="outline" size="sm" className="h-10 flex-shrink-0 whitespace-nowrap" asChild>
-            <Link href={`/campaign/${campaignId}/advanced-analytics`}>
-              Advanced Analytics
-            </Link>
-          </Button>
         </div>
       )}
     </motion.div>

@@ -12,6 +12,7 @@ import type { DateRangeFilter } from "./AnalyticsV2Header";
 import { KPIMetricsV2 } from "./KPIMetricsV2";
 import { MetricsChartV2 } from "./MetricsChartV2";
 import { VideoPerformanceTableV2 } from "./VideoPerformanceTableV2";
+import { AdvancedAnalyticsSection } from "./AdvancedAnalyticsSection";
 import { CampaignInfoSection } from "../../analytics/components/CampaignInfoSection";
 import { CommentCurationSection, SelectedCommentsDisplay } from "../../analytics/comments";
 import { VideoSamplesSection } from "../../analytics/components/VideoSamplesSection";
@@ -165,8 +166,12 @@ export function AnalyticsV2Client({
             sortOrder={videoPerformance.sortOrder}
             onToggleSortOrder={videoPerformance.toggleSortOrder}
             isLoading={videoPerformance.isLoading}
+            isPublic={isPublic}
           />
         </div>
+
+        {/* Advanced Analytics Section */}
+        <AdvancedAnalyticsSection campaignId={campaignId} />
 
         {/* Comments Section */}
         {isPublic ? (

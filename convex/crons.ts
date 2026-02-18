@@ -45,12 +45,12 @@ crons.interval(
 );
 
 // // V2 Analytics Crons
-// crons.hourly(
-//     "snapshotCampaignStatsV2",
-//     { minuteUTC: 45 }, // Every hour at :45
-//     internal.app.analyticsV2.snapshotCampaignStats,
-//     {}
-// );
+crons.hourly(
+    "snapshotCampaignStatsV2",
+    { minuteUTC: 45 }, // Every hour at :45
+    internal.app.analyticsV2.snapshotCampaignStats,
+    {}
+);
 
 crons.cron(
     "populateAllCampaignsV2",
