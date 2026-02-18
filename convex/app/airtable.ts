@@ -680,12 +680,12 @@ export const syncGetlatePosts = action({
 
           console.log(`\n📦 Campaign ${campaignRecordId} (${campaignIdField}): ${getlatePosts.length} getlate post(s)`);
 
-          // Bulk check existing posts
-          const existingPostIds = await ctx.runQuery(
-            internal.app.bundle.getExistingPostedVideos,
+          // Check existing posts via V2 tiktokVideoStats
+          const existingStats = await ctx.runQuery(
+            internal.app.analyticsV2.getExistingVideoIds,
             { campaignId: campaignRecordId }
           );
-          const existingPostIdsSet = new Set(existingPostIds);
+          const existingPostIdsSet = new Set(existingStats.bundlePostIds);
 
           // Collect data for bulk operations
           const postsToInsert: Array<{
@@ -806,22 +806,9 @@ export const syncGetlatePosts = action({
             }
           }
 
-          // Bulk insert posts
+          // V1 bundle table writes removed - V2 populateTiktokVideoStats handles data ingestion
           if (postsToInsert.length > 0) {
-            await ctx.runMutation(internal.app.bundle.bulkInsertPostedVideos, {
-              posts: postsToInsert,
-            });
-            console.log(`  💾 Bulk inserted ${postsToInsert.length} posts`);
-          }
-
-          // Bulk upsert snapshots
-          if (snapshotsToUpsert.length > 0) {
-            await ctx.runMutation(internal.app.bundle.bulkUpsertDailySnapshots, {
-              campaignId: campaignRecordId,
-              date,
-              snapshots: snapshotsToUpsert,
-            });
-            console.log(`  📸 Bulk upserted ${snapshotsToUpsert.length} snapshots`);
+            console.log(`  ✓ Found ${postsToInsert.length} getlate posts (V2 will ingest via populateTiktokVideoStats)`);
           }
         }
 

@@ -17,34 +17,7 @@ crons.hourly(
     {}
 );
 
-// crons.cron(
-//     "refreshTiktokStats",
-//     "30 */3 * * *", // Every 3 hours at 30 minutes past the hour
-//     internal.app.bundle.refreshTiktokStats,
-// );
-
-// crons.cron(
-//     "refreshTiktokStatsByCampaign",
-//     "*/5 * * * *",
-//     internal.app.bundle.refreshTiktokStatsByCampaign,
-//     { campaignId: "recK2FEC9YDXc0BKs" }
-// );
-
-// crons.interval(
-//     "calculateCampaignAnalytics",
-//     { minutes: 120 }, // Every 2 hours
-//     internal.app.analytics.calculateCampaignAnalytics,
-//     {}
-// );
-
-crons.interval(
-    "cleanupStaleBulkDownloads",
-    { minutes: 30 },
-    internal.app.bulkDownloader.cleanup.cleanupStaleJobs,
-    {}
-);
-
-// // V2 Analytics Crons
+// V2 Analytics Crons
 crons.hourly(
     "snapshotCampaignStatsV2",
     { minuteUTC: 45 }, // Every hour at :45
@@ -66,19 +39,18 @@ crons.interval(
     {}
 );
 
-// Advanced Analytics: link montagerVideos → tiktokVideoStats
-// crons.interval(
-//     "linkMontagerToTiktok",
-//     { minutes: 180 }, // Every 3 hours
-//     internal.app.advancedAnalytics.linkMontagerToTiktok,
-//     {}
-// );
-
 // Advanced Analytics: compute dimension stats
 crons.interval(
     "computeDimensionStats",
     { minutes: 180 }, // Every 3 hours
     internal.app.advancedAnalytics.computeDimensionStats,
+    {}
+);
+
+crons.interval(
+    "cleanupStaleBulkDownloads",
+    { minutes: 30 },
+    internal.app.bulkDownloader.cleanup.cleanupStaleJobs,
     {}
 );
 

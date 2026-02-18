@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Music2, User } from "lucide-react";
 import { motion } from "framer-motion";
-import { fadeInUp } from "../constants/metrics";
+import { fadeInUp } from "../constants/metrics-v2";
 import { calculateCPM, formatCPM } from "../utils/cpm.utils";
 
 type CurrencySymbol = "USD" | "GBP";

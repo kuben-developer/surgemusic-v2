@@ -41,44 +41,45 @@ export const getAllCampaignsInternal = internalAction({
 });
 
 /**
- * Internal query to fetch campaign analytics data
+ * Internal query to fetch campaign analytics data from V2 tables
  * Respects minViewsFilter setting to filter out posts with fewer views
  */
 export const getCampaignAnalyticsInternal = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    const analytics = await ctx.db
-      .query("campaignAnalytics")
+    const campaign = await ctx.db
+      .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
 
-    if (!analytics) {
+    if (!campaign) {
       return null;
     }
 
     // Get minViewsFilter setting
-    const minViewsFilter = analytics.minViewsFilter ?? 0;
+    const minViewsFilter = campaign.minViewsFilter ?? 0;
 
-    // If no minViewsFilter, return pre-calculated totals
+    // If no minViewsFilter, return pre-calculated totals from minViewsExcludedStats
     if (minViewsFilter === 0) {
+      const stats = campaign.minViewsExcludedStats;
       return {
-        campaignId: analytics.campaignId,
-        campaignName: analytics.campaignName,
-        artist: analytics.artist,
-        song: analytics.song,
-        totalPosts: analytics.totalPosts,
-        totalViews: analytics.totalViews,
-        totalLikes: analytics.totalLikes,
-        totalComments: analytics.totalComments,
-        totalShares: analytics.totalShares,
-        totalSaves: analytics.totalSaves,
-        contentSamples: analytics.contentSamples ?? [],
+        campaignId: campaign.campaignId,
+        campaignName: campaign.campaignName,
+        artist: campaign.artist,
+        song: campaign.song,
+        totalPosts: stats.totalPosts,
+        totalViews: stats.totalViews,
+        totalLikes: stats.totalLikes,
+        totalComments: stats.totalComments,
+        totalShares: stats.totalShares,
+        totalSaves: stats.totalSaves,
+        contentSamples: campaign.contentSamples ?? [],
       };
     }
 
     // minViewsFilter is set - recalculate totals from filtered posts
-    const bundlePosts = await ctx.db
-      .query("bundleSocialPostedVideos")
+    const videoStats = await ctx.db
+      .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
@@ -88,39 +89,42 @@ export const getCampaignAnalyticsInternal = internalQuery({
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
+    // Build set of valid tiktokVideoIds from airtable (using tiktokId or bundlePostId mapping)
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
 
-    // Filter posts: must exist in airtable AND meet minViews threshold
-    const filteredPosts = bundlePosts.filter((post) =>
-      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
-    );
+    // Filter: meet minViews threshold and have a matching airtable record
+    const filteredStats = videoStats.filter((stat) => {
+      const matchesAirtable = airtablePostIds.has(stat.bundlePostId ?? "") ||
+        airtablePostIds.has(stat.tiktokVideoId);
+      return matchesAirtable && stat.views >= minViewsFilter;
+    });
 
     // Calculate totals from filtered posts
-    const totalPosts = filteredPosts.length;
-    const totalViews = filteredPosts.reduce((acc, post) => acc + post.views, 0);
-    const totalLikes = filteredPosts.reduce((acc, post) => acc + post.likes, 0);
-    const totalComments = filteredPosts.reduce((acc, post) => acc + post.comments, 0);
-    const totalShares = filteredPosts.reduce((acc, post) => acc + post.shares, 0);
-    const totalSaves = filteredPosts.reduce((acc, post) => acc + post.saves, 0);
+    const totalPosts = filteredStats.length;
+    const totalViews = filteredStats.reduce((acc, s) => acc + s.views, 0);
+    const totalLikes = filteredStats.reduce((acc, s) => acc + s.likes, 0);
+    const totalComments = filteredStats.reduce((acc, s) => acc + s.comments, 0);
+    const totalShares = filteredStats.reduce((acc, s) => acc + s.shares, 0);
+    const totalSaves = filteredStats.reduce((acc, s) => acc + s.saves, 0);
 
     return {
-      campaignId: analytics.campaignId,
-      campaignName: analytics.campaignName,
-      artist: analytics.artist,
-      song: analytics.song,
+      campaignId: campaign.campaignId,
+      campaignName: campaign.campaignName,
+      artist: campaign.artist,
+      song: campaign.song,
       totalPosts,
       totalViews,
       totalLikes,
       totalComments,
       totalShares,
       totalSaves,
-      contentSamples: analytics.contentSamples ?? [],
+      contentSamples: campaign.contentSamples ?? [],
     };
   },
 });
 
 /**
- * Internal query to fetch all videos for a campaign with their stats
+ * Internal query to fetch all videos for a campaign with their stats from V2
  * Respects minViewsFilter setting to filter out posts with fewer views
  */
 export const getAllVideosInternal = internalQuery({
@@ -128,17 +132,17 @@ export const getAllVideosInternal = internalQuery({
     campaignId: v.string(),
   },
   handler: async (ctx, { campaignId }) => {
-    // Get minViewsFilter setting from campaign analytics
-    const analytics = await ctx.db
-      .query("campaignAnalytics")
+    // Get minViewsFilter setting from V2 campaigns table
+    const campaign = await ctx.db
+      .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
 
-    const minViewsFilter = analytics?.minViewsFilter ?? 0;
+    const minViewsFilter = campaign?.minViewsFilter ?? 0;
 
-    // Get all posts for this campaign
-    const bundlePosts = await ctx.db
-      .query("bundleSocialPostedVideos")
+    // Get all video stats for this campaign from V2
+    const videoStats = await ctx.db
+      .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
@@ -150,32 +154,34 @@ export const getAllVideosInternal = internalQuery({
 
     // Filter to only include posts that exist in airtableContents AND meet minViews threshold
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
-    const filteredPosts = bundlePosts.filter((post) =>
-      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
-    );
+    const filteredStats = videoStats.filter((stat) => {
+      const matchesAirtable = airtablePostIds.has(stat.bundlePostId ?? "") ||
+        airtablePostIds.has(stat.tiktokVideoId);
+      return matchesAirtable && stat.views >= minViewsFilter;
+    });
 
     // Sort by views descending and return all posts
-    return filteredPosts
+    return filteredStats
       .sort((a, b) => b.views - a.views)
-      .map((post) => ({
-        videoId: post.videoId,
-        postId: post.postId,
-        views: post.views,
-        likes: post.likes,
-        comments: post.comments,
-        shares: post.shares,
-        saves: post.saves,
-        videoUrl: post.videoUrl,
-        mediaUrl: post.mediaUrl,
-        postedAt: post.postedAt,
-        updatedAt: post.updatedAt,
-        isManual: post.isManual ?? false,
+      .map((stat) => ({
+        videoId: stat.tiktokVideoId,
+        postId: stat.bundlePostId ?? stat.tiktokVideoId,
+        views: stat.views,
+        likes: stat.likes,
+        comments: stat.comments,
+        shares: stat.shares,
+        saves: stat.saves,
+        videoUrl: undefined as string | undefined,
+        mediaUrl: stat.mediaUrl,
+        postedAt: stat.postedAt,
+        updatedAt: stat._creationTime,
+        isManual: stat.isManual,
       }));
   },
 });
 
 /**
- * Internal query to fetch top performing videos for a campaign
+ * Internal query to fetch top performing videos for a campaign from V2
  * Respects minViewsFilter setting to filter out posts with fewer views
  */
 export const getTopVideosInternal = internalQuery({
@@ -184,17 +190,17 @@ export const getTopVideosInternal = internalQuery({
     limit: v.number(),
   },
   handler: async (ctx, { campaignId, limit }) => {
-    // Get minViewsFilter setting from campaign analytics
-    const analytics = await ctx.db
-      .query("campaignAnalytics")
+    // Get minViewsFilter setting from V2 campaigns table
+    const campaign = await ctx.db
+      .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
 
-    const minViewsFilter = analytics?.minViewsFilter ?? 0;
+    const minViewsFilter = campaign?.minViewsFilter ?? 0;
 
-    // Get all posts for this campaign
-    const bundlePosts = await ctx.db
-      .query("bundleSocialPostedVideos")
+    // Get all video stats for this campaign from V2
+    const videoStats = await ctx.db
+      .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
@@ -206,24 +212,26 @@ export const getTopVideosInternal = internalQuery({
 
     // Filter to only include posts that exist in airtableContents AND meet minViews threshold
     const airtablePostIds = new Set(airtablePosts.map((item) => item.postId));
-    const filteredPosts = bundlePosts.filter((post) =>
-      airtablePostIds.has(post.postId) && post.views >= minViewsFilter
-    );
+    const filteredStats = videoStats.filter((stat) => {
+      const matchesAirtable = airtablePostIds.has(stat.bundlePostId ?? "") ||
+        airtablePostIds.has(stat.tiktokVideoId);
+      return matchesAirtable && stat.views >= minViewsFilter;
+    });
 
     // Sort by views descending and take top N
-    const topVideos = filteredPosts
+    const topVideos = filteredStats
       .sort((a, b) => b.views - a.views)
       .slice(0, limit)
-      .map((post) => ({
-        videoId: post.videoId,
-        postId: post.postId,
-        views: post.views,
-        likes: post.likes,
-        comments: post.comments,
-        shares: post.shares,
-        saves: post.saves,
-        videoUrl: post.videoUrl,
-        mediaUrl: post.mediaUrl,
+      .map((stat) => ({
+        videoId: stat.tiktokVideoId,
+        postId: stat.bundlePostId ?? stat.tiktokVideoId,
+        views: stat.views,
+        likes: stat.likes,
+        comments: stat.comments,
+        shares: stat.shares,
+        saves: stat.saves,
+        videoUrl: undefined as string | undefined,
+        mediaUrl: stat.mediaUrl,
       }));
 
     return topVideos;

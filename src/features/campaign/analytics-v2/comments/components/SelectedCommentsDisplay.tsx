@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
 import { CommentItem } from "./CommentItem";
-import { fadeInUp } from "../../constants/metrics";
+import { fadeInUp } from "../../constants/metrics-v2";
 
 interface SelectedCommentsDisplayProps {
   campaignId: string;

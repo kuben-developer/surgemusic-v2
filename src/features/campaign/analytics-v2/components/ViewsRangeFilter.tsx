@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Filter, X } from "lucide-react";
-import type { ViewsFilter } from "../types/analytics.types";
+import type { ViewsFilter } from "../types/analytics-v2.types";
 
 interface ViewsRangeFilterProps {
   minViews?: number;

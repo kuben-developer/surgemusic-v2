@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { fadeInUp } from "../constants/metrics";
+import { fadeInUp } from "../constants/metrics-v2";
 import { VideoSampleCard } from "./VideoSampleCard";
 import { BulkRemoveBar } from "./BulkRemoveBar";
 import { useContentSampleSelection } from "../hooks/useContentSampleSelection";
@@ -29,8 +29,8 @@ interface VideoSamplesSectionProps {
 }
 
 export function VideoSamplesSection({ campaignId, isPublic = false }: VideoSamplesSectionProps) {
-  const contentSamples = useQuery(api.app.analytics.getContentSamples, { campaignId });
-  const removeContentSamples = useMutation(api.app.analytics.removeContentSamples);
+  const contentSamples = useQuery(api.app.analyticsV2.getContentSamplesV2, { campaignId });
+  const removeContentSamples = useMutation(api.app.analyticsV2.removeContentSamplesV2);
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
   const [isBulkRemoving, setIsBulkRemoving] = useState(false);

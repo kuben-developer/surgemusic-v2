@@ -13,9 +13,9 @@ import { KPIMetricsV2 } from "./KPIMetricsV2";
 import { MetricsChartV2 } from "./MetricsChartV2";
 import { VideoPerformanceTableV2 } from "./VideoPerformanceTableV2";
 import { AdvancedAnalyticsSection } from "./AdvancedAnalyticsSection";
-import { CampaignInfoSection } from "../../analytics/components/CampaignInfoSection";
-import { CommentCurationSection, SelectedCommentsDisplay } from "../../analytics/comments";
-import { VideoSamplesSection } from "../../analytics/components/VideoSamplesSection";
+import { CampaignInfoSection } from "./CampaignInfoSection";
+import { CommentCurationSection, SelectedCommentsDisplay } from "../comments";
+import { VideoSamplesSection } from "./VideoSamplesSection";
 import { staggerContainer } from "../constants/metrics-v2";
 import type { MetricType } from "../types/analytics-v2.types";
 

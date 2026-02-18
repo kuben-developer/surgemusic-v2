@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AnalyticsClient } from "@/features/campaign/analytics/components/AnalyticsClient";
+import { AnalyticsV2Client } from "@/features/campaign/analytics-v2/components/AnalyticsV2Client";
 
 interface CampaignDetailViewProps {
   campaignId: string;
@@ -33,7 +33,7 @@ export function CampaignDetailView({ campaignId, onBack }: CampaignDetailViewPro
       </div>
 
       {/* Campaign Analytics */}
-      <AnalyticsClient campaignId={campaignId} hideBackButton />
+      <AnalyticsV2Client campaignId={campaignId} hideBackButton />
     </div>
   );
 }

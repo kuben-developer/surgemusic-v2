@@ -5,7 +5,9 @@ import { useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { ReportAnalyticsData, GrowthData, VideoMetric } from "../../shared/types/report.types";
-import type { AnalyticsResponse } from "../../../../../convex/app/analytics";
+// TODO: Reports feature needs migration to V2 analytics
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnalyticsResponse = any;
 
 interface UseReportAnalyticsDataProps {
   reportId: string | null;

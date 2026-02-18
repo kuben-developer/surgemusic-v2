@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, BarChart2, Eye, Heart, MessageCircle, Share2, DollarSign } from "lucide-react";
-import { calculateCPM, formatCPM } from "@/features/campaign/analytics/utils/cpm.utils";
+import { calculateCPM, formatCPM } from "@/features/campaign/analytics-v2/utils/cpm.utils";
 import {
   Table,
   TableBody,

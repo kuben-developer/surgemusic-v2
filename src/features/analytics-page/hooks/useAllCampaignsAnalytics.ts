@@ -15,7 +15,7 @@ import type { AggregateTotals, CampaignWithAnalytics } from "../types/analytics-
  */
 export function useAllCampaignsAnalytics() {
   // Fetch all campaigns with analytics from Convex
-  const campaignsData = useQuery(api.app.analytics.getAllCampaignsWithAnalytics);
+  const campaignsData = useQuery(api.app.analyticsV2.getAllCampaignsWithAnalyticsV2);
 
   // Transform and type the data
   const campaigns: CampaignWithAnalytics[] = useMemo(() => {

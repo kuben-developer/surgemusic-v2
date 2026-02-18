@@ -321,7 +321,7 @@ export const getVideosForCampaign = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
     const videos = await ctx.db
-      .query("bundleSocialPostedVideos")
+      .query("tiktokVideoStats")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
@@ -330,8 +330,8 @@ export const getVideosForCampaign = internalQuery({
     return videos
       .filter(v => v.comments > 0)
       .map(v => ({
-        postId: v.postId,
-        videoId: v.videoId,
+        postId: v.bundlePostId ?? v.tiktokVideoId,
+        videoId: v.tiktokVideoId,
       }));
   },
 });

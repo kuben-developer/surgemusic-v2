@@ -95,17 +95,6 @@ export const findStatsByBundlePostId = internalQuery({
   },
 });
 
-/** Find tiktokVideoId via bundleSocialPostedVideos (postId → videoId) */
-export const findVideoIdFromBundleSocialPosted = internalQuery({
-  args: { postId: v.string() },
-  handler: async (ctx, { postId }) => {
-    const posted = await ctx.db
-      .query("bundleSocialPostedVideos")
-      .withIndex("by_postId", (q) => q.eq("postId", postId))
-      .first();
-    return posted ? { tiktokVideoId: posted.videoId } : null;
-  },
-});
 
 /** Find tiktokVideoStats by tiktokVideoId */
 export const findStatsByTiktokVideoId = internalQuery({
@@ -382,7 +371,6 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     let hasAirtableButNoStats = 0;
     let resolvedViaTiktokId = 0;
     let resolvedViaBundlePostId = 0;
-    let resolvedViaBundleSocialPosted = 0;
 
     for (const video of unlinked) {
       const mapping = airtableMapping.get(video.airtableRecordId);
@@ -423,18 +411,6 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         }
       }
 
-      // Path 3: api_post_id → bundleSocialPostedVideos.postId → videoId
-      if (!resolvedTiktokVideoId && mapping.apiPostId) {
-        const posted = await ctx.runQuery(
-          internal.app.advancedAnalytics.findVideoIdFromBundleSocialPosted,
-          { postId: mapping.apiPostId },
-        );
-        if (posted) {
-          resolvedTiktokVideoId = posted.tiktokVideoId;
-          resolvedViaBundleSocialPosted++;
-        }
-      }
-
       if (resolvedTiktokVideoId) {
         await ctx.runMutation(
           internal.app.advancedAnalytics.patchMontagerVideoTiktokId,
@@ -453,7 +429,7 @@ export const linkSingleCampaignMontagerVideos = internalAction({
       `[Link] Campaign ${campaignId} ("${campaignName}") DONE:\n` +
       `  Total unlinked: ${unlinked.length}\n` +
       `  Airtable records fetched: ${airtableMapping.size}\n` +
-      `  Linked: ${linked} (via tiktokId: ${resolvedViaTiktokId}, via bundlePostId: ${resolvedViaBundlePostId}, via bundleSocialPosted: ${resolvedViaBundleSocialPosted})\n` +
+      `  Linked: ${linked} (via tiktokId: ${resolvedViaTiktokId}, via bundlePostId: ${resolvedViaBundlePostId})\n` +
       `  No Airtable match: ${noAirtableMatch}\n` +
       `  No api_post_id/tiktok_id (not yet posted): ${noApiPostId}\n` +
       `  Has api_post_id but no stats found: ${hasAirtableButNoStats}`,

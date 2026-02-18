@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { VideoPerformanceRowV2 } from "./VideoPerformanceRowV2";
-import { ViewsRangeFilter } from "../../analytics/components/ViewsRangeFilter";
+import { ViewsRangeFilter } from "./ViewsRangeFilter";
 import type {
   VideoPerformanceRow,
   ViewsFilter,

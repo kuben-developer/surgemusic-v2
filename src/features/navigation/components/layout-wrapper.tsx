@@ -82,7 +82,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   )
 
   // Check if current route is an analytics route
-  const isAnalyticsRoute = /\/campaign(-v2)?\/[^/]+\/analytics(-old)?/.test(pathname)
+  const isAnalyticsRoute = /\/campaign(-v2)?\/[^/]+\/analytics/.test(pathname)
 
   // Render public layout for:
   // 1. Explicitly public routes (sign-in, sign-up, /public/*)

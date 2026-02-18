@@ -16,7 +16,7 @@ import { ScrapeCommentsControls } from "./ScrapeCommentsControls";
 import { CommentsList } from "./CommentsList";
 import { useCommentCuration, type CommentFilterBy } from "../hooks/useCommentCuration";
 import { useCommentScrape } from "../hooks/useCommentScrape";
-import { fadeInUp } from "../../constants/metrics";
+import { fadeInUp } from "../../constants/metrics-v2";
 
 interface CommentCurationSectionProps {
   campaignId: string;

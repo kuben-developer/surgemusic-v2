@@ -49,7 +49,7 @@ export function CampaignContentPage() {
 
   // Push to analytics selection
   const pushSelection = usePushableVideoSelection();
-  const pushContentSamples = useMutation(api.app.analytics.pushContentSamples);
+  const pushContentSamples = useMutation(api.app.analyticsV2.pushContentSamplesV2);
 
   // Validate campaign assets for Montager
   const validation = useQuery(
