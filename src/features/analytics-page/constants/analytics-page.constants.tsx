@@ -11,7 +11,7 @@ export interface KPIMetricConfig {
   icon: React.ReactNode;
   bgColor: string;
   iconColor: string;
-  getValue: (data: AggregateTotals) => string | number;
+  getValue: (data: AggregateTotals) => number;
 }
 
 /**
@@ -25,7 +25,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <Sparkles className="h-4 w-4" />,
     bgColor: "bg-purple-100 dark:bg-purple-900/20",
     iconColor: "text-purple-600 dark:text-purple-400",
-    getValue: (data) => data.campaigns.toLocaleString(),
+    getValue: (data) => data.campaigns,
   },
   {
     key: "posts",
@@ -33,7 +33,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <BarChart2 className="h-4 w-4" />,
     bgColor: "bg-violet-100 dark:bg-violet-900/20",
     iconColor: "text-violet-600 dark:text-violet-400",
-    getValue: (data) => data.posts.toLocaleString(),
+    getValue: (data) => data.posts,
   },
   {
     key: "views",
@@ -41,7 +41,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <Eye className="h-4 w-4" />,
     bgColor: "bg-green-100 dark:bg-green-900/20",
     iconColor: "text-green-600 dark:text-green-400",
-    getValue: (data) => data.views.toLocaleString(),
+    getValue: (data) => data.views,
   },
   {
     key: "likes",
@@ -49,7 +49,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <Heart className="h-4 w-4" />,
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
     iconColor: "text-orange-600 dark:text-orange-400",
-    getValue: (data) => data.likes.toLocaleString(),
+    getValue: (data) => data.likes,
   },
   {
     key: "comments",
@@ -57,7 +57,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <MessageSquare className="h-4 w-4" />,
     bgColor: "bg-red-100 dark:bg-red-900/20",
     iconColor: "text-red-600 dark:text-red-400",
-    getValue: (data) => data.comments.toLocaleString(),
+    getValue: (data) => data.comments,
   },
   {
     key: "shares",
@@ -65,7 +65,7 @@ export const OVERVIEW_KPI_METRICS: KPIMetricConfig[] = [
     icon: <Share2 className="h-4 w-4" />,
     bgColor: "bg-blue-100 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
-    getValue: (data) => data.shares.toLocaleString(),
+    getValue: (data) => data.shares,
   },
 ];
 

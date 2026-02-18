@@ -274,7 +274,7 @@ export const startCommentScrape = action({
       throw new Error("A scrape job is already in progress for this campaign");
     }
 
-    // Get videos for this campaign from bundleSocialPostedVideos
+    // Get videos for this campaign from tiktokVideoStats
     const videos: Array<{ postId: string; videoId: string }> = await ctx.runQuery(internal.app.comments.getVideosForCampaign, { campaignId });
 
     if (videos.length === 0) {

@@ -918,7 +918,24 @@ export const getAllCampaignsWithAnalyticsV2 = query({
 
     const results = await Promise.all(
       allCampaigns.map(async (campaign) => {
-        const stats = campaign.minViewsExcludedStats;
+        // Get real-time aggregate totals (same approach as getCampaignAnalyticsV2)
+        const [views, likes, comments, shares, saves] = await Promise.all([
+          aggregateViews.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
+          aggregateLikes.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
+          aggregateComments.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
+          aggregateShares.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
+          aggregateSaves.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
+        ]);
+        const totalPosts = await aggregateViews.count(ctx, {
+          namespace: campaign.campaignId,
+          bounds: {},
+        });
+
+        // Subtract excluded stats (videos below min-views threshold)
+        const excluded = campaign.minViewsExcludedStats ?? {
+          totalPosts: 0, totalViews: 0, totalLikes: 0,
+          totalComments: 0, totalShares: 0, totalSaves: 0,
+        };
 
         // Get recent snapshots for sparkline
         const snapshots = await ctx.db
@@ -963,12 +980,12 @@ export const getAllCampaignsWithAnalyticsV2 = query({
           artist: campaign.artist,
           song: campaign.song,
           totals: {
-            posts: stats.totalPosts,
-            views: stats.totalViews,
-            likes: stats.totalLikes,
-            comments: stats.totalComments,
-            shares: stats.totalShares,
-            saves: stats.totalSaves,
+            posts: totalPosts - excluded.totalPosts,
+            views: views - excluded.totalViews,
+            likes: likes - excluded.totalLikes,
+            comments: comments - excluded.totalComments,
+            shares: shares - excluded.totalShares,
+            saves: saves - excluded.totalSaves,
           },
           sparklineData,
           lastUpdatedAt: campaign._creationTime,
