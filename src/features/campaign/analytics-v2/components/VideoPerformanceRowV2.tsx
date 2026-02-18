@@ -11,15 +11,12 @@ import {
   Bookmark,
   MousePointerClick,
 } from "lucide-react";
-import { VideoSparkChart } from "./VideoSparkChart";
 import { TikTokThumbnail } from "./TikTokThumbnail";
 import { useCounterAnimation } from "../hooks/useCounterAnimation";
 import type { VideoPerformanceRow } from "../types/analytics-v2.types";
-import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
 
 interface VideoPerformanceRowV2Props {
   video: VideoPerformanceRow;
-  snapshots?: SnapshotPoint[];
 }
 
 function AnimatedMetric({
@@ -60,7 +57,7 @@ function EngagementRate({ views, likes, comments, shares }: {
   );
 }
 
-function VideoPerformanceRowV2Inner({ video, snapshots }: VideoPerformanceRowV2Props) {
+function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
   const videoUrl =
     video.mediaUrl ||
     `https://www.tiktok.com/@/video/${video.tiktokVideoId}`;
@@ -144,10 +141,6 @@ function VideoPerformanceRowV2Inner({ video, snapshots }: VideoPerformanceRowV2P
         </div>
       </div>
 
-      {/* Spark chart — far right */}
-      <div className="flex-shrink-0 hidden sm:block">
-        <VideoSparkChart tiktokVideoId={video.tiktokVideoId} snapshots={snapshots} />
-      </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@ interface CampaignTableProps {
 export function CampaignTable({ campaigns, onSelectCampaign }: CampaignTableProps) {
   const router = useRouter();
   const [sortConfig, setSortConfig] = useState<SortConfig>({
-    field: "views",
+    field: "firstVideoAt",
     direction: "desc",
   });
 

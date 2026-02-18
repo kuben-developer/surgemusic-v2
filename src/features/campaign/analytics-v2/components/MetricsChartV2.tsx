@@ -53,7 +53,7 @@ export function MetricsChartV2({
   const livePoint = livePointIndex >= 0 ? chartData[livePointIndex] : null;
 
   return (
-    <Card className="p-4 sm:p-6 border border-primary/10 shadow-md overflow-hidden">
+    <Card className="p-4 sm:p-6 border border-primary/10 shadow-md overflow-hidden h-full flex flex-col">
       <div className="mb-4 sm:mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Performance Metrics</h3>
@@ -143,7 +143,7 @@ export function MetricsChartV2({
       </div>
 
       <motion.div
-        className="h-60 sm:h-80 bg-white dark:bg-muted/30 rounded-lg p-2 sm:p-4 border border-border/30 shadow-sm"
+        className="flex-1 min-h-60 bg-white dark:bg-muted/30 rounded-lg p-2 sm:p-4 border border-border/30 shadow-sm"
         key={`${activeMetric}-${chartMode}`}
         variants={chartVariants}
         initial="hidden"

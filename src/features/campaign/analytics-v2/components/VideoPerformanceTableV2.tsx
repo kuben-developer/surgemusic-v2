@@ -10,11 +10,9 @@ import type {
   ViewsFilter,
   SortOrder,
 } from "../types/analytics-v2.types";
-import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
 
 interface VideoPerformanceTableV2Props {
   videos: VideoPerformanceRow[];
-  snapshotsMap: Record<string, SnapshotPoint[]>;
   currentPage: number;
   totalPages: number;
   totalCount: number;
@@ -32,7 +30,6 @@ interface VideoPerformanceTableV2Props {
 
 export function VideoPerformanceTableV2({
   videos,
-  snapshotsMap,
   currentPage,
   totalPages,
   totalCount,
@@ -47,21 +44,16 @@ export function VideoPerformanceTableV2({
   isLoading,
   isPublic = false,
 }: VideoPerformanceTableV2Props) {
-  const startIndex = (currentPage - 1) * itemsPerPage + 1;
-  const endIndex = Math.min(currentPage * itemsPerPage, totalCount);
-
   return (
     <Card className="p-4 sm:p-6 border border-primary/10">
-      {/* Header */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">Content Performance</h3>
-          <p className="text-sm text-muted-foreground">
-            {totalCount.toLocaleString()} videos
-          </p>
-        </div>
+      {/* Header: title + controls + pagination in one row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-lg font-semibold mr-auto">
+          Content Performance
+        </h3>
+
         {!isPublic && (
-          <div className="flex items-center gap-2">
+          <>
             <ViewsRangeFilter
               minViews={viewsFilter.minViews}
               maxViews={viewsFilter.maxViews}
@@ -74,7 +66,7 @@ export function VideoPerformanceTableV2({
               variant="outline"
               size="sm"
               onClick={onToggleSortOrder}
-              className="h-8 gap-1.5"
+              className="h-7 gap-1.5"
             >
               {sortOrder === "desc" ? (
                 <ArrowDown className="h-3.5 w-3.5" />
@@ -83,42 +75,33 @@ export function VideoPerformanceTableV2({
               )}
               <span className="text-xs">Views</span>
             </Button>
-          </div>
+          </>
         )}
-      </div>
 
-      {/* Pagination */}
-      <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-        <div className="text-xs sm:text-sm text-muted-foreground">
-          {totalCount > 0
-            ? `${startIndex}-${endIndex} of ${totalCount.toLocaleString()}`
-            : "No videos"}
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 1 || isLoading}
-            onClick={() => onPageChange(currentPage - 1)}
-            className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
-          >
-            Prev
-          </Button>
-          <span className="text-xs sm:text-sm text-muted-foreground px-1 sm:px-2">
-            {currentPage}/{totalPages || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages || isLoading}
-            onClick={() => onPageChange(currentPage + 1)}
-            className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
-          >
-            Next
-          </Button>
-        </div>
       </div>
-
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 1 || isLoading}
+          onClick={() => onPageChange(currentPage - 1)}
+          className="h-7 px-2 text-xs"
+        >
+          Prev
+        </Button>
+        <span className="text-xs text-muted-foreground px-1">
+          {currentPage}/{totalPages || 1}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage >= totalPages || isLoading}
+          onClick={() => onPageChange(currentPage + 1)}
+          className="h-7 px-2 text-xs"
+        >
+          Next
+        </Button>
+      </div>
       {/* Loading */}
       {isLoading && (
         <div className="flex justify-center py-8">
@@ -131,7 +114,7 @@ export function VideoPerformanceTableV2({
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((video) => (
-              <VideoPerformanceRowV2 key={video._id} video={video} snapshots={snapshotsMap[video.tiktokVideoId]} />
+              <VideoPerformanceRowV2 key={video._id} video={video} />
             ))
           ) : (
             <div className="py-8 text-center text-muted-foreground">

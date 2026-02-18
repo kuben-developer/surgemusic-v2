@@ -2,11 +2,18 @@
 
 import React, { useMemo } from "react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
+interface VideoSnapshotPoint {
+  snapshotAt: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+}
 
 interface VideoSparkChartProps {
   tiktokVideoId: string;
-  snapshots?: SnapshotPoint[];
+  snapshots?: VideoSnapshotPoint[];
 }
 
 function VideoSparkChartInner({ snapshots }: VideoSparkChartProps) {

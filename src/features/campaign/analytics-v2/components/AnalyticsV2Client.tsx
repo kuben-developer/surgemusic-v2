@@ -141,33 +141,36 @@ export function AnalyticsV2Client({
 
         <KPIMetricsV2 totals={adjustedTotals} />
 
-        {/* Side-by-side layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <MetricsChartV2
-            chartData={chartData}
-            activeMetric={activeMetric}
-            onActiveMetricChange={setActiveMetric}
-            chartMode={chartMode}
-            onChartModeChange={setChartMode}
-          />
+        {/* Side-by-side layout: 7/12 metrics, 5/12 content performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+          <div className="lg:col-span-7">
+            <MetricsChartV2
+              chartData={chartData}
+              activeMetric={activeMetric}
+              onActiveMetricChange={setActiveMetric}
+              chartMode={chartMode}
+              onChartModeChange={setChartMode}
+            />
+          </div>
 
-          <VideoPerformanceTableV2
-            videos={videoPerformance.videos}
-            snapshotsMap={videoPerformance.snapshotsMap}
-            currentPage={videoPerformance.currentPage}
-            totalPages={videoPerformance.totalPages}
-            totalCount={videoPerformance.totalCount}
-            itemsPerPage={videoPerformance.itemsPerPage}
-            onPageChange={videoPerformance.goToPage}
-            viewsFilter={videoPerformance.viewsFilter}
-            onViewsFilterChange={videoPerformance.updateViewsFilter}
-            onClearFilters={videoPerformance.clearFilters}
-            hasActiveFilters={videoPerformance.hasActiveFilters}
-            sortOrder={videoPerformance.sortOrder}
-            onToggleSortOrder={videoPerformance.toggleSortOrder}
-            isLoading={videoPerformance.isLoading}
-            isPublic={isPublic}
-          />
+          <div className="lg:col-span-5">
+            <VideoPerformanceTableV2
+              videos={videoPerformance.videos}
+              currentPage={videoPerformance.currentPage}
+              totalPages={videoPerformance.totalPages}
+              totalCount={videoPerformance.totalCount}
+              itemsPerPage={videoPerformance.itemsPerPage}
+              onPageChange={videoPerformance.goToPage}
+              viewsFilter={videoPerformance.viewsFilter}
+              onViewsFilterChange={videoPerformance.updateViewsFilter}
+              onClearFilters={videoPerformance.clearFilters}
+              hasActiveFilters={videoPerformance.hasActiveFilters}
+              sortOrder={videoPerformance.sortOrder}
+              onToggleSortOrder={videoPerformance.toggleSortOrder}
+              isLoading={videoPerformance.isLoading}
+              isPublic={isPublic}
+            />
+          </div>
         </div>
 
         {/* Advanced Analytics Section */}

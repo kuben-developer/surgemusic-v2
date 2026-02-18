@@ -8,15 +8,6 @@ import type { ViewsFilter, SortOrder, VideoPerformanceRow } from "../types/analy
 const BACKEND_PAGE_SIZE = 100;
 const FRONTEND_PAGE_SIZE = 5;
 
-export type SnapshotPoint = {
-  snapshotAt: number;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  saves: number;
-};
-
 interface UseVideoPerformanceV2Options {
   campaignId: string;
   dateFrom?: number;
@@ -46,22 +37,6 @@ export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo }: UseVideo
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / FRONTEND_PAGE_SIZE));
   const isLoading = data === undefined;
-
-  // Preload spark chart snapshots for the entire 100-item batch
-  const batchVideoIds = useMemo(
-    () => allVideos.map((v) => v.tiktokVideoId),
-    [allVideos],
-  );
-
-  const batchSnapshots = useQuery(
-    api.app.analyticsV2.getBatchVideoSnapshots,
-    batchVideoIds.length > 0 ? { tiktokVideoIds: batchVideoIds } : "skip",
-  );
-
-  const snapshotsMap: Record<string, SnapshotPoint[]> = useMemo(
-    () => batchSnapshots ?? {},
-    [batchSnapshots],
-  );
 
   // Slice the current 5-item page from the preloaded 100-item batch
   const videos: VideoPerformanceRow[] = useMemo(() => {
@@ -113,7 +88,6 @@ export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo }: UseVideo
 
   return {
     videos,
-    snapshotsMap,
     currentPage,
     totalPages,
     totalCount,
