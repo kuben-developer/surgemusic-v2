@@ -129,6 +129,18 @@ export default defineSchema({
       addedAt: v.number(),
       sourceVideoId: v.optional(v.string()),
     }))),
+
+    // Pre-computed totals for fast campaign list loading (updated by cron)
+    cachedTotals: v.optional(v.object({
+      posts: v.number(),
+      views: v.number(),
+      likes: v.number(),
+      comments: v.number(),
+      shares: v.number(),
+      saves: v.number(),
+    })),
+    cachedFirstVideoAt: v.optional(v.number()),
+    cachedAt: v.optional(v.number()),
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_status", ["status"]),

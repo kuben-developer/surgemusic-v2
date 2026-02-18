@@ -7,7 +7,7 @@ import type { CampaignWithAnalytics } from "@/features/analytics-page/types/anal
 
 export function useCampaignList(status: string, skip = false) {
   const campaignsData = useQuery(
-    api.app.analyticsV2.getAllCampaignsWithAnalyticsV2,
+    api.app.analyticsV2.getCampaignListByStatus,
     skip ? "skip" : { status },
   );
 
@@ -28,13 +28,7 @@ export function useCampaignList(status: string, skip = false) {
         shares: campaign.totals.shares,
         saves: campaign.totals.saves,
       },
-      sparklineData: campaign.sparklineData.map((point) => ({
-        date: point.date,
-        views: point.views,
-        likes: point.likes,
-        comments: point.comments,
-        shares: point.shares,
-      })),
+      sparklineData: [],
       firstVideoAt: campaign.firstVideoAt,
       lastUpdatedAt: campaign.lastUpdatedAt,
     }));

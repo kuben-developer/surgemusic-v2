@@ -1511,6 +1511,146 @@ export const recalculateAllMinViewsExcluded = internalAction({
   },
 });
 
+// =============================================================================
+// CAMPAIGN LIST CACHE (pre-computed totals for fast list page loading)
+// =============================================================================
+
+export const getFirstVideoAt = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const firstVideo = await ctx.db
+      .query("tiktokVideoStats")
+      .withIndex("by_campaignId_postedAt", (q) =>
+        q.eq("campaignId", campaignId),
+      )
+      .order("asc")
+      .first();
+    return firstVideo?.postedAt ?? null;
+  },
+});
+
+export const updateCampaignCachedTotals = internalMutation({
+  args: {
+    campaignId: v.string(),
+    rawTotals: v.object({
+      totalPosts: v.number(),
+      totalViews: v.number(),
+      totalLikes: v.number(),
+      totalComments: v.number(),
+      totalShares: v.number(),
+      totalSaves: v.number(),
+    }),
+    firstVideoAt: v.union(v.number(), v.null()),
+  },
+  handler: async (ctx, { campaignId, rawTotals, firstVideoAt }) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .first();
+
+    if (!campaign) return;
+
+    const excluded = campaign.minViewsExcludedStats ?? {
+      totalPosts: 0,
+      totalViews: 0,
+      totalLikes: 0,
+      totalComments: 0,
+      totalShares: 0,
+      totalSaves: 0,
+    };
+
+    await ctx.db.patch(campaign._id, {
+      cachedTotals: {
+        posts: rawTotals.totalPosts - excluded.totalPosts,
+        views: rawTotals.totalViews - excluded.totalViews,
+        likes: rawTotals.totalLikes - excluded.totalLikes,
+        comments: rawTotals.totalComments - excluded.totalComments,
+        shares: rawTotals.totalShares - excluded.totalShares,
+        saves: rawTotals.totalSaves - excluded.totalSaves,
+      },
+      cachedFirstVideoAt: firstVideoAt ?? undefined,
+      cachedAt: Date.now(),
+    });
+  },
+});
+
+export const cacheSingleCampaignTotals = internalAction({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const [rawTotals, firstVideoAt] = await Promise.all([
+      ctx.runQuery(internal.app.analyticsV2.getAggregateTotals, { campaignId }),
+      ctx.runQuery(internal.app.analyticsV2.getFirstVideoAt, { campaignId }),
+    ]);
+
+    await ctx.runMutation(
+      internal.app.analyticsV2.updateCampaignCachedTotals,
+      { campaignId, rawTotals, firstVideoAt },
+    );
+  },
+});
+
+export const cacheAllCampaignTotals = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const campaignIds = await ctx.runQuery(
+      internal.app.analyticsV2.getAllCampaignIds,
+      {},
+    );
+
+    for (const campaignId of campaignIds) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.app.analyticsV2.cacheSingleCampaignTotals,
+        { campaignId },
+      );
+    }
+
+    console.log(
+      `[V2 Cache] Scheduled cache refresh for ${campaignIds.length} campaigns`,
+    );
+  },
+});
+
+export const getCampaignListByStatus = query({
+  args: {
+    status: v.optional(v.string()),
+  },
+  handler: async (ctx, { status }) => {
+    let allCampaigns;
+    if (status) {
+      allCampaigns = await ctx.db
+        .query("campaigns")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .collect();
+    } else {
+      allCampaigns = await ctx.db.query("campaigns").collect();
+    }
+
+    return allCampaigns.map((campaign) => ({
+      campaignId: campaign.campaignId,
+      campaignName: campaign.campaignName,
+      artist: campaign.artist,
+      song: campaign.song,
+      status: campaign.status,
+      totals: campaign.cachedTotals ?? {
+        posts: 0,
+        views: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+      },
+      firstVideoAt: campaign.cachedFirstVideoAt ?? null,
+      cachedAt: campaign.cachedAt ?? null,
+      lastUpdatedAt: campaign._creationTime,
+    }));
+  },
+});
+
+// =============================================================================
+// ONE-TIME UTILITIES
+// =============================================================================
+
 // One-time cleanup: delete campaignSnapshots with totalViews=0
 export const deleteEmptySnapshots = internalMutation({
   args: {},

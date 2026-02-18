@@ -39,6 +39,14 @@ crons.interval(
     {}
 );
 
+// Campaign list cache: pre-compute totals every 15 minutes
+crons.interval(
+    "cacheAllCampaignTotals",
+    { minutes: 15 },
+    internal.app.analyticsV2.cacheAllCampaignTotals,
+    {}
+);
+
 // Advanced Analytics: compute dimension stats
 crons.interval(
     "computeDimensionStats",
