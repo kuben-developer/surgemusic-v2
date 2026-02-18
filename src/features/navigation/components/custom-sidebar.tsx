@@ -29,7 +29,7 @@ function SidebarHeader() {
           role="toolbar"
           aria-label="User controls"
         >
-          <CreditsDisplay />
+          {/* <CreditsDisplay /> */}
           <ThemeSwitcher />
           <UserButton
             appearance={{
