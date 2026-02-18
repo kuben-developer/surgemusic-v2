@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Music, Upload, Trash2, Loader2 } from "lucide-react";
-import { AudioTrimmer } from "@/features/campaign-old/create/components/AudioTrimmer";
+import { AudioTrimmer } from "./AudioTrimmer";
 import { useCampaignAudio } from "../hooks/useCampaignAudio";
 
 interface AudioUploadSectionProps {
