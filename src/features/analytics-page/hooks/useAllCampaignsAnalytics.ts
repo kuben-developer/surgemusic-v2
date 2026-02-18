@@ -15,7 +15,7 @@ import type { AggregateTotals, CampaignWithAnalytics } from "../types/analytics-
  */
 export function useAllCampaignsAnalytics() {
   // Fetch all campaigns with analytics from Convex
-  const campaignsData = useQuery(api.app.analyticsV2.getAllCampaignsWithAnalyticsV2);
+  const campaignsData = useQuery(api.app.analyticsV2.getAllCampaignsWithAnalyticsV2, {});
 
   // Transform and type the data
   const campaigns: CampaignWithAnalytics[] = useMemo(() => {
@@ -26,6 +26,7 @@ export function useAllCampaignsAnalytics() {
       campaignName: campaign.campaignName,
       artist: campaign.artist,
       song: campaign.song,
+      status: campaign.status,
       totals: {
         posts: campaign.totals.posts,
         views: campaign.totals.views,
@@ -41,6 +42,7 @@ export function useAllCampaignsAnalytics() {
         comments: point.comments,
         shares: point.shares,
       })),
+      firstVideoAt: campaign.firstVideoAt,
       lastUpdatedAt: campaign.lastUpdatedAt,
     }));
   }, [campaignsData]);

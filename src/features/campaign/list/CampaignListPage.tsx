@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CampaignTable } from "./components/CampaignTable";
 import { useCampaignList } from "./hooks/useCampaignList";
-import { AlertCircle } from "lucide-react";
 
 const STATUS_TABS = [
   { value: "Active", label: "Active" },
@@ -14,28 +13,54 @@ const STATUS_TABS = [
   { value: "Done", label: "Done" },
 ] as const;
 
+function TabSkeleton() {
+  return (
+    <div className="rounded-lg border p-8">
+      <div className="space-y-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CampaignListPage() {
   const router = useRouter();
-  const { campaigns, isLoading, error } = useCampaignList();
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
+    new Set(["Active"]),
+  );
 
-  const campaignsByStatus = useMemo(() => {
-    if (!campaigns) return {};
-    return campaigns.reduce(
-      (acc, campaign) => {
-        const status = campaign.status || "Unknown";
-        if (!acc[status]) acc[status] = [];
-        acc[status].push(campaign);
-        return acc;
-      },
-      {} as Record<string, typeof campaigns>
-    );
-  }, [campaigns]);
+  const active = useCampaignList("Active");
+  const planned = useCampaignList("Planned", !visitedTabs.has("Planned"));
+  const done = useCampaignList("Done", !visitedTabs.has("Done"));
 
-  const handleSelectCampaign = (campaignId: string) => {
-    router.push(`/campaign/${campaignId}`);
-  };
+  const dataByStatus = {
+    Active: active,
+    Planned: planned,
+    Done: done,
+  } as const;
 
-  if (isLoading) {
+  const getTabData = (status: string) =>
+    dataByStatus[status as keyof typeof dataByStatus] ?? { campaigns: [], isLoading: false };
+
+  const handleTabChange = useCallback((tab: string) => {
+    setVisitedTabs((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, []);
+
+  const handleSelectCampaign = useCallback(
+    (campaignId: string) => {
+      router.push(`/campaign/${campaignId}`);
+    },
+    [router],
+  );
+
+  if (active.isLoading) {
     return (
       <div className="container max-w-6xl mx-auto py-12 px-4">
         <div className="space-y-6">
@@ -43,25 +68,7 @@ export function CampaignListPage() {
             <Skeleton className="h-10 w-64 mb-2" />
             <Skeleton className="h-5 w-96" />
           </div>
-          <div className="rounded-lg border p-8">
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container max-w-6xl mx-auto py-12 px-4">
-        <div className="text-center py-16 text-destructive border border-destructive/50 rounded-lg bg-destructive/5">
-          <AlertCircle className="size-12 mx-auto mb-3" />
-          <h3 className="text-base font-semibold mb-1">Error Loading Campaigns</h3>
-          <p className="text-sm">{error.message}</p>
+          <TabSkeleton />
         </div>
       </div>
     );
@@ -70,38 +77,46 @@ export function CampaignListPage() {
   return (
     <div className="container max-w-6xl mx-auto py-12 px-4">
       <div className="space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Campaigns</h1>
           <p className="text-muted-foreground mt-2">
-            View and manage campaigns from Airtable
+            View and manage your campaigns
           </p>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="Active">
+        <Tabs defaultValue="Active" onValueChange={handleTabChange}>
           <TabsList>
             {STATUS_TABS.map((tab) => {
-              const count = campaignsByStatus[tab.value]?.length || 0;
+              const data = getTabData(tab.value);
+              const count = data.isLoading ? "..." : data.campaigns.length;
               return (
                 <TabsTrigger key={tab.value} value={tab.value}>
                   {tab.label}
-                  <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-2 py-0.5 text-xs">
-                    {count}
-                  </span>
+                  {count !== "..." && count > 0 && (
+                    <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-2 py-0.5 text-xs">
+                      {count}
+                    </span>
+                  )}
                 </TabsTrigger>
               );
             })}
           </TabsList>
 
-          {STATUS_TABS.map((tab) => (
-            <TabsContent key={tab.value} value={tab.value}>
-              <CampaignTable
-                campaigns={campaignsByStatus[tab.value] || []}
-                onSelectCampaign={handleSelectCampaign}
-              />
-            </TabsContent>
-          ))}
+          {STATUS_TABS.map((tab) => {
+            const data = getTabData(tab.value);
+            return (
+              <TabsContent key={tab.value} value={tab.value}>
+                {data.isLoading ? (
+                  <TabSkeleton />
+                ) : (
+                  <CampaignTable
+                    campaigns={data.campaigns}
+                    onSelectCampaign={handleSelectCampaign}
+                  />
+                )}
+              </TabsContent>
+            );
+          })}
         </Tabs>
       </div>
     </div>

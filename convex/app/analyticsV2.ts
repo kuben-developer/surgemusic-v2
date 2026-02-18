@@ -780,9 +780,19 @@ export const getContentSamplesV2 = query({
  * V2 replacement for analytics.getAllCampaignsWithAnalytics.
  */
 export const getAllCampaignsWithAnalyticsV2 = query({
-  args: {},
-  handler: async (ctx) => {
-    const allCampaigns = await ctx.db.query("campaigns").collect();
+  args: {
+    status: v.optional(v.string()),
+  },
+  handler: async (ctx, { status }) => {
+    let allCampaigns;
+    if (status) {
+      allCampaigns = await ctx.db
+        .query("campaigns")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .collect();
+    } else {
+      allCampaigns = await ctx.db.query("campaigns").collect();
+    }
 
     // Calculate date range for last 14 days of snapshots
     const now = new Date();
@@ -796,6 +806,15 @@ export const getAllCampaignsWithAnalyticsV2 = query({
 
     const results = await Promise.all(
       allCampaigns.map(async (campaign) => {
+        // Get the earliest video posted date for this campaign
+        const firstVideo = await ctx.db
+          .query("tiktokVideoStats")
+          .withIndex("by_campaignId_postedAt", (q) =>
+            q.eq("campaignId", campaign.campaignId),
+          )
+          .order("asc")
+          .first();
+
         // Get real-time aggregate totals (same approach as getCampaignAnalyticsV2)
         const [views, likes, comments, shares, saves] = await Promise.all([
           aggregateViews.sum(ctx, { namespace: campaign.campaignId, bounds: {} }),
@@ -857,6 +876,7 @@ export const getAllCampaignsWithAnalyticsV2 = query({
           campaignName: campaign.campaignName,
           artist: campaign.artist,
           song: campaign.song,
+          status: campaign.status,
           totals: {
             posts: totalPosts - excluded.totalPosts,
             views: views - excluded.totalViews,
@@ -866,6 +886,7 @@ export const getAllCampaignsWithAnalyticsV2 = query({
             saves: saves - excluded.totalSaves,
           },
           sparklineData,
+          firstVideoAt: firstVideo?.postedAt ?? null,
           lastUpdatedAt: campaign._creationTime,
         };
       }),

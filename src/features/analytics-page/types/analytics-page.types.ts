@@ -33,8 +33,10 @@ export interface CampaignWithAnalytics {
   campaignName: string;
   artist: string;
   song: string;
+  status?: string;
   totals: CampaignTotals;
   sparklineData: SparklineDataPoint[];
+  firstVideoAt: number | null;
   lastUpdatedAt: number;
 }
 
