@@ -137,11 +137,11 @@ export const getDimensionStatsByCampaign = internalQuery({
   },
 });
 
-/** Get all campaign IDs from airtableCampaigns */
+/** Get all campaign IDs from campaigns */
 export const getAllCampaignIds = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const campaigns = await ctx.db.query("airtableCampaigns").collect();
+    const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns.map((c) => c.campaignId);
   },
 });
@@ -151,7 +151,7 @@ export const getCampaignName = internalQuery({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
     const campaign = await ctx.db
-      .query("airtableCampaigns")
+      .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
     return campaign?.campaignName ?? null;

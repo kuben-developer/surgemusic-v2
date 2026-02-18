@@ -216,7 +216,7 @@ export const getAggregateTotals = internalQuery({
 export const getAllCampaignIds = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const campaigns = await ctx.db.query("airtableCampaigns").collect();
+    const campaigns = await ctx.db.query("campaigns").collect();
     return [...new Set(campaigns.map((c) => c.campaignId))];
   },
 });
@@ -225,7 +225,7 @@ export const getActiveCampaigns = internalQuery({
   args: {},
   handler: async (ctx) => {
     const campaigns = await ctx.db
-      .query("airtableCampaigns")
+      .query("campaigns")
       .withIndex("by_status", (q) => q.eq("status", "Active"))
       .collect();
 
@@ -591,65 +591,6 @@ export const calculateMinViewsExcludedStats = internalMutation({
 
     await ctx.db.patch(campaign._id, {
       minViewsExcludedStats: excludedStats,
-    });
-  },
-});
-
-/**
- * Ensure a campaigns row exists and sync metadata from airtableCampaigns.
- * Called on the first chunk of populateTiktokVideoStats.
- */
-export const migrateSingleCampaign = internalMutation({
-  args: { campaignId: v.string() },
-  handler: async (ctx, { campaignId }) => {
-    // Get campaign info from airtableCampaigns
-    const airtableCampaign = await ctx.db
-      .query("airtableCampaigns")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .first();
-
-    if (!airtableCampaign) return;
-
-    const existing = await ctx.db
-      .query("campaigns")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .first();
-
-    if (existing) {
-      // Sync metadata from airtableCampaigns if it has changed
-      if (
-        existing.campaignName !== airtableCampaign.campaignName ||
-        existing.artist !== airtableCampaign.artist ||
-        existing.song !== airtableCampaign.song
-      ) {
-        await ctx.db.patch(existing._id, {
-          campaignName: airtableCampaign.campaignName,
-          artist: airtableCampaign.artist,
-          song: airtableCampaign.song,
-        });
-      }
-      return;
-    }
-
-    // Create new campaign row with defaults
-    await ctx.db.insert("campaigns", {
-      campaignId,
-      campaignName: airtableCampaign.campaignName,
-      artist: airtableCampaign.artist,
-      song: airtableCampaign.song,
-      minViewsExcludedStats: {
-        totalPosts: 0,
-        totalViews: 0,
-        totalLikes: 0,
-        totalComments: 0,
-        totalShares: 0,
-        totalSaves: 0,
-      },
-      minViewsFilter: 0,
-      currencySymbol: "USD",
-      manualCpmMultiplier: 1,
-      apiCpmMultiplier: 0.5,
-      contentSamples: [],
     });
   },
 });
@@ -1308,13 +1249,6 @@ export const populateTiktokVideoStats = internalAction({
     ctx,
     { campaignId, offset = 0 },
   ): Promise<void> => {
-    // Ensure the campaigns row exists on first chunk (no-op if already created)
-    if (offset === 0) {
-      await ctx.runMutation(internal.app.analyticsV2.migrateSingleCampaign, {
-        campaignId,
-      });
-    }
-
     const airtableContents = await ctx.runQuery(
       internal.app.analyticsV2.getAirtablePostsByCampaign,
       { campaignId },
@@ -1570,5 +1504,78 @@ export const deleteEmptySnapshots = internalMutation({
     }
     console.log(`[V2 Cleanup] Deleted ${deleted}/${snapshots.length} empty campaignSnapshots`);
     return { deleted, total: snapshots.length };
+  },
+});
+
+/**
+ * One-time migration: backfill status/total/published from airtableCampaigns
+ * into campaigns table. Run this BEFORE deploying the schema change that
+ * removes the airtableCampaigns table.
+ */
+export const backfillCampaignsFromAirtable = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // airtableCampaigns table will be removed after migration — use type assertion
+    const airtableRows = await (ctx.db.query as Function)("airtableCampaigns").collect() as Array<{
+      campaignId: string;
+      campaignName: string;
+      artist: string;
+      song: string;
+      status?: string;
+      total: number;
+      published: number;
+    }>;
+    let created = 0;
+    let updated = 0;
+
+    for (const row of airtableRows) {
+      const existing = await ctx.db
+        .query("campaigns")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", row.campaignId))
+        .first();
+
+      if (existing) {
+        // Merge status/total/published into existing campaigns row
+        await ctx.db.patch(existing._id, {
+          campaignName: row.campaignName,
+          artist: row.artist,
+          song: row.song,
+          status: row.status,
+          total: row.total,
+          published: row.published,
+        });
+        updated++;
+      } else {
+        // Create new campaigns row with defaults
+        await ctx.db.insert("campaigns", {
+          campaignId: row.campaignId,
+          campaignName: row.campaignName,
+          artist: row.artist,
+          song: row.song,
+          status: row.status,
+          total: row.total,
+          published: row.published,
+          minViewsExcludedStats: {
+            totalPosts: 0,
+            totalViews: 0,
+            totalLikes: 0,
+            totalComments: 0,
+            totalShares: 0,
+            totalSaves: 0,
+          },
+          minViewsFilter: 0,
+          currencySymbol: "USD",
+          manualCpmMultiplier: 1,
+          apiCpmMultiplier: 0.5,
+          contentSamples: [],
+        });
+        created++;
+      }
+    }
+
+    console.log(
+      `[Migration] Backfilled campaigns from airtableCampaigns: ${created} created, ${updated} updated (${airtableRows.length} total)`,
+    );
+    return { created, updated, total: airtableRows.length };
   },
 });

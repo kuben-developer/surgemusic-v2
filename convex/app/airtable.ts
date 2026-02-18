@@ -285,9 +285,12 @@ export const insertContent = internalMutation({
 });
 
 /**
- * Upsert campaign with name, artist, song, status, and sync statistics
+ * Upsert campaign with name, artist, song, status, and sync statistics.
+ * Writes directly to the `campaigns` table (unified with analytics settings).
+ * On insert, includes default analytics display settings.
+ * On patch, only updates Airtable-sourced metadata (won't clobber user settings).
  */
-export const upsertAirtableCampaign = internalMutation({
+export const upsertCampaign = internalMutation({
     args: {
         campaignId: v.string(),
         campaignName: v.string(),
@@ -300,12 +303,12 @@ export const upsertAirtableCampaign = internalMutation({
     handler: async (ctx, { campaignId, campaignName, artist, song, status, total, published }) => {
         // Check if campaign record exists
         const existing = await ctx.db
-            .query("airtableCampaigns")
+            .query("campaigns")
             .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
             .first();
 
         if (existing) {
-            // Update existing record
+            // Update only Airtable-sourced metadata (don't clobber user settings)
             await ctx.db.patch(existing._id, {
                 campaignName,
                 artist,
@@ -315,8 +318,8 @@ export const upsertAirtableCampaign = internalMutation({
                 published,
             });
         } else {
-            // Insert new record
-            await ctx.db.insert("airtableCampaigns", {
+            // Insert new record with default analytics settings
+            await ctx.db.insert("campaigns", {
                 campaignId,
                 campaignName,
                 artist,
@@ -324,6 +327,19 @@ export const upsertAirtableCampaign = internalMutation({
                 status,
                 total,
                 published,
+                minViewsExcludedStats: {
+                    totalPosts: 0,
+                    totalViews: 0,
+                    totalLikes: 0,
+                    totalComments: 0,
+                    totalShares: 0,
+                    totalSaves: 0,
+                },
+                minViewsFilter: 0,
+                currencySymbol: "USD",
+                manualCpmMultiplier: 1,
+                apiCpmMultiplier: 0.5,
+                contentSamples: [],
             });
         }
     },
@@ -345,7 +361,7 @@ export const syncAirtableCampaign = internalAction({
             for (const campaign of campaigns) {
                 try {
                     // Upsert campaign to database
-                    await ctx.runMutation(internal.app.airtable.upsertAirtableCampaign, {
+                    await ctx.runMutation(internal.app.airtable.upsertCampaign, {
                         campaignId: campaign.id, // Airtable record ID (immutable)
                         campaignName: campaign.campaign_id, // campaign_id field value
                         artist: campaign.artist,
@@ -454,7 +470,7 @@ export const syncAirtableContentByCampaign = internalAction({
 
             if (campaign) {
                 // Update campaign with sync statistics
-                await ctx.runMutation(internal.app.airtable.upsertAirtableCampaign, {
+                await ctx.runMutation(internal.app.airtable.upsertCampaign, {
                     campaignId: campaignRecordId,
                     campaignName: campaign.campaign_id,
                     artist: campaign.artist,

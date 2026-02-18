@@ -36,18 +36,6 @@ export default defineSchema({
     .index("by_postId", ["postId"])
     .index("by_error", ["error"]),
 
-  airtableCampaigns: defineTable({
-    campaignId: v.string(), // airtable campaign id
-    campaignName: v.string(),
-    artist: v.string(),
-    song: v.string(),
-    status: v.optional(v.string()), // Campaign status: "Active", "Planned", "Done"
-    total: v.number(), // Total content records from Airtable for this campaign
-    published: v.number(), // Number of rows with valid api_post_id
-  })
-    .index("by_campaignId", ["campaignId"])
-    .index("by_status", ["status"]),
-
   campaignAssets: defineTable({
     campaignId: v.string(), // airtable campaign id
     audioFileId: v.optional(v.id('_storage')),
@@ -115,6 +103,9 @@ export default defineSchema({
     campaignName: v.string(),
     artist: v.string(),
     song: v.string(),
+    status: v.optional(v.string()), // Campaign status: "Active", "Planned", "Done"
+    total: v.optional(v.number()), // Total content records from Airtable
+    published: v.optional(v.number()), // Number of rows with valid api_post_id
 
     minViewsExcludedStats: v.object({
       totalPosts: v.number(),
@@ -139,7 +130,8 @@ export default defineSchema({
       sourceVideoId: v.optional(v.string()),
     }))),
   })
-    .index("by_campaignId", ["campaignId"]),
+    .index("by_campaignId", ["campaignId"])
+    .index("by_status", ["status"]),
 
   campaignSnapshots: defineTable({
     campaignId: v.string(), // airtable campaign id
