@@ -10,12 +10,12 @@ import {
   mutation,
   query,
 } from "../_generated/server";
+import { fetchVideoDetails } from "./tiktok";
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const TOKAPI_KEY = "808a45b29cf9422798bcc4560909b4c2";
 const BUNDLE_SOCIAL_API_KEY = process.env.BUNDLE_SOCIAL_API_KEY!;
 const CHUNK_SIZE = 1000; // Airtable contents per action invocation
 const CONCURRENCY = 5; // Parallel HTTP requests within a chunk
@@ -94,69 +94,6 @@ triggers.register("tiktokVideoStats", aggregateSaves.trigger());
 // =============================================================================
 // HELPER FUNCTIONS (private)
 // =============================================================================
-
-interface TokapiVideoDetails {
-  authorUid: string;
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  saves: number;
-  createTime: number;
-}
-
-async function fetchTokapiVideoDetails(
-  videoId: string,
-): Promise<TokapiVideoDetails | null> {
-  try {
-    const response = await fetch(
-      `http://api.tokapi.online/v1/post/${videoId}`,
-      {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          "x-project-name": "tokapi",
-          "x-api-key": TOKAPI_KEY,
-        },
-        signal: AbortSignal.timeout(15000),
-      },
-    );
-
-    if (!response.ok) {
-      console.error(
-        `Tokapi: Failed to fetch video ${videoId}: HTTP ${response.status}`,
-      );
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (data.status_code !== 0 || !data.aweme_detail) {
-      return null;
-    }
-
-    const aweme = data.aweme_detail;
-    const stats = aweme.statistics;
-    const author = aweme.author;
-
-    if (!stats || !author) {
-      return null;
-    }
-
-    return {
-      authorUid: String(author.uid || author.id || ""),
-      views: stats.play_count || 0,
-      likes: stats.digg_count || 0,
-      comments: stats.comment_count || 0,
-      shares: stats.share_count || 0,
-      saves: stats.collect_count || 0,
-      createTime: aweme.create_time || 0,
-    };
-  } catch (error) {
-    console.error(`Tokapi: Error fetching video ${videoId}:`, error);
-    return null;
-  }
-}
 
 interface BundleSocialPostResult {
   tiktokVideoId: string;
@@ -1450,7 +1387,7 @@ export const populateTiktokVideoStats = internalAction({
       if (!tiktokVideoId || existingSet.has(tiktokVideoId)) return null;
 
       // Fetch stats from Tokapi
-      const details = await fetchTokapiVideoDetails(tiktokVideoId);
+      const details = await fetchVideoDetails(tiktokVideoId);
       if (!details) return null;
 
       return {
