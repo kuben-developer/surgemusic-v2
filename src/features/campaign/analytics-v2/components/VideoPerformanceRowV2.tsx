@@ -4,6 +4,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Heart, MessageCircle, Share2, ExternalLink, Bookmark } from "lucide-react";
 import { VideoSparkChart } from "./VideoSparkChart";
+import { TikTokThumbnail } from "./TikTokThumbnail";
 import { useCounterAnimation } from "../hooks/useCounterAnimation";
 import type { VideoPerformanceRow } from "../types/analytics-v2.types";
 import type { SnapshotPoint } from "../hooks/useVideoPerformanceV2";
@@ -39,8 +40,15 @@ function VideoPerformanceRowV2Inner({ video, snapshots }: VideoPerformanceRowV2P
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Spark chart */}
-        <VideoSparkChart tiktokVideoId={video.tiktokVideoId} snapshots={snapshots} />
+        {/* Thumbnail */}
+        <a
+          href={videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0"
+        >
+          <TikTokThumbnail tiktokVideoId={video.tiktokVideoId} />
+        </a>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -70,6 +78,10 @@ function VideoPerformanceRowV2Inner({ video, snapshots }: VideoPerformanceRowV2P
               <ExternalLink className="h-3 w-3" />
               <span className="hidden xs:inline">TikTok</span>
             </a>
+          </div>
+          {/* Spark chart below text info */}
+          <div className="mt-1">
+            <VideoSparkChart tiktokVideoId={video.tiktokVideoId} snapshots={snapshots} />
           </div>
         </div>
       </div>
