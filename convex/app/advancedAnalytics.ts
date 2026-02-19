@@ -341,7 +341,7 @@ export const linkMontagerToTiktok = internalAction({
  * Uses indexed query (by_campaignId) to avoid full table scans.
  * Processes in chunks of LINK_CHUNK_SIZE and self-schedules to avoid timeouts.
  */
-const LINK_CHUNK_SIZE = 50;
+const LINK_CHUNK_SIZE = 500;
 
 export const linkSingleCampaignMontagerVideos = internalAction({
   args: { campaignId: v.string() },
@@ -353,11 +353,11 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     );
 
     if (unlinked.length === 0) {
-      console.log(`[Link] Campaign ${campaignId}: no unlinked videos, skipping`);
+      // console.log(`[Link] Campaign ${campaignId}: no unlinked videos, skipping`);
       return;
     }
 
-    console.log(`[Link] Campaign ${campaignId}: ${unlinked.length} unlinked, processing chunk of ${Math.min(LINK_CHUNK_SIZE, unlinked.length)}`);
+    // console.log(`[Link] Campaign ${campaignId}: ${unlinked.length} unlinked, processing chunk of ${Math.min(LINK_CHUNK_SIZE, unlinked.length)}`);
 
     // Look up campaign name to filter Airtable content table
     const campaignName = await ctx.runQuery(
@@ -445,16 +445,16 @@ export const linkSingleCampaignMontagerVideos = internalAction({
       }
     }
 
-    console.log(
-      `[Link] Campaign ${campaignId} ("${campaignName}") chunk done:\n` +
-      `  Processed: ${chunk.length}/${unlinked.length}\n` +
-      `  Linked: ${linked} (tiktokId: ${resolvedViaTiktokId}, bundlePostId: ${resolvedViaBundlePostId})\n` +
-      `  No Airtable match: ${noAirtableMatch}, not posted: ${noApiPostId}, no stats: ${hasAirtableButNoStats}`,
-    );
+    // console.log(
+    //   `[Link] Campaign ${campaignId} ("${campaignName}") chunk done:\n` +
+    //   `  Processed: ${chunk.length}/${unlinked.length}\n` +
+    //   `  Linked: ${linked} (tiktokId: ${resolvedViaTiktokId}, bundlePostId: ${resolvedViaBundlePostId})\n` +
+    //   `  No Airtable match: ${noAirtableMatch}, not posted: ${noApiPostId}, no stats: ${hasAirtableButNoStats}`,
+    // );
 
     // Self-schedule if more unlinked videos remain
     if (unlinked.length > LINK_CHUNK_SIZE) {
-      console.log(`[Link] Campaign ${campaignId}: scheduling next chunk (${unlinked.length - LINK_CHUNK_SIZE} remaining)`);
+      // console.log(`[Link] Campaign ${campaignId}: scheduling next chunk (${unlinked.length - LINK_CHUNK_SIZE} remaining)`);
       await ctx.scheduler.runAfter(
         0,
         internal.app.advancedAnalytics.linkSingleCampaignMontagerVideos,

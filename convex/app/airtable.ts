@@ -61,7 +61,10 @@ async function fetchRecords(
         });
 
         if (!response.ok) {
-            throw new Error(`Airtable API error: ${response.status}`);
+            const errorBody = await response.text();
+            console.error(`Airtable API error ${response.status}:`, errorBody);
+            console.error(`Request URL:`, url.toString().replace(AIRTABLE_API_KEY, "***"));
+            throw new Error(`Airtable API error: ${response.status} - ${errorBody}`);
         }
 
         const data: AirtableResponse = (await response.json()) as AirtableResponse;
@@ -177,7 +180,8 @@ export const getCampaignContent = action({
                 `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}`
             );
 
-            url.searchParams.append("filterByFormula", `{campaign_id} = '${campaignId}'`);
+            const escapedCampaignId = campaignId.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            url.searchParams.append("filterByFormula", `{campaign_id} = '${escapedCampaignId}'`);
             url.searchParams.append("fields[]", "video_url");
             url.searchParams.append("fields[]", "account_niche");
             url.searchParams.append("fields[]", "video_category");
@@ -194,7 +198,10 @@ export const getCampaignContent = action({
             });
 
             if (!response.ok) {
-                throw new Error(`Airtable API error: ${response.status}`);
+                const errorBody = await response.text();
+                console.error(`Airtable API error ${response.status}:`, errorBody);
+                console.error(`Request URL:`, url.toString().replace(AIRTABLE_API_KEY, "***"));
+                throw new Error(`Airtable API error: ${response.status} - ${errorBody}`);
             }
 
             const data: AirtableResponse = (await response.json()) as AirtableResponse;
