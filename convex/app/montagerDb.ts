@@ -589,29 +589,19 @@ export const getPendingConfigsInternal = internalQuery({
 export const getClipUrlsForFolder = internalQuery({
   args: { clipperFolderId: v.id("clipperFolders"), maxClips: v.number() },
   handler: async (ctx, { clipperFolderId, maxClips }) => {
+    const videos = await ctx.db
+      .query("clippedVideoUrls")
+      .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", clipperFolderId))
+      .collect();
+
     const clips: string[] = [];
-    let isDone = false;
-    let cursor: string | null = null;
-
-    // Read in small batches and stop once we have enough clips
-    while (!isDone && clips.length < maxClips) {
-      const page = await ctx.db
-        .query("clippedVideoUrls")
-        .withIndex("by_clipperFolderId", (q) => q.eq("clipperFolderId", clipperFolderId))
-        .paginate({ numItems: 20, cursor: cursor === null ? null : cursor });
-
-      for (const video of page.page) {
-        for (const clip of video.outputUrls) {
-          if (!clip.isDeleted) {
-            clips.push(clip.videoUrl);
-            if (clips.length >= maxClips) break;
-          }
+    for (const video of videos) {
+      for (const clip of video.outputUrls) {
+        if (!clip.isDeleted) {
+          clips.push(clip.videoUrl);
+          if (clips.length >= maxClips) return clips;
         }
-        if (clips.length >= maxClips) break;
       }
-
-      isDone = page.isDone;
-      cursor = page.continueCursor;
     }
 
     return clips;
@@ -645,9 +635,12 @@ export const buildPendingConfigsWithClips = internalAction({
 
     for (const config of configs) {
       const clipsNeeded = config.numberOfMontages * CLIPS_PER_MONTAGE;
-      const clipsPerFolder = Math.max(
-        100,
-        Math.ceil(clipsNeeded / Math.max(1, config.clipperFolderIds.length))
+      const clipsPerFolder = Math.min(
+        8192,
+        Math.max(
+          100,
+          Math.ceil(clipsNeeded / Math.max(1, config.clipperFolderIds.length))
+        )
       );
 
       // Fetch clips from each folder in a separate query call
