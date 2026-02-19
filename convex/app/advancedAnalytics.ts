@@ -137,12 +137,32 @@ export const getDimensionStatsByCampaign = internalQuery({
   },
 });
 
-/** Get all campaign IDs from campaigns */
+/** Get campaign IDs, optionally filtered to active only */
 export const getAllCampaignIds = internalQuery({
+  args: { includeAll: v.optional(v.boolean()) },
+  handler: async (ctx, { includeAll }) => {
+    if (includeAll) {
+      const campaigns = await ctx.db.query("campaigns").collect();
+      return campaigns.map((c) => c.campaignId);
+    }
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_status", (q) => q.eq("status", "Active"))
+      .collect();
+    return campaigns.map((c) => c.campaignId);
+  },
+});
+
+/** Get all campaign names as a map of campaignId → campaignName */
+export const getAllCampaignNames = internalQuery({
   args: {},
   handler: async (ctx) => {
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns.map((c) => c.campaignId);
+    const map: Record<string, string> = {};
+    for (const c of campaigns) {
+      map[c.campaignId] = c.campaignName;
+    }
+    return map;
   },
 });
 
@@ -282,8 +302,9 @@ async function fetchAirtableMappings(
 export const linkMontagerToTiktok = internalAction({
   args: {
     campaignId: v.optional(v.string()),
+    includeAll: v.optional(v.boolean()),
   },
-  handler: async (ctx, { campaignId }) => {
+  handler: async (ctx, { campaignId, includeAll }) => {
     if (campaignId) {
       // Link a single campaign
       await ctx.scheduler.runAfter(
@@ -295,10 +316,10 @@ export const linkMontagerToTiktok = internalAction({
       return;
     }
 
-    // Link all campaigns
+    // Default: active campaigns only. Pass includeAll=true for all.
     const campaignIds = await ctx.runQuery(
       internal.app.advancedAnalytics.getAllCampaignIds,
-      {},
+      { includeAll: includeAll ?? false },
     );
 
     for (const id of campaignIds) {
@@ -310,7 +331,7 @@ export const linkMontagerToTiktok = internalAction({
     }
 
     console.log(
-      `[AdvancedAnalytics] Scheduled linking for ${campaignIds.length} campaigns`,
+      `[AdvancedAnalytics] Scheduled linking for ${campaignIds.length} campaigns (includeAll=${!!includeAll})`,
     );
   },
 });
@@ -318,13 +339,13 @@ export const linkMontagerToTiktok = internalAction({
 /**
  * Link montagerVideos to tiktokVideoStats for a single campaign.
  * Uses indexed query (by_campaignId) to avoid full table scans.
- * Can be called directly from the Convex dashboard.
+ * Processes in chunks of LINK_CHUNK_SIZE and self-schedules to avoid timeouts.
  */
+const LINK_CHUNK_SIZE = 50;
+
 export const linkSingleCampaignMontagerVideos = internalAction({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    console.log(`[Link] Starting for campaign ${campaignId}`);
-
     // Get unlinked videos for this campaign (indexed query)
     const unlinked = await ctx.runQuery(
       internal.app.advancedAnalytics.getUnlinkedByCampaign,
@@ -336,7 +357,7 @@ export const linkSingleCampaignMontagerVideos = internalAction({
       return;
     }
 
-    console.log(`[Link] Campaign ${campaignId}: found ${unlinked.length} unlinked montagerVideos`);
+    console.log(`[Link] Campaign ${campaignId}: ${unlinked.length} unlinked, processing chunk of ${Math.min(LINK_CHUNK_SIZE, unlinked.length)}`);
 
     // Look up campaign name to filter Airtable content table
     const campaignName = await ctx.runQuery(
@@ -345,11 +366,9 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     );
 
     if (!campaignName) {
-      console.error(`[Link] Campaign ${campaignId}: campaign name not found in airtableCampaigns, aborting`);
+      console.error(`[Link] Campaign ${campaignId}: campaign name not found, aborting`);
       return;
     }
-
-    console.log(`[Link] Campaign ${campaignId} = "${campaignName}", fetching Airtable content...`);
 
     // Fetch Airtable mapping for this campaign (filtered by campaign name)
     let airtableMapping: Map<
@@ -363,7 +382,8 @@ export const linkSingleCampaignMontagerVideos = internalAction({
       return;
     }
 
-    console.log(`[Link] Campaign ${campaignId}: fetched ${airtableMapping.size} Airtable content records`);
+    // Process only first chunk
+    const chunk = unlinked.slice(0, LINK_CHUNK_SIZE);
 
     let linked = 0;
     let noAirtableMatch = 0;
@@ -372,7 +392,7 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     let resolvedViaTiktokId = 0;
     let resolvedViaBundlePostId = 0;
 
-    for (const video of unlinked) {
+    for (const video of chunk) {
       const mapping = airtableMapping.get(video.airtableRecordId);
       if (!mapping) {
         noAirtableMatch++;
@@ -426,20 +446,36 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     }
 
     console.log(
-      `[Link] Campaign ${campaignId} ("${campaignName}") DONE:\n` +
-      `  Total unlinked: ${unlinked.length}\n` +
-      `  Airtable records fetched: ${airtableMapping.size}\n` +
-      `  Linked: ${linked} (via tiktokId: ${resolvedViaTiktokId}, via bundlePostId: ${resolvedViaBundlePostId})\n` +
-      `  No Airtable match: ${noAirtableMatch}\n` +
-      `  No api_post_id/tiktok_id (not yet posted): ${noApiPostId}\n` +
-      `  Has api_post_id but no stats found: ${hasAirtableButNoStats}`,
+      `[Link] Campaign ${campaignId} ("${campaignName}") chunk done:\n` +
+      `  Processed: ${chunk.length}/${unlinked.length}\n` +
+      `  Linked: ${linked} (tiktokId: ${resolvedViaTiktokId}, bundlePostId: ${resolvedViaBundlePostId})\n` +
+      `  No Airtable match: ${noAirtableMatch}, not posted: ${noApiPostId}, no stats: ${hasAirtableButNoStats}`,
     );
+
+    // Self-schedule if more unlinked videos remain
+    if (unlinked.length > LINK_CHUNK_SIZE) {
+      console.log(`[Link] Campaign ${campaignId}: scheduling next chunk (${unlinked.length - LINK_CHUNK_SIZE} remaining)`);
+      await ctx.scheduler.runAfter(
+        0,
+        internal.app.advancedAnalytics.linkSingleCampaignMontagerVideos,
+        { campaignId },
+      );
+    }
   },
 });
 
 // =============================================================================
 // ANALYTICS COMPUTATION
 // =============================================================================
+
+interface TiktokStatsEntry {
+  tiktokVideoId: string;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+}
 
 interface DimensionAccumulator {
   totalVideos: number;
@@ -474,16 +510,16 @@ export const computeSingleCampaignDimensionStats = internalAction({
       internal.app.advancedAnalytics.getTiktokStatsMap,
       { campaignId },
     );
-    const statsMap = new Map(statsArr.map((s) => [s.tiktokVideoId, s]));
+    const statsMap = new Map<string, TiktokStatsEntry>(statsArr.map((s: TiktokStatsEntry) => [s.tiktokVideoId, s]));
 
     // 3. Resolve folder names
     const uniqueFolderIds = [
       ...new Set(
         linkedVideos
-          .map((v) => v.montagerFolderId)
-          .filter((id) => !!id),
+          .map((v: { montagerFolderId?: string }) => v.montagerFolderId)
+          .filter((id): id is string => !!id),
       ),
-    ] as string[];
+    ];
     const folderNames =
       uniqueFolderIds.length > 0
         ? await ctx.runQuery(
@@ -677,6 +713,65 @@ export const getAdvancedAnalyticsSummary = query({
       totalUnlinked,
       totalMontagerVideos: montagerVideos.length,
     };
+  },
+});
+
+/** Count stats vs linked montagerVideos for a single campaign */
+export const getCampaignSyncCounts = internalQuery({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const statsCount = (
+      await ctx.db
+        .query("tiktokVideoStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect()
+    ).length;
+
+    const montagerVideos = await ctx.db
+      .query("montagerVideos")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    const linkedCount = montagerVideos.filter((v) => v.tiktokVideoId).length;
+
+    return { statsCount, linkedCount };
+  },
+});
+
+/** List campaigns where tiktokVideoStats > linked montagerVideos */
+export const getUnsyncedCampaigns = internalAction({
+  args: {},
+  handler: async (ctx): Promise<Array<{ campaignId: string; campaignName: string; statsCount: number; linkedCount: number }>> => {
+    const campaignIds: string[] = await ctx.runQuery(
+      internal.app.advancedAnalytics.getAllCampaignIds,
+      { includeAll: true },
+    );
+
+    const campaigns: Record<string, string> = await ctx.runQuery(
+      internal.app.advancedAnalytics.getAllCampaignNames,
+      {},
+    );
+
+    const results: Array<{ campaignId: string; campaignName: string; statsCount: number; linkedCount: number }> = [];
+    for (const campaignId of campaignIds) {
+      const { statsCount, linkedCount }: { statsCount: number; linkedCount: number } = await ctx.runQuery(
+        internal.app.advancedAnalytics.getCampaignSyncCounts,
+        { campaignId },
+      );
+
+      if (statsCount > linkedCount) {
+        results.push({
+          campaignId,
+          campaignName: campaigns[campaignId] ?? campaignId,
+          statsCount,
+          linkedCount,
+        });
+      }
+    }
+
+    results.sort((a, b) => (b.statsCount - b.linkedCount) - (a.statsCount - a.linkedCount));
+    console.log(`[AdvancedAnalytics] Unsynced campaigns:\n${results.map((r) => `  ${r.campaignName}: ${r.statsCount} stats, ${r.linkedCount} linked (delta: ${r.statsCount - r.linkedCount})`).join("\n")}`);
+    return results;
   },
 });
 

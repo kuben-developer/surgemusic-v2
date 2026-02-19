@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   RefreshCw,
   BarChart3,
-  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,21 +40,9 @@ export function AdvancedAnalyticsSection({
   const {
     stats,
     isLoading,
-    lastUpdated,
     totalLinked,
-    totalUnlinked,
     handleRefresh,
   } = useAdvancedAnalyticsV2(campaignId, activeDimension);
-
-  const lastUpdatedLabel = lastUpdated
-    ? new Date(lastUpdated).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "Never";
 
   return (
     <div className="rounded-2xl border border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl overflow-hidden">
@@ -68,19 +55,9 @@ export function AdvancedAnalyticsSection({
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link2 className="h-3 w-3" />
-            <span>
-              {totalLinked} linked
-              {totalUnlinked > 0 && ` / ${totalUnlinked} pending`}
-            </span>
-          </div>
-
-          <span className="text-xs text-muted-foreground">
-            Updated: {lastUpdatedLabel}
-          </span>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {totalLinked} Posts
+        </span>
       </div>
 
       {/* Content */}
