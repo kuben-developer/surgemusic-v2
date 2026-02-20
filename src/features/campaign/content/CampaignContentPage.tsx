@@ -178,9 +178,30 @@ export function CampaignContentPage() {
     };
   }, [allMontagerVideosData, filteredVideos]);
 
-  // Count processing and processed videos for current category
-  const processingCount = montagerVideosForCategory.processing.length;
-  const processedCount = montagerVideosForCategory.processed.length;
+  // Exclude montager videos whose Airtable records are already scheduled/published
+  // so "ready" only shows videos not yet pushed to Airtable
+  const scheduledOrPublishedRecordIds = useMemo(() => {
+    return new Set(
+      filteredVideos
+        .filter((v) => v.video_url || v.api_post_id)
+        .map((v) => v.id)
+    );
+  }, [filteredVideos]);
+
+  const filteredProcessing = useMemo(() => {
+    return montagerVideosForCategory.processing.filter(
+      (v) => !v.airtableRecordId || !scheduledOrPublishedRecordIds.has(v.airtableRecordId)
+    );
+  }, [montagerVideosForCategory.processing, scheduledOrPublishedRecordIds]);
+
+  const filteredProcessed = useMemo(() => {
+    return montagerVideosForCategory.processed.filter(
+      (v) => !v.airtableRecordId || !scheduledOrPublishedRecordIds.has(v.airtableRecordId)
+    );
+  }, [montagerVideosForCategory.processed, scheduledOrPublishedRecordIds]);
+
+  const processingCount = filteredProcessing.length;
+  const processedCount = filteredProcessed.length;
 
   // Filter Airtable videos by selected date for Scheduled/Published tabs only
   const dateFilteredAirtableVideos = useMemo(() => {
@@ -495,14 +516,14 @@ export function CampaignContentPage() {
                 {videoView === "processing" && (
                   <VideoGrid
                     variant="processing"
-                    montagerVideos={montagerVideosForCategory.processing}
+                    montagerVideos={filteredProcessing}
                     isLoading={allMontagerVideosData === undefined}
                   />
                 )}
                 {videoView === "ready" && (
                   <VideoGrid
                     variant="ready"
-                    montagerVideos={montagerVideosForCategory.processed}
+                    montagerVideos={filteredProcessed}
                     isLoading={allMontagerVideosData === undefined}
                     campaignId={campaignRecordId}
                     unassignedRecordIds={unassignedRecordIds}
