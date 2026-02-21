@@ -298,6 +298,7 @@ async function fetchAirtableMappings(
 /**
  * Orchestrator: get all campaign IDs, schedule per-campaign linking.
  * Called by cron every 3 hours.
+ * Schedules each campaign 5 minutes (300,000 ms) apart.
  */
 export const linkMontagerToTiktok = internalAction({
   args: {
@@ -322,16 +323,20 @@ export const linkMontagerToTiktok = internalAction({
       { includeAll: includeAll ?? false },
     );
 
-    for (const id of campaignIds) {
+    // Schedule each campaign 5 minutes apart
+    const DELAY_BETWEEN_CAMPAIGNS_MS = 5 * 60 * 1000; // 5 minutes
+
+    for (let i = 0; i < campaignIds.length; i++) {
+      const id = campaignIds[i];
       await ctx.scheduler.runAfter(
-        0,
+        i * DELAY_BETWEEN_CAMPAIGNS_MS,
         internal.app.advancedAnalytics.linkSingleCampaignMontagerVideos,
         { campaignId: id },
       );
     }
 
     console.log(
-      `[AdvancedAnalytics] Scheduled linking for ${campaignIds.length} campaigns (includeAll=${!!includeAll})`,
+      `[AdvancedAnalytics] Scheduled linking for ${campaignIds.length} campaigns (includeAll=${!!includeAll}), each 5 minutes apart`,
     );
   },
 });
