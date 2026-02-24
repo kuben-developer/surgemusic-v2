@@ -502,6 +502,7 @@ export const upsertVideoSnapshotsBatch = internalMutation({
 export const writeCampaignSnapshot = internalMutation({
   args: {
     campaignId: v.string(),
+    platform: v.union(v.literal("tiktok"), v.literal("instagram")),
     totalPosts: v.number(),
     totalViews: v.number(),
     totalLikes: v.number(),
@@ -510,7 +511,7 @@ export const writeCampaignSnapshot = internalMutation({
     totalSaves: v.number(),
   },
   handler: async (ctx, args) => {
-    const intervalId = getHourlyIntervalId(args.campaignId);
+    const intervalId = getHourlyIntervalId(args.campaignId) + `_${args.platform}`;
     const snapshotAt = getSnapshotAt();
     const hour = new Date().getUTCHours();
 
@@ -534,6 +535,7 @@ export const writeCampaignSnapshot = internalMutation({
         intervalId,
         snapshotAt,
         hour,
+        platform: args.platform,
         totalPosts: args.totalPosts,
         totalViews: args.totalViews,
         totalLikes: args.totalLikes,
@@ -905,8 +907,9 @@ export const getCampaignAnalyticsV2 = query({
     campaignId: v.string(),
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
+    platform: v.optional(v.union(v.literal("all"), v.literal("tiktok"), v.literal("instagram"))),
   },
-  handler: async (ctx, { campaignId, dateFrom, dateTo }) => {
+  handler: async (ctx, { campaignId, dateFrom, dateTo, platform = "all" }) => {
     // Read campaign record for settings and excluded stats
     const campaign = await ctx.db
       .query("campaigns")
@@ -916,40 +919,39 @@ export const getCampaignAnalyticsV2 = query({
     const settingsMinViewsFilter = campaign?.minViewsFilter ?? 0;
     const hasDateFilter = dateFrom !== undefined || dateTo !== undefined;
 
-    let totalPosts: number;
-    let viewsResult: number;
-    let likesResult: number;
-    let commentsResult: number;
-    let sharesResult: number;
-    let savesResult: number;
+    let totalPosts = 0;
+    let viewsResult = 0;
+    let likesResult = 0;
+    let commentsResult = 0;
+    let sharesResult = 0;
+    let savesResult = 0;
 
-    if (hasDateFilter) {
-      // Date filter active: compute from filtered tiktokVideoStats
-      let videos = await ctx.db
-        .query("tiktokVideoStats")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-        .collect();
+    // --- TikTok totals ---
+    if (platform === "all" || platform === "tiktok") {
+      if (hasDateFilter) {
+        let videos = await ctx.db
+          .query("tiktokVideoStats")
+          .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+          .collect();
 
-      if (settingsMinViewsFilter > 0) {
-        videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
-      }
-      if (dateFrom !== undefined) {
-        videos = videos.filter((v) => v.postedAt >= dateFrom);
-      }
-      if (dateTo !== undefined) {
-        videos = videos.filter((v) => v.postedAt <= dateTo);
-      }
+        if (settingsMinViewsFilter > 0) {
+          videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+        }
+        if (dateFrom !== undefined) {
+          videos = videos.filter((v) => v.postedAt >= dateFrom);
+        }
+        if (dateTo !== undefined) {
+          videos = videos.filter((v) => v.postedAt <= dateTo);
+        }
 
-      totalPosts = videos.length;
-      viewsResult = videos.reduce((sum, v) => sum + v.views, 0);
-      likesResult = videos.reduce((sum, v) => sum + v.likes, 0);
-      commentsResult = videos.reduce((sum, v) => sum + v.comments, 0);
-      sharesResult = videos.reduce((sum, v) => sum + v.shares, 0);
-      savesResult = videos.reduce((sum, v) => sum + v.saves, 0);
-    } else {
-      // No date filter: use real-time aggregates (fast path)
-      [viewsResult, likesResult, commentsResult, sharesResult, savesResult] =
-        await Promise.all([
+        totalPosts += videos.length;
+        viewsResult += videos.reduce((sum, v) => sum + v.views, 0);
+        likesResult += videos.reduce((sum, v) => sum + v.likes, 0);
+        commentsResult += videos.reduce((sum, v) => sum + v.comments, 0);
+        sharesResult += videos.reduce((sum, v) => sum + v.shares, 0);
+        savesResult += videos.reduce((sum, v) => sum + v.saves, 0);
+      } else {
+        const [views, likes, comments, shares, saves] = await Promise.all([
           aggregateViews.sum(ctx, { namespace: campaignId, bounds: {} }),
           aggregateLikes.sum(ctx, { namespace: campaignId, bounds: {} }),
           aggregateComments.sum(ctx, { namespace: campaignId, bounds: {} }),
@@ -957,28 +959,59 @@ export const getCampaignAnalyticsV2 = query({
           aggregateSaves.sum(ctx, { namespace: campaignId, bounds: {} }),
         ]);
 
-      totalPosts = await aggregateViews.count(ctx, {
-        namespace: campaignId,
-        bounds: {},
-      });
+        const ttPosts = await aggregateViews.count(ctx, {
+          namespace: campaignId,
+          bounds: {},
+        });
+
+        totalPosts += ttPosts;
+        viewsResult += views;
+        likesResult += likes;
+        commentsResult += comments;
+        sharesResult += shares;
+        savesResult += saves;
+      }
     }
 
-    const excluded = hasDateFilter
+    // --- Instagram totals ---
+    if (platform === "all" || platform === "instagram") {
+      let igPosts = await ctx.db
+        .query("instagramPostStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      if (dateFrom !== undefined) {
+        igPosts = igPosts.filter((p) => p.postedAt >= dateFrom);
+      }
+      if (dateTo !== undefined) {
+        igPosts = igPosts.filter((p) => p.postedAt <= dateTo);
+      }
+
+      totalPosts += igPosts.length;
+      viewsResult += igPosts.reduce((sum, p) => sum + p.views, 0);
+      likesResult += igPosts.reduce((sum, p) => sum + p.likes, 0);
+      commentsResult += igPosts.reduce((sum, p) => sum + p.comments, 0);
+      // Instagram has no shares/saves
+    }
+
+    const excluded = hasDateFilter || platform === "instagram"
       ? { totalPosts: 0, totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0 }
-      : (campaign?.minViewsExcludedStats ?? {
-          totalPosts: 0,
-          totalViews: 0,
-          totalLikes: 0,
-          totalComments: 0,
-          totalShares: 0,
-          totalSaves: 0,
-        });
+      : (platform === "tiktok"
+        ? (campaign?.minViewsExcludedStats ?? {
+            totalPosts: 0, totalViews: 0, totalLikes: 0,
+            totalComments: 0, totalShares: 0, totalSaves: 0,
+          })
+        : (campaign?.minViewsExcludedStats ?? {
+            totalPosts: 0, totalViews: 0, totalLikes: 0,
+            totalComments: 0, totalShares: 0, totalSaves: 0,
+          }));
 
     return {
       campaignId,
       campaignName: campaign?.campaignName ?? "",
       artist: campaign?.artist ?? "",
       song: campaign?.song ?? "",
+      platform,
       aggregateTotals: {
         totalPosts,
         totalViews: viewsResult,
@@ -1018,6 +1051,7 @@ export const getVideoPerformanceV2 = query({
     isManualOnly: v.optional(v.boolean()),
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
+    platform: v.optional(v.union(v.literal("all"), v.literal("tiktok"), v.literal("instagram"))),
   },
   handler: async (
     ctx,
@@ -1031,6 +1065,7 @@ export const getVideoPerformanceV2 = query({
       isManualOnly,
       dateFrom,
       dateTo,
+      platform = "all",
     },
   ) => {
     // Get settings-level minViewsFilter
@@ -1041,55 +1076,116 @@ export const getVideoPerformanceV2 = query({
 
     const settingsMinViewsFilter = campaign?.minViewsFilter ?? 0;
 
-    let videos = await ctx.db
-      .query("tiktokVideoStats")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .collect();
+    type UnifiedVideo = {
+      _id: string;
+      tiktokVideoId: string;
+      tiktokAuthorId: string;
+      mediaUrl: string;
+      postedAt: number;
+      views: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+      isManual: boolean;
+      platform: "tiktok" | "instagram";
+      thumbnailUrl?: string | null;
+    };
 
-    // Apply settings-level filter
-    if (settingsMinViewsFilter > 0) {
-      videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+    const allVideos: UnifiedVideo[] = [];
+
+    // --- TikTok videos ---
+    if (platform === "all" || platform === "tiktok") {
+      let videos = await ctx.db
+        .query("tiktokVideoStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      if (settingsMinViewsFilter > 0) {
+        videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
+      }
+      if (dateFrom !== undefined) {
+        videos = videos.filter((v) => v.postedAt >= dateFrom);
+      }
+      if (dateTo !== undefined) {
+        videos = videos.filter((v) => v.postedAt <= dateTo);
+      }
+      if (isManualOnly) {
+        videos = videos.filter((v) => v.isManual === true);
+      }
+
+      for (const v of videos) {
+        allVideos.push({
+          _id: v._id,
+          tiktokVideoId: v.tiktokVideoId,
+          tiktokAuthorId: v.tiktokAuthorId,
+          mediaUrl: v.mediaUrl,
+          postedAt: v.postedAt,
+          views: v.views,
+          likes: v.likes,
+          comments: v.comments,
+          shares: v.shares,
+          saves: v.saves,
+          isManual: v.isManual,
+          platform: "tiktok",
+        });
+      }
     }
 
-    // Apply date range filter (postedAt is unix seconds)
-    if (dateFrom !== undefined) {
-      videos = videos.filter((v) => v.postedAt >= dateFrom);
-    }
-    if (dateTo !== undefined) {
-      videos = videos.filter((v) => v.postedAt <= dateTo);
+    // --- Instagram posts ---
+    if (platform === "all" || platform === "instagram") {
+      let igPosts = await ctx.db
+        .query("instagramPostStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      if (dateFrom !== undefined) {
+        igPosts = igPosts.filter((p) => p.postedAt >= dateFrom);
+      }
+      if (dateTo !== undefined) {
+        igPosts = igPosts.filter((p) => p.postedAt <= dateTo);
+      }
+
+      for (const p of igPosts) {
+        let thumbnailUrl: string | null = null;
+        if (p.thumbnailStorageId) {
+          thumbnailUrl = await ctx.storage.getUrl(p.thumbnailStorageId);
+        }
+        allVideos.push({
+          _id: p._id,
+          tiktokVideoId: p.instagramShortcode, // use shortcode as ID
+          tiktokAuthorId: p.instagramUserId,
+          mediaUrl: p.mediaUrl,
+          postedAt: p.postedAt,
+          views: p.views,
+          likes: p.likes,
+          comments: p.comments,
+          shares: 0,
+          saves: 0,
+          isManual: false,
+          platform: "instagram",
+          thumbnailUrl,
+        });
+      }
     }
 
-    // Apply user filters
+    // Apply user filters on unified list
+    let filtered = allVideos;
     if (minViews !== undefined) {
-      videos = videos.filter((v) => v.views >= minViews);
+      filtered = filtered.filter((v) => v.views >= minViews);
     }
     if (maxViews !== undefined) {
-      videos = videos.filter((v) => v.views <= maxViews);
-    }
-    if (isManualOnly) {
-      videos = videos.filter((v) => v.isManual === true);
+      filtered = filtered.filter((v) => v.views <= maxViews);
     }
 
-    const totalCount = videos.length;
+    const totalCount = filtered.length;
 
     // Sort and paginate
-    const sorted = videos.sort((a, b) =>
+    const sorted = filtered.sort((a, b) =>
       sortOrder === "desc" ? b.views - a.views : a.views - b.views,
     );
 
-    const paginated = sorted.slice(offset, offset + limit).map((v) => ({
-      _id: v._id,
-      tiktokVideoId: v.tiktokVideoId,
-      tiktokAuthorId: v.tiktokAuthorId,
-      mediaUrl: v.mediaUrl,
-      postedAt: v.postedAt,
-      views: v.views,
-      likes: v.likes,
-      comments: v.comments,
-      shares: v.shares,
-      saves: v.saves,
-      isManual: v.isManual,
-    }));
+    const paginated = sorted.slice(offset, offset + limit);
 
     return {
       videos: paginated,
@@ -1156,49 +1252,109 @@ export const getBatchVideoSnapshots = query({
 });
 
 export const getCampaignSnapshots = query({
-  args: { campaignId: v.string() },
-  handler: async (ctx, { campaignId }) => {
-    const snapshots = await ctx.db
+  args: {
+    campaignId: v.string(),
+    platform: v.optional(v.union(v.literal("all"), v.literal("tiktok"), v.literal("instagram"))),
+  },
+  handler: async (ctx, { campaignId, platform = "all" }) => {
+    const allSnapshots = await ctx.db
       .query("campaignSnapshots")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .collect();
 
-    return snapshots
+    if (platform === "tiktok" || platform === "instagram") {
+      // Return only snapshots for the requested platform
+      return allSnapshots
+        .filter((s) => s.platform === platform)
+        .sort((a, b) => a.snapshotAt - b.snapshotAt)
+        .slice(-336)
+        .map((s) => ({
+          snapshotAt: s.snapshotAt,
+          hour: s.hour,
+          totalPosts: s.totalPosts,
+          totalViews: s.totalViews,
+          totalLikes: s.totalLikes,
+          totalComments: s.totalComments,
+          totalShares: s.totalShares,
+          totalSaves: s.totalSaves,
+        }));
+    }
+
+    // "all" — merge tiktok + instagram snapshots by snapshotAt
+    const ttSnapshots = allSnapshots.filter((s) => s.platform === "tiktok");
+    const igSnapshots = allSnapshots.filter((s) => s.platform === "instagram");
+
+    // If no per-platform snapshots exist yet, fall back to legacy (no platform field)
+    if (ttSnapshots.length === 0 && igSnapshots.length === 0) {
+      return allSnapshots
+        .filter((s) => !s.platform)
+        .sort((a, b) => a.snapshotAt - b.snapshotAt)
+        .slice(-336)
+        .map((s) => ({
+          snapshotAt: s.snapshotAt,
+          hour: s.hour,
+          totalPosts: s.totalPosts,
+          totalViews: s.totalViews,
+          totalLikes: s.totalLikes,
+          totalComments: s.totalComments,
+          totalShares: s.totalShares,
+          totalSaves: s.totalSaves,
+        }));
+    }
+
+    // Build a map keyed by snapshotAt, summing both platforms
+    const merged = new Map<number, {
+      snapshotAt: number;
+      hour: number;
+      totalPosts: number;
+      totalViews: number;
+      totalLikes: number;
+      totalComments: number;
+      totalShares: number;
+      totalSaves: number;
+    }>();
+
+    for (const s of [...ttSnapshots, ...igSnapshots]) {
+      const existing = merged.get(s.snapshotAt);
+      if (existing) {
+        existing.totalPosts += s.totalPosts;
+        existing.totalViews += s.totalViews;
+        existing.totalLikes += s.totalLikes;
+        existing.totalComments += s.totalComments;
+        existing.totalShares += s.totalShares;
+        existing.totalSaves += s.totalSaves;
+      } else {
+        merged.set(s.snapshotAt, {
+          snapshotAt: s.snapshotAt,
+          hour: s.hour,
+          totalPosts: s.totalPosts,
+          totalViews: s.totalViews,
+          totalLikes: s.totalLikes,
+          totalComments: s.totalComments,
+          totalShares: s.totalShares,
+          totalSaves: s.totalSaves,
+        });
+      }
+    }
+
+    return [...merged.values()]
       .sort((a, b) => a.snapshotAt - b.snapshotAt)
-      .slice(-336) // Last 14 days * 24 hours
-      .map((s) => ({
-        snapshotAt: s.snapshotAt,
-        hour: s.hour,
-        totalPosts: s.totalPosts,
-        totalViews: s.totalViews,
-        totalLikes: s.totalLikes,
-        totalComments: s.totalComments,
-        totalShares: s.totalShares,
-        totalSaves: s.totalSaves,
-      }));
+      .slice(-336);
   },
 });
 
 export const getDailySnapshotsByDate = query({
-  args: { campaignId: v.string() },
-  handler: async (ctx, { campaignId }) => {
+  args: {
+    campaignId: v.string(),
+    platform: v.optional(v.union(v.literal("all"), v.literal("tiktok"), v.literal("instagram"))),
+  },
+  handler: async (ctx, { campaignId, platform = "all" }) => {
     // Get settings-level minViewsFilter
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
       .first();
     const settingsMinViewsFilter = campaign?.minViewsFilter ?? 0;
-
-    // Compute daily stats in real-time from tiktokVideoStats
-    let videos = await ctx.db
-      .query("tiktokVideoStats")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
-      .collect();
-
-    // Apply minViewsFilter so calendar counts match Content Performance
-    if (settingsMinViewsFilter > 0) {
-      videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
-    }
 
     const byDate: Record<string, {
       totalPosts: number;
@@ -1209,28 +1365,57 @@ export const getDailySnapshotsByDate = query({
       totalSaves: number;
     }> = {};
 
-    for (const video of videos) {
-      const date = new Date(video.postedAt * 1000);
-      const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+    // --- TikTok ---
+    if (platform === "all" || platform === "tiktok") {
+      let videos = await ctx.db
+        .query("tiktokVideoStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
 
-      if (!byDate[dateKey]) {
-        byDate[dateKey] = {
-          totalPosts: 0,
-          totalViews: 0,
-          totalLikes: 0,
-          totalComments: 0,
-          totalShares: 0,
-          totalSaves: 0,
-        };
+      if (settingsMinViewsFilter > 0) {
+        videos = videos.filter((v) => v.views >= settingsMinViewsFilter);
       }
 
-      const entry = byDate[dateKey]!;
-      entry.totalPosts++;
-      entry.totalViews += video.views;
-      entry.totalLikes += video.likes;
-      entry.totalComments += video.comments;
-      entry.totalShares += video.shares;
-      entry.totalSaves += video.saves;
+      for (const video of videos) {
+        const date = new Date(video.postedAt * 1000);
+        const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+
+        if (!byDate[dateKey]) {
+          byDate[dateKey] = { totalPosts: 0, totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0 };
+        }
+
+        const entry = byDate[dateKey]!;
+        entry.totalPosts++;
+        entry.totalViews += video.views;
+        entry.totalLikes += video.likes;
+        entry.totalComments += video.comments;
+        entry.totalShares += video.shares;
+        entry.totalSaves += video.saves;
+      }
+    }
+
+    // --- Instagram ---
+    if (platform === "all" || platform === "instagram") {
+      const igPosts = await ctx.db
+        .query("instagramPostStats")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+        .collect();
+
+      for (const post of igPosts) {
+        const date = new Date(post.postedAt * 1000);
+        const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+
+        if (!byDate[dateKey]) {
+          byDate[dateKey] = { totalPosts: 0, totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0 };
+        }
+
+        const entry = byDate[dateKey]!;
+        entry.totalPosts++;
+        entry.totalViews += post.views;
+        entry.totalLikes += post.likes;
+        entry.totalComments += post.comments;
+        // Instagram has no shares/saves
+      }
     }
 
     return Object.entries(byDate).map(([postDate, stats]) => ({
@@ -1454,16 +1639,39 @@ export const populateAllCampaigns = internalAction({
 export const snapshotSingleCampaign = internalAction({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    // Read aggregate totals
-    const totals = await ctx.runQuery(
+    // Read TikTok aggregate totals
+    const ttTotals = await ctx.runQuery(
       internal.app.analyticsV2.getAggregateTotals,
       { campaignId },
     );
 
-    // Write campaign snapshot
+    // Read Instagram totals
+    const igTotals = await ctx.runQuery(
+      internal.app.instagramAnalytics.getInstagramTotals,
+      { campaignId },
+    );
+
+    // Write per-platform snapshots
     await ctx.runMutation(internal.app.analyticsV2.writeCampaignSnapshot, {
       campaignId,
-      ...totals,
+      platform: "tiktok",
+      totalPosts: ttTotals.totalPosts,
+      totalViews: ttTotals.totalViews,
+      totalLikes: ttTotals.totalLikes,
+      totalComments: ttTotals.totalComments,
+      totalShares: ttTotals.totalShares,
+      totalSaves: ttTotals.totalSaves,
+    });
+
+    await ctx.runMutation(internal.app.analyticsV2.writeCampaignSnapshot, {
+      campaignId,
+      platform: "instagram",
+      totalPosts: igTotals.totalPosts,
+      totalViews: igTotals.totalViews,
+      totalLikes: igTotals.totalLikes,
+      totalComments: igTotals.totalComments,
+      totalShares: 0,
+      totalSaves: 0,
     });
   },
 });
@@ -1487,6 +1695,54 @@ export const snapshotCampaignStats = internalAction({
     console.log(
       `[V2 Snapshot] Scheduled snapshots for ${campaignIds.length} campaigns`,
     );
+  },
+});
+
+// One-time backfill: patch legacy snapshots (no platform) to platform="tiktok".
+// Processes in batches to stay under the 4096 read limit.
+const BACKFILL_BATCH = 500;
+
+export const backfillSnapshotPlatformBatch = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, { cursor }) => {
+    const result = await ctx.db
+      .query("campaignSnapshots")
+      .paginate({ numItems: BACKFILL_BATCH, cursor: cursor ?? null });
+
+    let patched = 0;
+    for (const s of result.page) {
+      if (!s.platform) {
+        await ctx.db.patch(s._id, {
+          platform: "tiktok",
+          intervalId: s.intervalId + "_tiktok",
+        });
+        patched++;
+      }
+    }
+
+    console.log(`[Backfill] Batch patched ${patched}/${result.page.length} rows, isDone=${result.isDone}`);
+    return { patched, isDone: result.isDone, cursor: result.continueCursor };
+  },
+});
+
+export const backfillSnapshotPlatform = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    let cursor: string | undefined;
+    let totalPatched = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result = await ctx.runMutation(
+        internal.app.analyticsV2.backfillSnapshotPlatformBatch,
+        { cursor },
+      );
+      totalPatched += result.patched;
+      if (result.isDone) break;
+      cursor = result.cursor;
+    }
+
+    console.log(`[Backfill] Done. Patched ${totalPatched} legacy snapshots to platform=tiktok`);
   },
 });
 
@@ -1577,10 +1833,21 @@ export const updateCampaignCachedTotals = internalMutation({
 export const cacheSingleCampaignTotals = internalAction({
   args: { campaignId: v.string() },
   handler: async (ctx, { campaignId }) => {
-    const [rawTotals, firstVideoAt] = await Promise.all([
+    const [ttTotals, igTotals, firstVideoAt] = await Promise.all([
       ctx.runQuery(internal.app.analyticsV2.getAggregateTotals, { campaignId }),
+      ctx.runQuery(internal.app.instagramAnalytics.getInstagramTotals, { campaignId }),
       ctx.runQuery(internal.app.analyticsV2.getFirstVideoAt, { campaignId }),
     ]);
+
+    // Combine TikTok + Instagram totals
+    const rawTotals = {
+      totalPosts: ttTotals.totalPosts + igTotals.totalPosts,
+      totalViews: ttTotals.totalViews + igTotals.totalViews,
+      totalLikes: ttTotals.totalLikes + igTotals.totalLikes,
+      totalComments: ttTotals.totalComments + igTotals.totalComments,
+      totalShares: ttTotals.totalShares,
+      totalSaves: ttTotals.totalSaves,
+    };
 
     await ctx.runMutation(
       internal.app.analyticsV2.updateCampaignCachedTotals,
@@ -1644,6 +1911,30 @@ export const getCampaignListByStatus = query({
       cachedAt: campaign.cachedAt ?? null,
       lastUpdatedAt: campaign._creationTime,
     }));
+  },
+});
+
+// =============================================================================
+// PLATFORM POST COUNTS
+// =============================================================================
+
+export const getPlatformPostCounts = query({
+  args: { campaignId: v.string() },
+  handler: async (ctx, { campaignId }) => {
+    const tiktokPosts = await aggregateViews.count(ctx, {
+      namespace: campaignId,
+      bounds: {},
+    });
+
+    const igPosts = await ctx.db
+      .query("instagramPostStats")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", campaignId))
+      .collect();
+
+    return {
+      tiktokPosts,
+      instagramPosts: igPosts.length,
+    };
   },
 });
 

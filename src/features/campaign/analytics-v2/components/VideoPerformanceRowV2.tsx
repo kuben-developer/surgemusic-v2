@@ -10,13 +10,17 @@ import {
   ExternalLink,
   Bookmark,
   MousePointerClick,
+  Play,
 } from "lucide-react";
 import { TikTokThumbnail } from "./TikTokThumbnail";
 import { useCounterAnimation } from "../hooks/useCounterAnimation";
 import type { VideoPerformanceRow } from "../types/analytics-v2.types";
+import { TikTokIcon } from "@/components/icons/TikTokIcon";
+import { InstagramColorIcon } from "@/components/icons/InstagramIcon";
 
 interface VideoPerformanceRowV2Props {
   video: VideoPerformanceRow;
+  showPlatformBadge?: boolean;
 }
 
 function AnimatedMetric({
@@ -57,10 +61,11 @@ function EngagementRate({ views, likes, comments, shares }: {
   );
 }
 
-function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
-  const videoUrl =
-    video.mediaUrl ||
-    `https://www.tiktok.com/@/video/${video.tiktokVideoId}`;
+function VideoPerformanceRowV2Inner({ video, showPlatformBadge = false }: VideoPerformanceRowV2Props) {
+  const isInstagram = video.platform === "instagram";
+  const videoUrl = isInstagram
+    ? video.mediaUrl || `https://www.instagram.com/p/${video.tiktokVideoId}/`
+    : video.mediaUrl || `https://www.tiktok.com/@/video/${video.tiktokVideoId}`;
 
   const postedDate = new Date(video.postedAt * 1000).toLocaleDateString("en-US", {
     month: "short",
@@ -77,7 +82,24 @@ function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
         rel="noopener noreferrer"
         className="flex-shrink-0"
       >
-        <TikTokThumbnail tiktokVideoId={video.tiktokVideoId} />
+        {isInstagram ? (
+          <div className="w-10 h-14 sm:w-12 sm:h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+            {video.thumbnailUrl ? (
+              <img
+                src={video.thumbnailUrl}
+                alt="Instagram thumbnail"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted">
+                <Play className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        ) : (
+          <TikTokThumbnail tiktokVideoId={video.tiktokVideoId} />
+        )}
       </a>
 
       {/* Middle: date + badge + stats grid */}
@@ -90,6 +112,15 @@ function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
               Manual
             </Badge>
           )}
+          {showPlatformBadge && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+              {isInstagram ? (
+                <><InstagramColorIcon className="h-3 w-3" /> Instagram</>
+              ) : (
+                <><TikTokIcon className="h-3 w-3" /> TikTok</>
+              )}
+            </Badge>
+          )}
           <a
             href={videoUrl}
             target="_blank"
@@ -100,45 +131,24 @@ function VideoPerformanceRowV2Inner({ video }: VideoPerformanceRowV2Props) {
           </a>
         </div>
 
-        {/* 3x2 stats grid */}
-        <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-          <AnimatedMetric
-            value={video.views}
-            label="Views"
-            icon={Eye}
-            colorClass="text-green-600 dark:text-green-400"
-          />
-          <AnimatedMetric
-            value={video.likes}
-            label="Likes"
-            icon={Heart}
-            colorClass="text-orange-600 dark:text-orange-400"
-          />
-          <AnimatedMetric
-            value={video.comments}
-            label="Cmts"
-            icon={MessageCircle}
-            colorClass="text-red-600 dark:text-red-400"
-          />
-          <AnimatedMetric
-            value={video.shares}
-            label="Shares"
-            icon={Share2}
-            colorClass="text-blue-600 dark:text-blue-400"
-          />
-          <AnimatedMetric
-            value={video.saves}
-            label="Saves"
-            icon={Bookmark}
-            colorClass="text-amber-600 dark:text-amber-400"
-          />
-          <EngagementRate
-            views={video.views}
-            likes={video.likes}
-            comments={video.comments}
-            shares={video.shares}
-          />
-        </div>
+        {/* Stats grid */}
+        {isInstagram ? (
+          <div className="grid grid-cols-2 max-w-[66%] gap-x-4 gap-y-1.5">
+            <AnimatedMetric value={video.views} label="Views" icon={Eye} colorClass="text-green-600 dark:text-green-400" />
+            <AnimatedMetric value={video.likes} label="Likes" icon={Heart} colorClass="text-orange-600 dark:text-orange-400" />
+            <AnimatedMetric value={video.comments} label="Cmts" icon={MessageCircle} colorClass="text-red-600 dark:text-red-400" />
+            <EngagementRate views={video.views} likes={video.likes} comments={video.comments} shares={0} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+            <AnimatedMetric value={video.views} label="Views" icon={Eye} colorClass="text-green-600 dark:text-green-400" />
+            <AnimatedMetric value={video.likes} label="Likes" icon={Heart} colorClass="text-orange-600 dark:text-orange-400" />
+            <AnimatedMetric value={video.comments} label="Cmts" icon={MessageCircle} colorClass="text-red-600 dark:text-red-400" />
+            <AnimatedMetric value={video.shares} label="Shares" icon={Share2} colorClass="text-blue-600 dark:text-blue-400" />
+            <AnimatedMetric value={video.saves} label="Saves" icon={Bookmark} colorClass="text-amber-600 dark:text-amber-400" />
+            <EngagementRate views={video.views} likes={video.likes} comments={video.comments} shares={video.shares} />
+          </div>
+        )}
       </div>
 
     </div>

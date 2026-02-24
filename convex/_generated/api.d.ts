@@ -24,6 +24,8 @@ import type * as app_clipperS3 from "../app/clipperS3.js";
 import type * as app_comments from "../app/comments.js";
 import type * as app_directUploadS3 from "../app/directUploadS3.js";
 import type * as app_files from "../app/files.js";
+import type * as app_instagram from "../app/instagram.js";
+import type * as app_instagramAnalytics from "../app/instagramAnalytics.js";
 import type * as app_montager from "../app/montager.js";
 import type * as app_montagerDb from "../app/montagerDb.js";
 import type * as app_podcastClipperDb from "../app/podcastClipperDb.js";
@@ -73,6 +75,8 @@ declare const fullApi: ApiFromModules<{
   "app/comments": typeof app_comments;
   "app/directUploadS3": typeof app_directUploadS3;
   "app/files": typeof app_files;
+  "app/instagram": typeof app_instagram;
+  "app/instagramAnalytics": typeof app_instagramAnalytics;
   "app/montager": typeof app_montager;
   "app/montagerDb": typeof app_montagerDb;
   "app/podcastClipperDb": typeof app_podcastClipperDb;

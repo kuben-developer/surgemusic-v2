@@ -37,6 +37,7 @@ interface ContentItem {
     date?: string; // ISO format "YYYY-MM-DD"
     is_manual?: boolean; // true if manually posted (not through Bundle Social API)
     tiktok_id?: string; // TikTok video ID for manual posts
+    instagram_id?: string; // Instagram shortcode
     status?: string; // "planned" | "done" | etc.
 }
 
@@ -195,6 +196,7 @@ export const getCampaignContent = action({
             url.searchParams.append("fields[]", "date");
             url.searchParams.append("fields[]", "is_manual");
             url.searchParams.append("fields[]", "tiktok_id");
+            url.searchParams.append("fields[]", "instagram_id");
             url.searchParams.append("fields[]", "status");
 
             if (offset) url.searchParams.append("offset", offset);
@@ -218,6 +220,7 @@ export const getCampaignContent = action({
                 const apiPostId = record.fields["api_post_id"] as string[] | undefined;
                 const isManual = record.fields["is_manual"] as boolean | undefined;
                 const tiktokId = record.fields["tiktok_id"] as string | undefined;
+                const instagramId = record.fields["instagram_id"] as string | undefined;
                 const status = record.fields["status"] as string | undefined;
 
                 allRecords.push({
@@ -229,6 +232,7 @@ export const getCampaignContent = action({
                     date: record.fields["date"] as string | undefined,
                     is_manual: isManual,
                     tiktok_id: tiktokId,
+                    instagram_id: instagramId,
                     status: status,
                 });
             });
@@ -270,6 +274,19 @@ export const checkContentExists = internalQuery({
 });
 
 /**
+ * Get content record by postId (returns full doc for patching)
+ */
+export const getContentByPostId = internalQuery({
+    args: { postId: v.string() },
+    handler: async (ctx, { postId }) => {
+        return await ctx.db
+            .query("airtableContents")
+            .withIndex("by_postId", (q) => q.eq("postId", postId))
+            .first();
+    },
+});
+
+/**
  * Get all content records for a specific campaign
  */
 export const getContentByCampaign = internalQuery({
@@ -291,6 +308,7 @@ export const insertContent = internalMutation({
         postId: v.string(),
         isManual: v.optional(v.boolean()),
         tiktokId: v.optional(v.string()),
+        instagramId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         await ctx.db.insert("airtableContents", {
@@ -298,6 +316,7 @@ export const insertContent = internalMutation({
             postId: args.postId,
             isManual: args.isManual,
             tiktokId: args.tiktokId,
+            instagramId: args.instagramId,
         });
     },
 });
@@ -428,30 +447,37 @@ export const syncAirtableContentByCampaign = internalAction({
 
             // Build Set of valid postIds from Airtable content
             // For manual posts without api_post_id, use tiktok_id as the postId
+            // For Instagram-only posts, use instagram_id as the postId
             const validPostIds = new Set<string>();
             for (const content of contentRecords) {
                 if (content.api_post_id) {
                     validPostIds.add(content.api_post_id);
                 } else if (content.is_manual && content.tiktok_id) {
-                    // Manual posts use tiktok_id as postId
                     validPostIds.add(content.tiktok_id);
+                } else if (content.instagram_id) {
+                    validPostIds.add(content.instagram_id);
                 }
             }
 
             // Process each content record from Airtable
             let insertedCount = 0;
+            let patchedCount = 0;
             for (const content of contentRecords) {
                 const apiPostId = content.api_post_id;
                 const isManual = content.is_manual ?? false;
                 const tiktokId = content.tiktok_id;
+                const instagramId = content.instagram_id;
 
                 // Determine the postId to use
-                // For manual posts without api_post_id, use tiktok_id as postId
+                // Priority: api_post_id > tiktok_id (manual) > instagram_id
                 let postId: string | undefined;
                 if (apiPostId) {
                     postId = apiPostId;
                 } else if (isManual && tiktokId) {
                     postId = tiktokId;
+                } else if (instagramId) {
+                    // Instagram-only posts use instagram shortcode as postId
+                    postId = instagramId;
                 }
 
                 // Skip if no valid postId
@@ -460,11 +486,19 @@ export const syncAirtableContentByCampaign = internalAction({
                 }
 
                 // Check if already exists
-                const exists = await ctx.runQuery(internal.app.airtable.checkContentExists, {
+                const existing = await ctx.runQuery(internal.app.airtable.getContentByPostId, {
                     postId,
                 });
 
-                if (exists) {
+                if (existing) {
+                    // Patch instagramId if Airtable has it but our record doesn't
+                    if (instagramId && !existing.instagramId) {
+                        await ctx.runMutation(internal.app.airtable.patchContentInstagramId, {
+                            contentId: existing._id,
+                            instagramId,
+                        });
+                        patchedCount++;
+                    }
                     continue;
                 }
 
@@ -474,6 +508,7 @@ export const syncAirtableContentByCampaign = internalAction({
                     postId,
                     isManual: isManual || undefined,
                     tiktokId: tiktokId,
+                    instagramId: instagramId,
                 });
 
                 insertedCount++;
@@ -500,7 +535,7 @@ export const syncAirtableContentByCampaign = internalAction({
             }
 
             console.log(
-                `Synced campaign ${campaignRecordId}: ${totalCount} total, ${publishedCount} published, ${insertedCount} inserted`
+                `Synced campaign ${campaignRecordId}: ${totalCount} total, ${publishedCount} published, ${insertedCount} inserted, ${patchedCount} patched with instagramId`
             );
 
             return {
@@ -544,6 +579,70 @@ export const syncAirtableContent = internalAction({
             console.error("Error syncing Airtable content:", error);
             throw error;
         }
+    },
+});
+
+/**
+ * Backfill instagramId into existing airtableContents records.
+ * Fetches all content with instagram_id from Airtable and patches matching records.
+ */
+export const backfillInstagramIds = internalAction({
+    args: {},
+    handler: async (ctx) => {
+        // Fetch all campaigns
+        const campaigns: CampaignOutput[] = await ctx.runAction(api.app.airtable.getCampaigns, {});
+        let totalPatched = 0;
+
+        for (const campaign of campaigns) {
+            // Fetch content for this campaign from Airtable
+            const result = await ctx.runAction(api.app.airtable.getCampaignContent, {
+                campaignRecordId: campaign.id,
+            });
+
+            // Get existing airtableContents for this campaign
+            const existingContents = await ctx.runQuery(
+                internal.app.airtable.getContentByCampaign,
+                { campaignId: campaign.id },
+            );
+
+            // Build postId -> content doc map
+            const contentByPostId = new Map(
+                existingContents.map((c) => [c.postId, c]),
+            );
+
+            for (const content of result.content) {
+                if (!content.instagram_id) continue;
+
+                // Find matching airtableContents record
+                const postId = content.api_post_id || (content.is_manual && content.tiktok_id ? content.tiktok_id : undefined);
+                if (!postId) continue;
+
+                const existing = contentByPostId.get(postId);
+                if (existing && !existing.instagramId) {
+                    await ctx.runMutation(internal.app.airtable.patchContentInstagramId, {
+                        contentId: existing._id,
+                        instagramId: content.instagram_id,
+                    });
+                    totalPatched++;
+                }
+            }
+        }
+
+        console.log(`[Backfill] Patched ${totalPatched} records with instagramId`);
+        return { totalPatched };
+    },
+});
+
+/**
+ * Patch a single airtableContents record with instagramId
+ */
+export const patchContentInstagramId = internalMutation({
+    args: {
+        contentId: v.id("airtableContents"),
+        instagramId: v.string(),
+    },
+    handler: async (ctx, { contentId, instagramId }) => {
+        await ctx.db.patch(contentId, { instagramId });
     },
 });
 

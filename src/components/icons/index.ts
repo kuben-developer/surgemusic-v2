@@ -1,3 +1,3 @@
 export { TikTokIcon } from './TikTokIcon'
-export { InstagramIcon } from './InstagramIcon'
+export { InstagramIcon, InstagramColorIcon } from './InstagramIcon'
 export { YouTubeIcon } from './YouTubeIcon'

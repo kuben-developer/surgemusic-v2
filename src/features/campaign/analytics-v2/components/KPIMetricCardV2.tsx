@@ -8,12 +8,14 @@ interface KPIMetricCardV2Props {
   config: KPIMetricConfig;
   value: number;
   className?: string;
+  snapKey?: string;
 }
 
-export function KPIMetricCardV2({ config, value, className = "" }: KPIMetricCardV2Props) {
+export function KPIMetricCardV2({ config, value, className = "", snapKey }: KPIMetricCardV2Props) {
   const animatedValue = useCounterAnimation(value, {
     duration: 1200,
     ease: "easeOut",
+    snapKey,
   });
 
   return (

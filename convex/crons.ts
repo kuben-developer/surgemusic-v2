@@ -32,6 +32,13 @@ crons.cron(
     {}
 );
 
+crons.cron(
+    "populateAllCampaignsInstagram",
+    "30 */3 * * *", // Every 3 hours at :30 (offset from TikTok at :00)
+    internal.app.instagramAnalytics.populateAllCampaignsInstagram,
+    {}
+);
+
 crons.interval(
     "recalculateMinViewsExcluded",
     { minutes: 60 }, // Every 1 hours

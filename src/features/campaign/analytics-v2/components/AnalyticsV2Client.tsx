@@ -4,6 +4,8 @@ import { useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 import { useCampaignAnalyticsV2 } from "../hooks/useCampaignAnalyticsV2";
 import { useChartDataV2 } from "../hooks/useChartDataV2";
 import { useVideoPerformanceV2 } from "../hooks/useVideoPerformanceV2";
@@ -16,10 +18,95 @@ import { AdvancedAnalyticsSection } from "./AdvancedAnalyticsSection";
 import { CampaignInfoSection } from "./CampaignInfoSection";
 import { CommentCurationSection, SelectedCommentsDisplay } from "../comments";
 import { VideoSamplesSection } from "./VideoSamplesSection";
+import { useQuery } from "convex/react";
+import { api } from "convex/_generated/api";
 import { staggerContainer } from "../constants/metrics-v2";
-import type { MetricType } from "../types/analytics-v2.types";
+import type { MetricType, PlatformFilter } from "../types/analytics-v2.types";
 
 type ChartMode = "area" | "bar" | "dailyGain";
+
+function AnalyticsSkeleton({ platform }: { platform: PlatformFilter }) {
+  const isInstagram = platform === "instagram";
+  const kpiCount = isInstagram ? 4 : 6;
+  const kpiGridCols = isInstagram
+    ? "grid grid-cols-6 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3"
+    : "grid grid-cols-6 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3";
+
+  return (
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-150">
+      {/* Campaign info skeleton */}
+      <Card className="p-4 sm:p-6 border border-primary/10">
+        <div className="flex items-center gap-4">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-9 w-24" />
+        </div>
+      </Card>
+
+      {/* KPI cards skeleton */}
+      <div className={kpiGridCols}>
+        {Array.from({ length: kpiCount }).map((_, i) => (
+          <Card
+            key={i}
+            className={`p-2.5 sm:p-4 space-y-2 sm:space-y-3 border border-primary/10 ${
+              isInstagram ? "col-span-3 sm:col-span-1" :
+              i < 2 ? "col-span-3 sm:col-span-1" :
+              i < 5 ? "col-span-2 sm:col-span-1" :
+              "col-span-3 sm:col-span-1"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-5 w-5 sm:h-7 sm:w-7 rounded-full" />
+            </div>
+            <Skeleton className="h-5 sm:h-7 w-20" />
+          </Card>
+        ))}
+      </div>
+
+      {/* Chart + Table skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        <div className="lg:col-span-7">
+          <Card className="p-4 sm:p-6 border border-primary/10">
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-5 w-32" />
+              <div className="flex gap-2">
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-7 w-16" />
+              </div>
+            </div>
+            <Skeleton className="h-[250px] w-full rounded-lg" />
+          </Card>
+        </div>
+        <div className="lg:col-span-5">
+          <Card className="p-4 sm:p-6 border border-primary/10">
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-7 w-20" />
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                  <Skeleton className="h-16 w-12 rounded-md flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Skeleton className="h-3 w-14" />
+                      <Skeleton className="h-3 w-14" />
+                      <Skeleton className="h-3 w-14" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface AnalyticsV2ClientProps {
   campaignId: string;
@@ -35,7 +122,10 @@ export function AnalyticsV2Client({
   const [activeMetric, setActiveMetric] = useState<MetricType>("views");
   const [dateRange, setDateRange] = useState<DateRangeFilter | undefined>();
   const [chartMode, setChartMode] = useState<ChartMode>("area");
+  const [platform, setPlatform] = useState<PlatformFilter>("all");
   const hasLoadedOnce = useRef(false);
+
+  const platformCounts = useQuery(api.app.analyticsV2.getPlatformPostCounts, { campaignId });
 
   const handleDateRangeChange = useCallback((range: DateRangeFilter | undefined) => {
     setDateRange(range);
@@ -57,6 +147,7 @@ export function AnalyticsV2Client({
     campaignId,
     dateFrom: dateRange?.from,
     dateTo: dateRange?.to,
+    platform,
   });
 
   const { growthChartData, barChartData, dailyGainChartData } = useChartDataV2(
@@ -65,12 +156,14 @@ export function AnalyticsV2Client({
     minViewsExcludedStats,
     dateRange,
     dailyStatsByDate,
+    platform,
   );
 
   const videoPerformance = useVideoPerformanceV2({
     campaignId,
     dateFrom: dateRange?.from,
     dateTo: dateRange?.to,
+    platform,
   });
 
   // Track first successful load
@@ -86,6 +179,9 @@ export function AnalyticsV2Client({
       </div>
     );
   }
+
+  // Show skeleton when loading after a platform/filter change (not initial load)
+  const showSkeleton = isLoading && hasLoadedOnce.current;
 
   // Build campaign metadata for the info section
   const campaignMetadata = {
@@ -123,69 +219,77 @@ export function AnalyticsV2Client({
         isPublic={isPublic}
         hideBackButton={hideBackButton}
         onDateRangeChange={handleDateRangeChange}
+        platform={platform}
+        onPlatformChange={setPlatform}
+        platformCounts={platformCounts ?? { tiktokPosts: 0, instagramPosts: 0 }}
       />
 
-      <motion.div
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-        className="space-y-4 sm:space-y-6"
-      >
-        <CampaignInfoSection
-          campaignMetadata={campaignMetadata}
-          totals={totals}
-          currencySymbol={settings.currencySymbol}
-          manualCpmMultiplier={settings.manualCpmMultiplier}
-          apiCpmMultiplier={settings.apiCpmMultiplier}
-        />
+      {showSkeleton ? (
+        <AnalyticsSkeleton platform={platform} />
+      ) : (
+        <motion.div
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+          className="space-y-4 sm:space-y-6"
+        >
+          <CampaignInfoSection
+            campaignMetadata={campaignMetadata}
+            totals={totals}
+            currencySymbol={settings.currencySymbol}
+            manualCpmMultiplier={settings.manualCpmMultiplier}
+            apiCpmMultiplier={settings.apiCpmMultiplier}
+          />
 
-        <KPIMetricsV2 totals={adjustedTotals} />
+          <KPIMetricsV2 totals={adjustedTotals} platform={platform} />
 
-        {/* Side-by-side layout: 7/12 metrics, 5/12 content performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-          <div className="lg:col-span-7">
-            <MetricsChartV2
-              chartData={chartData}
-              activeMetric={activeMetric}
-              onActiveMetricChange={setActiveMetric}
-              chartMode={chartMode}
-              onChartModeChange={setChartMode}
-            />
+          {/* Side-by-side layout: 7/12 metrics, 5/12 content performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            <div className="lg:col-span-7">
+              <MetricsChartV2
+                chartData={chartData}
+                activeMetric={activeMetric}
+                onActiveMetricChange={setActiveMetric}
+                chartMode={chartMode}
+                onChartModeChange={setChartMode}
+              />
+            </div>
+
+            <div className="lg:col-span-5">
+              <VideoPerformanceTableV2
+                videos={videoPerformance.videos}
+                currentPage={videoPerformance.currentPage}
+                totalPages={videoPerformance.totalPages}
+                totalCount={videoPerformance.totalCount}
+                itemsPerPage={videoPerformance.itemsPerPage}
+                onPageChange={videoPerformance.goToPage}
+                viewsFilter={videoPerformance.viewsFilter}
+                onViewsFilterChange={videoPerformance.updateViewsFilter}
+                onClearFilters={videoPerformance.clearFilters}
+                hasActiveFilters={videoPerformance.hasActiveFilters}
+                sortOrder={videoPerformance.sortOrder}
+                onToggleSortOrder={videoPerformance.toggleSortOrder}
+                isLoading={videoPerformance.isLoading}
+                isPublic={isPublic}
+                platform={platform}
+              />
+            </div>
           </div>
 
-          <div className="lg:col-span-5">
-            <VideoPerformanceTableV2
-              videos={videoPerformance.videos}
-              currentPage={videoPerformance.currentPage}
-              totalPages={videoPerformance.totalPages}
-              totalCount={videoPerformance.totalCount}
-              itemsPerPage={videoPerformance.itemsPerPage}
-              onPageChange={videoPerformance.goToPage}
-              viewsFilter={videoPerformance.viewsFilter}
-              onViewsFilterChange={videoPerformance.updateViewsFilter}
-              onClearFilters={videoPerformance.clearFilters}
-              hasActiveFilters={videoPerformance.hasActiveFilters}
-              sortOrder={videoPerformance.sortOrder}
-              onToggleSortOrder={videoPerformance.toggleSortOrder}
-              isLoading={videoPerformance.isLoading}
-              isPublic={isPublic}
-            />
-          </div>
-        </div>
+          {/* Advanced Analytics Section */}
+          <AdvancedAnalyticsSection campaignId={campaignId} />
 
-        {/* Advanced Analytics Section */}
-        <AdvancedAnalyticsSection campaignId={campaignId} />
+          {/* Comments Section */}
+          {isPublic ? (
+            <SelectedCommentsDisplay campaignId={campaignId} />
+          ) : (
+            <CommentCurationSection campaignId={campaignId} />
+          )}
 
-        {/* Comments Section */}
-        {isPublic ? (
-          <SelectedCommentsDisplay campaignId={campaignId} />
-        ) : (
-          <CommentCurationSection campaignId={campaignId} />
-        )}
-
-        {/* Content Samples Section */}
-        <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
-      </motion.div>
+          {/* Content Samples Section */}
+          <VideoSamplesSection campaignId={campaignId} isPublic={isPublic} />
+        </motion.div>
+      )}
     </div>
   );
 }

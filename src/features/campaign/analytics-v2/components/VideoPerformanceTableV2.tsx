@@ -9,6 +9,7 @@ import type {
   VideoPerformanceRow,
   ViewsFilter,
   SortOrder,
+  PlatformFilter,
 } from "../types/analytics-v2.types";
 
 interface VideoPerformanceTableV2Props {
@@ -26,6 +27,7 @@ interface VideoPerformanceTableV2Props {
   onToggleSortOrder: () => void;
   isLoading: boolean;
   isPublic?: boolean;
+  platform?: PlatformFilter;
 }
 
 export function VideoPerformanceTableV2({
@@ -43,6 +45,7 @@ export function VideoPerformanceTableV2({
   onToggleSortOrder,
   isLoading,
   isPublic = false,
+  platform = "all",
 }: VideoPerformanceTableV2Props) {
   return (
     <Card className="p-4 sm:p-6 border border-primary/10">
@@ -114,7 +117,7 @@ export function VideoPerformanceTableV2({
         <div className="space-y-3">
           {videos.length > 0 ? (
             videos.map((video) => (
-              <VideoPerformanceRowV2 key={video._id} video={video} />
+              <VideoPerformanceRowV2 key={video._id} video={video} showPlatformBadge={platform === "all"} />
             ))
           ) : (
             <div className="py-8 text-center text-muted-foreground">

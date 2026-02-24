@@ -31,6 +31,7 @@ export default defineSchema({
     errorAt: v.optional(v.number()), // Timestamp when error was set (for retry logic)
     isManual: v.optional(v.boolean()), // true if manually posted (not through Bundle Social API)
     tiktokId: v.optional(v.string()), // TikTok video ID for manual posts
+    instagramId: v.optional(v.string()), // Instagram shortcode e.g. "DUvNQgmEWM1"
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_postId", ["postId"])
@@ -98,6 +99,36 @@ export default defineSchema({
     .index("by_snapshotAt", ["snapshotAt"])
     .index("by_hour", ["hour"]),
 
+  instagramPostStats: defineTable({
+    campaignId: v.string(),
+    instagramShortcode: v.string(),    // e.g. "DUvNQgmEWM1"
+    instagramUserId: v.string(),       // user.pk from RocketAPI
+    instagramUsername: v.string(),     // user.username
+    mediaUrl: v.string(),             // https://www.instagram.com/p/{shortcode}/
+    mediaType: v.number(),            // 1=photo, 2=video, 8=carousel
+    postedAt: v.number(),             // taken_at unix timestamp
+    views: v.number(),                // play_count (0 for non-video)
+    likes: v.number(),                // like_count
+    comments: v.number(),             // comment_count
+    thumbnailStorageId: v.optional(v.id("_storage")),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_instagramShortcode", ["instagramShortcode"])
+    .index("by_campaignId_postedAt", ["campaignId", "postedAt"]),
+
+  instagramPostSnapshots: defineTable({
+    instagramShortcode: v.string(),
+    intervalId: v.string(),           // "shortcode_YYYYMMDDHH"
+    snapshotAt: v.number(),           // YYYYMMDDHH
+    hour: v.number(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+  })
+    .index("by_intervalId", ["intervalId"])
+    .index("by_instagramShortcode", ["instagramShortcode"])
+    .index("by_snapshotAt", ["snapshotAt"]),
+
   campaigns: defineTable({
     campaignId: v.string(), // airtable campaign id
     campaignName: v.string(),
@@ -147,9 +178,10 @@ export default defineSchema({
 
   campaignSnapshots: defineTable({
     campaignId: v.string(), // airtable campaign id
-    intervalId: v.string(), // Format: "campaignId_YYYYMMDDHH" e.g., "campaign123_2025090114" (hourly intervals)
+    intervalId: v.string(), // Format: "campaignId_YYYYMMDDHH_platform" (hourly per-platform)
     snapshotAt: v.number(), // YYYYMMDDHH
     hour: v.number(), // Hour of the day (0-23)
+    platform: v.optional(v.union(v.literal("tiktok"), v.literal("instagram"))), // undefined = legacy combined
     totalPosts: v.number(),
     totalViews: v.number(),
     totalLikes: v.number(),
@@ -159,6 +191,7 @@ export default defineSchema({
   })
     .index("by_intervalId", ["intervalId"])
     .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_platform", ["campaignId", "platform"])
     .index("by_snapshotAt", ["snapshotAt"])
     .index("by_hour", ["hour"]),
 

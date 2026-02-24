@@ -3,28 +3,31 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
-import type { AdjustedTotals, CampaignSettings } from "../types/analytics-v2.types";
+import type { AdjustedTotals, CampaignSettings, PlatformFilter } from "../types/analytics-v2.types";
 
 interface UseCampaignAnalyticsV2Options {
   campaignId: string;
   dateFrom?: number;
   dateTo?: number;
+  platform?: PlatformFilter;
 }
 
 export function useCampaignAnalyticsV2({
   campaignId,
   dateFrom,
   dateTo,
+  platform = "all",
 }: UseCampaignAnalyticsV2Options) {
   const data = useQuery(api.app.analyticsV2.getCampaignAnalyticsV2, {
     campaignId,
     dateFrom,
     dateTo,
+    platform,
   });
 
   const dailySnapshots = useQuery(
     api.app.analyticsV2.getDailySnapshotsByDate,
-    { campaignId },
+    { campaignId, platform },
   );
 
   const adjustedTotals: AdjustedTotals = useMemo(() => {

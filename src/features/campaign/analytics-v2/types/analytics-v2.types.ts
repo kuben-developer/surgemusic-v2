@@ -8,6 +8,8 @@ export type SortOrder = "asc" | "desc";
 
 export type MetricType = "views" | "likes" | "comments" | "shares";
 
+export type PlatformFilter = "all" | "tiktok" | "instagram";
+
 export interface AdjustedTotals {
   totalPosts: number;
   totalViews: number;
@@ -55,6 +57,8 @@ export interface VideoPerformanceRow {
   shares: number;
   saves: number;
   isManual: boolean;
+  platform?: "tiktok" | "instagram";
+  thumbnailUrl?: string | null;
 }
 
 export interface DailySnapshot {

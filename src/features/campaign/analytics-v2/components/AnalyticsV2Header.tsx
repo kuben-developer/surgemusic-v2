@@ -15,11 +15,18 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import type { DateRange, DayButtonProps } from "react-day-picker";
 import { fadeInUp } from "../constants/metrics-v2";
-import type { CampaignSettings } from "../types/analytics-v2.types";
+import type { CampaignSettings, PlatformFilter } from "../types/analytics-v2.types";
+import { TikTokIcon } from "@/components/icons/TikTokIcon";
+import { InstagramColorIcon } from "@/components/icons/InstagramIcon";
 
 export interface DateRangeFilter {
   from: number; // unix seconds
   to: number;   // unix seconds
+}
+
+interface PlatformCounts {
+  tiktokPosts: number;
+  instagramPosts: number;
 }
 
 interface AnalyticsV2HeaderProps {
@@ -29,6 +36,9 @@ interface AnalyticsV2HeaderProps {
   isPublic?: boolean;
   hideBackButton?: boolean;
   onDateRangeChange: (range: DateRangeFilter | undefined) => void;
+  platform: PlatformFilter;
+  onPlatformChange: (platform: PlatformFilter) => void;
+  platformCounts: PlatformCounts;
 }
 
 const QUICK_MIN_VIEWS_OPTIONS = [
@@ -46,6 +56,9 @@ export function AnalyticsV2Header({
   isPublic = false,
   hideBackButton = false,
   onDateRangeChange,
+  platform,
+  onPlatformChange,
+  platformCounts,
 }: AnalyticsV2HeaderProps) {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>();
   const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>();
@@ -185,8 +198,39 @@ export function AnalyticsV2Header({
         </div>
       )}
 
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        {/* Platform tabs */}
+        <div className="flex items-center gap-0.5 rounded-lg border p-0.5">
+          <Button
+            variant={platform === "all" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs px-2.5"
+            onClick={() => onPlatformChange("all")}
+          >
+            All
+          </Button>
+          <Button
+            variant={platform === "tiktok" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs px-2.5 gap-1.5"
+            onClick={() => onPlatformChange("tiktok")}
+          >
+            <TikTokIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">TikTok</span>
+          </Button>
+          <Button
+            variant={platform === "instagram" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs px-2.5 gap-1.5"
+            onClick={() => onPlatformChange("instagram")}
+          >
+            <InstagramColorIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Instagram</span>
+          </Button>
+        </div>
+
       {!isPublic && (
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <>
           {/* Date filter */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
@@ -369,8 +413,9 @@ export function AnalyticsV2Header({
             </PopoverContent>
           </Popover>
 
-        </div>
+        </>
       )}
+      </div>
     </motion.div>
   );
 }

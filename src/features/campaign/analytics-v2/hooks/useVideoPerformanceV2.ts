@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
-import type { ViewsFilter, SortOrder, VideoPerformanceRow } from "../types/analytics-v2.types";
+import type { ViewsFilter, SortOrder, VideoPerformanceRow, PlatformFilter } from "../types/analytics-v2.types";
 
 const BACKEND_PAGE_SIZE = 100;
 const FRONTEND_PAGE_SIZE = 5;
@@ -12,9 +12,10 @@ interface UseVideoPerformanceV2Options {
   campaignId: string;
   dateFrom?: number;
   dateTo?: number;
+  platform?: PlatformFilter;
 }
 
-export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo }: UseVideoPerformanceV2Options) {
+export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo, platform = "all" }: UseVideoPerformanceV2Options) {
   const [currentPage, setCurrentPage] = useState(1);
   const [backendOffset, setBackendOffset] = useState(0);
   const [viewsFilter, setViewsFilter] = useState<ViewsFilter>({});
@@ -31,6 +32,7 @@ export function useVideoPerformanceV2({ campaignId, dateFrom, dateTo }: UseVideo
     isManualOnly: viewsFilter.isManualOnly,
     dateFrom,
     dateTo,
+    platform,
   });
 
   const allVideos = (data?.videos ?? []) as VideoPerformanceRow[];

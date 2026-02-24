@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
-import type { AdjustedTotals, ChartDataPoint } from "../types/analytics-v2.types";
+import type { AdjustedTotals, ChartDataPoint, PlatformFilter } from "../types/analytics-v2.types";
 import { formatSnapshotDate, formatSnapshotLabel } from "../utils/format.utils";
 
 interface ExcludedStats {
@@ -34,9 +34,11 @@ export function useChartDataV2(
   excludedStats?: ExcludedStats,
   dateFilter?: DateFilter,
   dailyStatsByDate?: DailyStats[],
+  platform?: PlatformFilter,
 ) {
   const snapshots = useQuery(api.app.analyticsV2.getCampaignSnapshots, {
     campaignId,
+    platform: platform ?? "all",
   });
 
   // Area chart: campaign growth over time
