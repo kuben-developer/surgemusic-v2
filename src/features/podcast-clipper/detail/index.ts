@@ -1,0 +1,1 @@
+export { FolderDetailPage } from "./FolderDetailPage";

@@ -26,6 +26,8 @@ import type * as app_directUploadS3 from "../app/directUploadS3.js";
 import type * as app_files from "../app/files.js";
 import type * as app_montager from "../app/montager.js";
 import type * as app_montagerDb from "../app/montagerDb.js";
+import type * as app_podcastClipperDb from "../app/podcastClipperDb.js";
+import type * as app_podcastClipperS3 from "../app/podcastClipperS3.js";
 import type * as app_tiktok from "../app/tiktok.js";
 import type * as app_transcription from "../app/transcription.js";
 import type * as app_users from "../app/users.js";
@@ -45,6 +47,7 @@ import type * as webhooks_clerk from "../webhooks/clerk.js";
 import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_montager from "../webhooks/montager.js";
 import type * as webhooks_montagerVideos from "../webhooks/montagerVideos.js";
+import type * as webhooks_podcastClipper from "../webhooks/podcastClipper.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
 import type {
@@ -72,6 +75,8 @@ declare const fullApi: ApiFromModules<{
   "app/files": typeof app_files;
   "app/montager": typeof app_montager;
   "app/montagerDb": typeof app_montagerDb;
+  "app/podcastClipperDb": typeof app_podcastClipperDb;
+  "app/podcastClipperS3": typeof app_podcastClipperS3;
   "app/tiktok": typeof app_tiktok;
   "app/transcription": typeof app_transcription;
   "app/users": typeof app_users;
@@ -91,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   "webhooks/clipper": typeof webhooks_clipper;
   "webhooks/montager": typeof webhooks_montager;
   "webhooks/montagerVideos": typeof webhooks_montagerVideos;
+  "webhooks/podcastClipper": typeof webhooks_podcastClipper;
   "webhooks/test": typeof webhooks_test;
 }>;
 

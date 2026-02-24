@@ -6,6 +6,13 @@ import { getPendingMontagerConfigs, updateMontagerVideos } from "./webhooks/mont
 import { getPendingVideosForProcessing, updateProcessedVideos } from "./webhooks/montagerVideos";
 import { getAllCampaignsPublic, getCampaignAnalyticsPublic, getCampaignDetailedAnalyticsPublic } from "./webhooks/campaignAnalytics";
 import { updateVideoStats, getCampaignVideos, getActiveCampaigns } from "./webhooks/analyticsV2";
+import {
+  getPendingPodcastClipperTasks,
+  getPodcastClipperUploadUrl,
+  postCalibrationResult,
+  postReframeResult,
+  postTaskFailed,
+} from "./webhooks/podcastClipper";
 
 const http = httpRouter();
 
@@ -110,6 +117,41 @@ http.route({
   path: "/api/analytics/campaign-videos",
   method: "GET",
   handler: getCampaignVideos,
+});
+
+// Podcast Clipper API - Get pending tasks (calibrate/reframe)
+http.route({
+  path: "/api/podcast-clipper/pending",
+  method: "GET",
+  handler: getPendingPodcastClipperTasks,
+});
+
+// Podcast Clipper API - Get Convex storage upload URL
+http.route({
+  path: "/api/podcast-clipper/upload-url",
+  method: "POST",
+  handler: getPodcastClipperUploadUrl,
+});
+
+// Podcast Clipper API - Backend pushes calibration results
+http.route({
+  path: "/api/podcast-clipper/calibration-result",
+  method: "POST",
+  handler: postCalibrationResult,
+});
+
+// Podcast Clipper API - Backend pushes reframe results
+http.route({
+  path: "/api/podcast-clipper/reframe-result",
+  method: "POST",
+  handler: postReframeResult,
+});
+
+// Podcast Clipper API - Backend reports task failure
+http.route({
+  path: "/api/podcast-clipper/task-failed",
+  method: "POST",
+  handler: postTaskFailed,
 });
 
 export default http;

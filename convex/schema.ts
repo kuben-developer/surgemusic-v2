@@ -335,6 +335,88 @@ export default defineSchema({
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_status", ["status"]),
 
+  // PODCAST CLIPPER
+  podcastClipperFolders: defineTable({
+    userId: v.id("users"),
+    folderName: v.string(),
+    videoCount: v.optional(v.number()),
+    reframedCount: v.optional(v.number()),
+    calibrationStatus: v.optional(v.union(
+      v.literal("none"),
+      v.literal("pending"),
+      v.literal("detected"),
+      v.literal("configured"),
+    )),
+  })
+    .index("by_userId", ["userId"]),
+
+  podcastClipperVideos: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    videoName: v.string(),
+    inputVideoUrl: v.string(),
+    reframedVideoUrl: v.optional(v.string()),
+    status: v.union(
+      v.literal("uploaded"),
+      v.literal("reframing"),
+      v.literal("reframed"),
+      v.literal("failed"),
+    ),
+    errorMessage: v.optional(v.string()),
+    isReferenceVideo: v.optional(v.boolean()),
+  })
+    .index("by_folderId", ["folderId"])
+    .index("by_folderId_status", ["folderId", "status"]),
+
+  podcastClipperConfigs: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    sourceWidth: v.number(),
+    sourceHeight: v.number(),
+    sceneThreshold: v.number(),
+    clusterThreshold: v.number(),
+  })
+    .index("by_folderId", ["folderId"]),
+
+  podcastClipperSceneTypes: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    sceneTypeId: v.number(),
+    frameStorageId: v.id("_storage"),
+    histogramStorageId: v.id("_storage"),
+    crop: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      width: v.number(),
+      height: v.number(),
+    })),
+    altCrop: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      width: v.number(),
+      height: v.number(),
+    })),
+  })
+    .index("by_folderId", ["folderId"]),
+
+  podcastClipperTasks: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    type: v.union(v.literal("calibrate"), v.literal("reframe")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    referenceVideoId: v.optional(v.id("podcastClipperVideos")),
+    targetVideoId: v.optional(v.id("podcastClipperVideos")),
+    sceneThreshold: v.optional(v.number()),
+    clusterThreshold: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_folderId", ["folderId"])
+    .index("by_type_status", ["type", "status"]),
+
   // TIKTOK COMMENTS (for campaign analytics curation)
   tiktokComments: defineTable({
     // Identifiers

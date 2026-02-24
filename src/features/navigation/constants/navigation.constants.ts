@@ -3,6 +3,7 @@ import {
   Calendar,
   Download,
   FileText,
+  Headphones,
   Home,
   LayoutGrid,
   Link2,
@@ -82,6 +83,11 @@ export const navigationData: { navMain: NavSection[] } = {
           title: "Analytics",
           url: "/analytics",
           icon: BarChart3,
+        },
+        {
+          title: "Podcast Clipper",
+          url: "/podcast-clipper",
+          icon: Headphones,
         },
         {
           title: "Bulk Downloader",
