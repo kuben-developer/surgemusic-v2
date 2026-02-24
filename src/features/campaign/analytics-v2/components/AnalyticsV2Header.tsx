@@ -217,15 +217,26 @@ export function AnalyticsV2Header({
           >
             <TikTokIcon className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">TikTok</span>
+            {platformCounts.tiktokPosts > 0 && (
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                ({platformCounts.tiktokPosts})
+              </span>
+            )}
           </Button>
           <Button
             variant={platform === "instagram" ? "secondary" : "ghost"}
             size="sm"
             className="h-8 text-xs px-2.5 gap-1.5"
+            disabled={platformCounts.instagramPosts === 0}
             onClick={() => onPlatformChange("instagram")}
           >
             <InstagramColorIcon className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Instagram</span>
+            {platformCounts.instagramPosts > 0 && (
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                ({platformCounts.instagramPosts})
+              </span>
+            )}
           </Button>
         </div>
 
