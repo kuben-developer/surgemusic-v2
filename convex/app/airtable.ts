@@ -139,6 +139,8 @@ export const getCampaigns = action({
 export const getCampaignContent = action({
     args: {
         campaignRecordId: v.string(),
+        page: v.optional(v.number()),
+        pageSize: v.optional(v.number()),
     },
     handler: async (ctx, args): Promise<{
         content: ContentItem[];
@@ -146,7 +148,11 @@ export const getCampaignContent = action({
         campaign_name: string;
         artist: string;
         song: string;
+        totalCount: number;
+        hasMore: boolean;
     }> => {
+        const page = args.page ?? 0;
+        const pageSize = args.pageSize ?? 5000;
         // First, get the campaign to extract campaign_id and metadata
         const campaign = await fetchRecordById(AIRTABLE_CAMPAIGN_TABLE_ID, args.campaignRecordId);
 
@@ -230,12 +236,17 @@ export const getCampaignContent = action({
             offset = data.offset;
         } while (offset);
 
+        const start = page * pageSize;
+        const paginatedContent = allRecords.slice(start, start + pageSize);
+
         return {
-            content: allRecords,
+            content: paginatedContent,
             campaign_id: campaignId,
             campaign_name: campaignId,
             artist,
             song,
+            totalCount: allRecords.length,
+            hasMore: start + pageSize < allRecords.length,
         };
     },
 });

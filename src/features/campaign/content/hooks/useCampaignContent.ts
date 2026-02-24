@@ -16,8 +16,33 @@ export function useCampaignContent(campaignRecordId: string) {
       try {
         setIsLoading(true);
         setError(null);
-        const result = await getCampaignContent({ campaignRecordId });
-        setData(result);
+
+        const firstPage = await getCampaignContent({
+          campaignRecordId,
+          page: 0,
+        });
+
+        let allContent = firstPage.content;
+
+        let page = 1;
+        let hasMore = firstPage.hasMore;
+        while (hasMore) {
+          const nextPage = await getCampaignContent({
+            campaignRecordId,
+            page,
+          });
+          allContent = [...allContent, ...nextPage.content];
+          hasMore = nextPage.hasMore;
+          page++;
+        }
+
+        setData({
+          content: allContent,
+          campaign_id: firstPage.campaign_id,
+          campaign_name: firstPage.campaign_name,
+          artist: firstPage.artist,
+          song: firstPage.song,
+        });
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Failed to fetch content"));
         console.error("Error fetching campaign content:", err);
