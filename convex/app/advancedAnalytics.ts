@@ -8,21 +8,6 @@ import {
   query,
 } from "../_generated/server";
 
-// Airtable configuration
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "";
-const AIRTABLE_CONTENT_TABLE_ID = "tbleqHUKb7il998rO";
-
-interface AirtableRecord {
-  id: string;
-  fields: Record<string, unknown>;
-}
-
-interface AirtableResponse {
-  records: AirtableRecord[];
-  offset?: string;
-}
-
 // =============================================================================
 // INTERNAL QUERIES
 // =============================================================================
@@ -80,6 +65,22 @@ export const getTiktokStatsMap = internalQuery({
       shares: s.shares,
       saves: s.saves,
     }));
+  },
+});
+
+/** Look up airtableContents by airtableRecordId */
+export const getContentByAirtableRecordId = internalQuery({
+  args: { airtableRecordId: v.string() },
+  handler: async (ctx, { airtableRecordId }) => {
+    const content = await ctx.db
+      .query("airtableContents")
+      .withIndex("by_airtableRecordId", (q) =>
+        q.eq("airtableRecordId", airtableRecordId),
+      )
+      .first();
+    return content
+      ? { postId: content.postId, tiktokId: content.tiktokId }
+      : null;
   },
 });
 
@@ -233,69 +234,6 @@ export const replaceDimensionStats = internalMutation({
 // =============================================================================
 
 /**
- * Fetches Airtable content table for a campaign, returns mapping:
- * airtableRecordId → { apiPostId, tiktokId }
- *
- * Filters by campaignName (the text campaign_id field in Airtable)
- * to avoid fetching the entire content table.
- */
-async function fetchAirtableMappings(
-  campaignName: string,
-): Promise<Map<string, { apiPostId?: string; tiktokId?: string }>> {
-  const mapping = new Map<
-    string,
-    { apiPostId?: string; tiktokId?: string }
-  >();
-
-  let offset: string | undefined;
-
-  do {
-    const url = new URL(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}`,
-    );
-
-    url.searchParams.append(
-      "filterByFormula",
-      `{campaign_id} = '${campaignName}'`,
-    );
-    url.searchParams.append("fields[]", "api_post_id");
-    url.searchParams.append("fields[]", "tiktok_id");
-
-    if (offset) url.searchParams.append("offset", offset);
-
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-    });
-
-    if (!response.ok) {
-      console.error(
-        `[AdvancedAnalytics] Airtable API error: ${response.status}`,
-      );
-      break;
-    }
-
-    const data: AirtableResponse =
-      (await response.json()) as AirtableResponse;
-
-    for (const record of data.records) {
-      const apiPostIdArr = record.fields["api_post_id"] as
-        | string[]
-        | undefined;
-      const tiktokId = record.fields["tiktok_id"] as string | undefined;
-
-      mapping.set(record.id, {
-        apiPostId: apiPostIdArr?.[0],
-        tiktokId,
-      });
-    }
-
-    offset = data.offset;
-  } while (offset);
-
-  return mapping;
-}
-
-/**
  * Orchestrator: get all campaign IDs, schedule per-campaign linking.
  * Called by cron every 3 hours.
  * Schedules each campaign 5 minutes (300,000 ms) apart.
@@ -358,65 +296,47 @@ export const linkSingleCampaignMontagerVideos = internalAction({
     );
 
     if (unlinked.length === 0) {
-      // console.log(`[Link] Campaign ${campaignId}: no unlinked videos, skipping`);
+      console.log(`[Link] Campaign ${campaignId}: no unlinked videos, skipping`);
       return;
     }
 
-    // console.log(`[Link] Campaign ${campaignId}: ${unlinked.length} unlinked, processing chunk of ${Math.min(LINK_CHUNK_SIZE, unlinked.length)}`);
-
-    // Look up campaign name to filter Airtable content table
-    const campaignName = await ctx.runQuery(
-      internal.app.advancedAnalytics.getCampaignName,
-      { campaignId },
-    );
-
-    if (!campaignName) {
-      console.error(`[Link] Campaign ${campaignId}: campaign name not found, aborting`);
-      return;
-    }
-
-    // Fetch Airtable mapping for this campaign (filtered by campaign name)
-    let airtableMapping: Map<
-      string,
-      { apiPostId?: string; tiktokId?: string }
-    >;
-    try {
-      airtableMapping = await fetchAirtableMappings(campaignName);
-    } catch (error) {
-      console.error(`[Link] Campaign ${campaignId}: Airtable fetch failed:`, error);
-      return;
-    }
+    console.log(`[Link] Campaign ${campaignId}: ${unlinked.length} unlinked, processing chunk of ${Math.min(LINK_CHUNK_SIZE, unlinked.length)} (using local data, no external API calls)`);
 
     // Process only first chunk
     const chunk = unlinked.slice(0, LINK_CHUNK_SIZE);
 
     let linked = 0;
-    let noAirtableMatch = 0;
-    let noApiPostId = 0;
-    let hasAirtableButNoStats = 0;
+    let noContentMatch = 0;
+    let noPostId = 0;
+    let hasContentButNoStats = 0;
     let resolvedViaTiktokId = 0;
     let resolvedViaBundlePostId = 0;
 
     for (const video of chunk) {
-      const mapping = airtableMapping.get(video.airtableRecordId);
-      if (!mapping) {
-        noAirtableMatch++;
+      // Look up local airtableContents by airtableRecordId
+      const content = await ctx.runQuery(
+        internal.app.advancedAnalytics.getContentByAirtableRecordId,
+        { airtableRecordId: video.airtableRecordId },
+      );
+
+      if (!content) {
+        noContentMatch++;
         continue;
       }
 
-      // Skip records with no api_post_id and no tiktok_id (not yet posted)
-      if (!mapping.apiPostId && !mapping.tiktokId) {
-        noApiPostId++;
+      // Skip records with no postId and no tiktokId (not yet posted)
+      if (!content.postId && !content.tiktokId) {
+        noPostId++;
         continue;
       }
 
       let resolvedTiktokVideoId: string | null = null;
 
-      // Path 1: tiktok_id → tiktokVideoStats.tiktokVideoId
-      if (mapping.tiktokId) {
+      // Path 1: tiktokId → tiktokVideoStats.tiktokVideoId
+      if (content.tiktokId) {
         const stat = await ctx.runQuery(
           internal.app.advancedAnalytics.findStatsByTiktokVideoId,
-          { tiktokVideoId: mapping.tiktokId },
+          { tiktokVideoId: content.tiktokId },
         );
         if (stat) {
           resolvedTiktokVideoId = stat.tiktokVideoId;
@@ -424,11 +344,11 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         }
       }
 
-      // Path 2: api_post_id → tiktokVideoStats.bundlePostId
-      if (!resolvedTiktokVideoId && mapping.apiPostId) {
+      // Path 2: postId (api_post_id) → tiktokVideoStats.bundlePostId
+      if (!resolvedTiktokVideoId && content.postId) {
         const stat = await ctx.runQuery(
           internal.app.advancedAnalytics.findStatsByBundlePostId,
-          { bundlePostId: mapping.apiPostId },
+          { bundlePostId: content.postId },
         );
         if (stat) {
           resolvedTiktokVideoId = stat.tiktokVideoId;
@@ -446,25 +366,27 @@ export const linkSingleCampaignMontagerVideos = internalAction({
         );
         linked++;
       } else {
-        hasAirtableButNoStats++;
+        hasContentButNoStats++;
       }
     }
 
-    // console.log(
-    //   `[Link] Campaign ${campaignId} ("${campaignName}") chunk done:\n` +
-    //   `  Processed: ${chunk.length}/${unlinked.length}\n` +
-    //   `  Linked: ${linked} (tiktokId: ${resolvedViaTiktokId}, bundlePostId: ${resolvedViaBundlePostId})\n` +
-    //   `  No Airtable match: ${noAirtableMatch}, not posted: ${noApiPostId}, no stats: ${hasAirtableButNoStats}`,
-    // );
+    console.log(
+      `[Link] Campaign ${campaignId} chunk done: ` +
+      `processed=${chunk.length}/${unlinked.length}, ` +
+      `linked=${linked} (tiktokId=${resolvedViaTiktokId}, bundlePostId=${resolvedViaBundlePostId}), ` +
+      `noContentMatch=${noContentMatch}, notPosted=${noPostId}, noStats=${hasContentButNoStats}`,
+    );
 
-    // Self-schedule if more unlinked videos remain
-    if (unlinked.length > LINK_CHUNK_SIZE) {
-      // console.log(`[Link] Campaign ${campaignId}: scheduling next chunk (${unlinked.length - LINK_CHUNK_SIZE} remaining)`);
+    // Self-schedule if more unlinked videos remain AND we made progress
+    if (unlinked.length > LINK_CHUNK_SIZE && linked > 0) {
+      console.log(`[Link] Campaign ${campaignId}: scheduling next chunk (${unlinked.length - LINK_CHUNK_SIZE} remaining)`);
       await ctx.scheduler.runAfter(
         0,
         internal.app.advancedAnalytics.linkSingleCampaignMontagerVideos,
         { campaignId },
       );
+    } else if (unlinked.length > LINK_CHUNK_SIZE && linked === 0) {
+      console.log(`[Link] Campaign ${campaignId}: no progress made, stopping (${unlinked.length - LINK_CHUNK_SIZE} unresolvable remaining)`);
     }
   },
 });
@@ -796,3 +718,4 @@ export const triggerRefreshDimensionStats = mutation({
     return { success: true };
   },
 });
+

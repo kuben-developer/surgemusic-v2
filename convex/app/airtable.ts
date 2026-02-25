@@ -309,6 +309,7 @@ export const insertContent = internalMutation({
         isManual: v.optional(v.boolean()),
         tiktokId: v.optional(v.string()),
         instagramId: v.optional(v.string()),
+        airtableRecordId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         await ctx.db.insert("airtableContents", {
@@ -317,6 +318,7 @@ export const insertContent = internalMutation({
             isManual: args.isManual,
             tiktokId: args.tiktokId,
             instagramId: args.instagramId,
+            airtableRecordId: args.airtableRecordId,
         });
     },
 });
@@ -491,11 +493,16 @@ export const syncAirtableContentByCampaign = internalAction({
                 });
 
                 if (existing) {
-                    // Patch instagramId if Airtable has it but our record doesn't
-                    if (instagramId && !existing.instagramId) {
-                        await ctx.runMutation(internal.app.airtable.patchContentInstagramId, {
+                    const needsInstagramPatch = instagramId && !existing.instagramId;
+                    const needsRecordIdPatch = !existing.airtableRecordId;
+                    const needsTiktokIdPatch = tiktokId && !existing.tiktokId;
+
+                    if (needsInstagramPatch || needsRecordIdPatch || needsTiktokIdPatch) {
+                        await ctx.runMutation(internal.app.airtable.patchContentFields, {
                             contentId: existing._id,
-                            instagramId,
+                            ...(needsInstagramPatch ? { instagramId } : {}),
+                            ...(needsRecordIdPatch ? { airtableRecordId: content.id } : {}),
+                            ...(needsTiktokIdPatch ? { tiktokId } : {}),
                         });
                         patchedCount++;
                     }
@@ -509,6 +516,7 @@ export const syncAirtableContentByCampaign = internalAction({
                     isManual: isManual || undefined,
                     tiktokId: tiktokId,
                     instagramId: instagramId,
+                    airtableRecordId: content.id,
                 });
 
                 insertedCount++;
@@ -563,13 +571,14 @@ export const syncAirtableContent = internalAction({
 
             console.log(`Starting content sync for ${campaigns.length} active campaigns`);
 
-            // Schedule sync for each campaign in parallel
-            for (const campaign of campaigns) {
+            // Schedule sync for each campaign staggered 10min apart to avoid Airtable rate limits (5 req/s)
+            const DELAY_BETWEEN_CAMPAIGNS_MS = 10 * 60 * 1000; // 10 minutes
+            for (let i = 0; i < campaigns.length; i++) {
                 await ctx.scheduler.runAfter(
-                    0,
+                    i * DELAY_BETWEEN_CAMPAIGNS_MS,
                     internal.app.airtable.syncAirtableContentByCampaign,
                     {
-                        campaignRecordId: campaign.id, // Use Airtable record ID
+                        campaignRecordId: campaigns[i]!.id,
                     }
                 );
             }
@@ -643,6 +652,27 @@ export const patchContentInstagramId = internalMutation({
     },
     handler: async (ctx, { contentId, instagramId }) => {
         await ctx.db.patch(contentId, { instagramId });
+    },
+});
+
+/**
+ * Patch a single airtableContents record with optional fields
+ */
+export const patchContentFields = internalMutation({
+    args: {
+        contentId: v.id("airtableContents"),
+        instagramId: v.optional(v.string()),
+        airtableRecordId: v.optional(v.string()),
+        tiktokId: v.optional(v.string()),
+    },
+    handler: async (ctx, { contentId, instagramId, airtableRecordId, tiktokId }) => {
+        const patch: Record<string, string> = {};
+        if (instagramId !== undefined) patch.instagramId = instagramId;
+        if (airtableRecordId !== undefined) patch.airtableRecordId = airtableRecordId;
+        if (tiktokId !== undefined) patch.tiktokId = tiktokId;
+        if (Object.keys(patch).length > 0) {
+            await ctx.db.patch(contentId, patch);
+        }
     },
 });
 

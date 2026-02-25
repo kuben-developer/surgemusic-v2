@@ -32,10 +32,12 @@ export default defineSchema({
     isManual: v.optional(v.boolean()), // true if manually posted (not through Bundle Social API)
     tiktokId: v.optional(v.string()), // TikTok video ID for manual posts
     instagramId: v.optional(v.string()), // Instagram shortcode e.g. "DUvNQgmEWM1"
+    airtableRecordId: v.optional(v.string()), // Airtable record ID for joining with montagerVideos
   })
     .index("by_campaignId", ["campaignId"])
     .index("by_postId", ["postId"])
-    .index("by_error", ["error"]),
+    .index("by_error", ["error"])
+    .index("by_airtableRecordId", ["airtableRecordId"]),
 
   campaignAssets: defineTable({
     campaignId: v.string(), // airtable campaign id

@@ -1524,7 +1524,15 @@ export const populateTiktokVideoStats = internalAction({
         bundlePostId = item.postId;
       }
 
-      if (!tiktokVideoId || existingSet.has(tiktokVideoId)) return null;
+      if (!tiktokVideoId) return null;
+
+      // If already tracked but resolved via Bundle Social, queue bundlePostId backfill
+      if (existingSet.has(tiktokVideoId)) {
+        if (bundlePostId) {
+          bundlePostIdBackfills.push({ tiktokVideoId, bundlePostId });
+        }
+        return null;
+      }
 
       // Fetch stats from Tokapi
       const details = await fetchVideoDetails(tiktokVideoId);
@@ -1545,6 +1553,9 @@ export const populateTiktokVideoStats = internalAction({
         bundlePostId,
       };
     }
+
+    // Collect bundlePostId backfills for existing stats that are missing it
+    const bundlePostIdBackfills: Array<{ tiktokVideoId: string; bundlePostId: string }> = [];
 
     // Run in parallel batches of CONCURRENCY
     const videos: VideoResult[] = [];
@@ -1583,9 +1594,21 @@ export const populateTiktokVideoStats = internalAction({
       );
     }
 
+    // Backfill bundlePostId on existing stats that are missing it
+    if (bundlePostIdBackfills.length > 0) {
+      const BACKFILL_BATCH = 25;
+      for (let i = 0; i < bundlePostIdBackfills.length; i += BACKFILL_BATCH) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.app.analyticsV2.backfillBundlePostIds,
+          { items: bundlePostIdBackfills.slice(i, i + BACKFILL_BATCH) },
+        );
+      }
+    }
+
     const skipped = chunk.length - pending.length;
     console.log(
-      `[V2 Populate] Campaign ${campaignId} [${offset}..${offset + chunk.length - 1}/${airtableContents.length}]: ${videos.length} new, ${skipped} skipped, ${errors} errors (${pending.length} pending, ${CONCURRENCY} concurrency)`,
+      `[V2 Populate] Campaign ${campaignId} [${offset}..${offset + chunk.length - 1}/${airtableContents.length}]: ${videos.length} new, ${skipped} skipped, ${bundlePostIdBackfills.length} bundlePostId backfills, ${errors} errors (${pending.length} pending, ${CONCURRENCY} concurrency)`,
     );
 
     // Schedule next chunk
@@ -1943,6 +1966,32 @@ export const getPlatformPostCounts = query({
 // =============================================================================
 
 // One-time cleanup: delete campaignSnapshots with totalViews=0
+/** Backfill bundlePostId on existing tiktokVideoStats that are missing it */
+export const backfillBundlePostIds = internalMutation({
+  args: {
+    items: v.array(v.object({
+      tiktokVideoId: v.string(),
+      bundlePostId: v.string(),
+    })),
+  },
+  handler: async (ctx, { items }) => {
+    let patched = 0;
+    for (const { tiktokVideoId, bundlePostId } of items) {
+      const existing = await ctx.db
+        .query("tiktokVideoStats")
+        .withIndex("by_tiktokVideoId", (q) => q.eq("tiktokVideoId", tiktokVideoId))
+        .first();
+      if (existing && !existing.bundlePostId) {
+        await ctx.db.patch(existing._id, { bundlePostId });
+        patched++;
+      }
+    }
+    if (patched > 0) {
+      console.log(`[V2 Backfill] Patched ${patched}/${items.length} tiktokVideoStats with bundlePostId`);
+    }
+  },
+});
+
 export const deleteEmptySnapshots = internalMutation({
   args: {},
   handler: async (ctx) => {

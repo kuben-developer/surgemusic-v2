@@ -12,7 +12,7 @@ crons.hourly(
 
 crons.hourly(
     "syncAirtableContent",
-    { minuteUTC: 15 }, // Every hour at 15 minutes past the hour
+    { minuteUTC: 30 }, // Every hour at 30 minutes past the hour
     internal.app.airtable.syncAirtableContent,
     {}
 );
