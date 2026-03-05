@@ -4,6 +4,37 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import type { CropRegion } from "../../shared/types/podcast-clipper.types";
 import { useCropEditor } from "../hooks/useCropEditor";
 
+// Module-level image cache — survives re-renders, shared across all CropCanvas instances
+const imageCache = new Map<string, HTMLImageElement>();
+
+function getCachedImage(url: string): HTMLImageElement | null {
+  return imageCache.get(url) ?? null;
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  const cached = imageCache.get(url);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      imageCache.set(url, img);
+      resolve(img);
+    };
+    img.src = url;
+  });
+}
+
+/** Preload a list of image URLs into the cache (fire-and-forget). */
+export function preloadImages(urls: string[]) {
+  for (const url of urls) {
+    if (url && !imageCache.has(url)) {
+      loadImage(url);
+    }
+  }
+}
+
 interface CropCanvasProps {
   frameUrl: string;
   sourceWidth: number;
@@ -23,7 +54,7 @@ export function CropCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [displayWidth, setDisplayWidth] = useState(0);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageRevision, setImageRevision] = useState(0);
 
   const scale = displayWidth > 0 ? displayWidth / sourceWidth : 1;
   const displayHeight = sourceHeight * scale;
@@ -57,15 +88,20 @@ export function CropCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // Load image
+  // Load image — use cache for instant switching, fallback to network
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
+    const cached = getCachedImage(frameUrl);
+    if (cached) {
+      imgRef.current = cached;
+      setImageRevision((r) => r + 1);
+      return;
+    }
+
+    imgRef.current = null;
+    loadImage(frameUrl).then((img) => {
       imgRef.current = img;
-      setImageLoaded(true);
-    };
-    img.src = frameUrl;
+      setImageRevision((r) => r + 1);
+    });
   }, [frameUrl]);
 
   // Draw canvas
@@ -118,7 +154,7 @@ export function CropCanvas({
     ctx.fillRect(cx - handleSize / 2, cy + ch / 2 - handleSize / 2, handleSize, handleSize);
     // Right edge handle
     ctx.fillRect(cx + cw - handleSize / 2, cy + ch / 2 - handleSize / 2, handleSize, handleSize);
-  }, [currentCrop, displayWidth, displayHeight, scale, imageLoaded]);
+  }, [currentCrop, displayWidth, displayHeight, scale, imageRevision]);
 
   useEffect(() => {
     draw();

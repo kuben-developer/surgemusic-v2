@@ -193,6 +193,7 @@ export default defineSchema({
   })
     .index("by_intervalId", ["intervalId"])
     .index("by_campaignId", ["campaignId"])
+    .index("by_campaignId_snapshotAt", ["campaignId", "snapshotAt"])
     .index("by_campaignId_platform", ["campaignId", "platform"])
     .index("by_snapshotAt", ["snapshotAt"])
     .index("by_hour", ["hour"]),

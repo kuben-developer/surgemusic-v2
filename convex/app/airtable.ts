@@ -178,67 +178,79 @@ export const getCampaignContent = action({
             }
         }
 
-        // Fetch all content for this campaign
+        // Get content record IDs from the campaign's linked Content field
+        const contentRecordIds = campaign.fields["Content"] as string[] | undefined;
+        if (!contentRecordIds || contentRecordIds.length === 0) {
+            const start = page * pageSize;
+            return {
+                content: [],
+                campaign_id: campaignId,
+                campaign_name: campaignId,
+                artist,
+                song,
+                totalCount: 0,
+                hasMore: start + pageSize < 0,
+            };
+        }
+
+        // Fetch content records in batches using RECORD_ID() filter
+        const BATCH_SIZE = 50;
         const allRecords: ContentItem[] = [];
-        let offset: string | undefined;
+        const contentFields = [
+            "video_url", "account_niche", "video_category", "api_post_id",
+            "date", "is_manual", "tiktok_id", "instagram_id", "status",
+        ];
 
-        do {
-            const url = new URL(
-                `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}`
-            );
+        for (let i = 0; i < contentRecordIds.length; i += BATCH_SIZE) {
+            const batch = contentRecordIds.slice(i, i + BATCH_SIZE);
+            const formula = `OR(${batch.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
 
-            const escapedCampaignId = campaignId.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-            url.searchParams.append("filterByFormula", `{campaign_id} = '${escapedCampaignId}'`);
-            url.searchParams.append("fields[]", "video_url");
-            url.searchParams.append("fields[]", "account_niche");
-            url.searchParams.append("fields[]", "video_category");
-            url.searchParams.append("fields[]", "api_post_id");
-            url.searchParams.append("fields[]", "date");
-            url.searchParams.append("fields[]", "is_manual");
-            url.searchParams.append("fields[]", "tiktok_id");
-            url.searchParams.append("fields[]", "instagram_id");
-            url.searchParams.append("fields[]", "status");
+            let offset: string | undefined;
+            do {
+                const url = new URL(
+                    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_CONTENT_TABLE_ID}`
+                );
+                url.searchParams.append("filterByFormula", formula);
+                contentFields.forEach((field) => url.searchParams.append("fields[]", field));
+                if (offset) url.searchParams.append("offset", offset);
 
-            if (offset) url.searchParams.append("offset", offset);
-
-            const response = await fetch(url.toString(), {
-                headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-            });
-
-            if (!response.ok) {
-                const errorBody = await response.text();
-                console.error(`Airtable API error ${response.status}:`, errorBody);
-                console.error(`Request URL:`, url.toString().replace(AIRTABLE_API_KEY, "***"));
-                throw new Error(`Airtable API error: ${response.status} - ${errorBody}`);
-            }
-
-            const data: AirtableResponse = (await response.json()) as AirtableResponse;
-
-            data.records.forEach((record) => {
-                // account_niche is an array in Airtable, take first element
-                const accountNiche = record.fields["account_niche"] as string[] | undefined;
-                const apiPostId = record.fields["api_post_id"] as string[] | undefined;
-                const isManual = record.fields["is_manual"] as boolean | undefined;
-                const tiktokId = record.fields["tiktok_id"] as string | undefined;
-                const instagramId = record.fields["instagram_id"] as string | undefined;
-                const status = record.fields["status"] as string | undefined;
-
-                allRecords.push({
-                    id: record.id,
-                    video_url: record.fields["video_url"] as string | undefined,
-                    account_niche: accountNiche?.[0] || "",
-                    video_category: (record.fields["video_category"] as string) || "",
-                    api_post_id: apiPostId?.[0] as string | undefined,
-                    date: record.fields["date"] as string | undefined,
-                    is_manual: isManual,
-                    tiktok_id: tiktokId,
-                    instagram_id: instagramId,
-                    status: status,
+                const response = await fetch(url.toString(), {
+                    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
                 });
-            });
 
-            offset = data.offset;
-        } while (offset);
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error(`Airtable API error ${response.status}:`, errorBody);
+                    throw new Error(`Airtable API error: ${response.status} - ${errorBody}`);
+                }
+
+                const data: AirtableResponse = (await response.json()) as AirtableResponse;
+
+                data.records.forEach((record) => {
+                    const accountNiche = record.fields["account_niche"] as string[] | undefined;
+                    const apiPostId = record.fields["api_post_id"] as string[] | undefined;
+                    const isManual = record.fields["is_manual"] as boolean | undefined;
+                    const tiktokId = record.fields["tiktok_id"] as string | undefined;
+                    const instagramId = record.fields["instagram_id"] as string | undefined;
+                    const status = record.fields["status"] as string | undefined;
+
+                    allRecords.push({
+                        id: record.id,
+                        video_url: record.fields["video_url"] as string | undefined,
+                        account_niche: accountNiche?.[0] || "",
+                        video_category: (record.fields["video_category"] as string) || "",
+                        api_post_id: apiPostId?.[0] as string | undefined,
+                        date: record.fields["date"] as string | undefined,
+                        is_manual: isManual,
+                        tiktok_id: tiktokId,
+                        instagram_id: instagramId,
+                        status: status,
+                    });
+                });
+
+                offset = data.offset;
+            } while (offset);
+        }
 
         const start = page * pageSize;
         const paginatedContent = allRecords.slice(start, start + pageSize);

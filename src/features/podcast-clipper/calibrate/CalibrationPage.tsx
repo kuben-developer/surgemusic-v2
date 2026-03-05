@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCalibrationData } from "./hooks/useCalibrationData";
 import { useSaveCropRegions } from "./hooks/useSaveCropRegions";
 import { SceneTypeCard } from "./components/SceneTypeCard";
+import { preloadImages } from "./components/CropCanvas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
@@ -58,6 +59,20 @@ export function CalibrationPage() {
       })
     );
   }, [sceneTypes, config, cropKeyframes, cropStates.length]);
+
+  // Preload all keyframe images once crop states are initialized
+  const hasStates = cropStates.length > 0;
+  useEffect(() => {
+    if (!hasStates) return;
+    const urls: string[] = [];
+    for (const cs of cropStates) {
+      if (cs.frameUrl) urls.push(cs.frameUrl);
+      for (const kf of cs.keyframes) {
+        if (kf.frameUrl) urls.push(kf.frameUrl);
+      }
+    }
+    preloadImages(urls);
+  }, [hasStates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateCrop = (index: number, crop: CropRegion) => {
     setCropStates((prev) =>

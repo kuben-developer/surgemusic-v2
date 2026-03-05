@@ -806,6 +806,23 @@ export const getAllCampaignsWithAnalyticsV2 = query({
       (fourteenDaysAgo.getMonth() + 1) * 10000 +
       fourteenDaysAgo.getDate() * 100;
 
+    // Batch fetch all recent snapshots in a single query to avoid per-campaign reads
+    const allRecentSnapshots = await ctx.db
+      .query("campaignSnapshots")
+      .withIndex("by_snapshotAt", (q) => q.gte("snapshotAt", minSnapshotAt))
+      .collect();
+
+    // Group snapshots by campaignId
+    const snapshotsByCampaign = new Map<string, typeof allRecentSnapshots>();
+    for (const snap of allRecentSnapshots) {
+      const list = snapshotsByCampaign.get(snap.campaignId);
+      if (list) {
+        list.push(snap);
+      } else {
+        snapshotsByCampaign.set(snap.campaignId, [snap]);
+      }
+    }
+
     const results = await Promise.all(
       allCampaigns.map(async (campaign) => {
         // Get the earliest video posted date for this campaign
@@ -836,16 +853,10 @@ export const getAllCampaignsWithAnalyticsV2 = query({
           totalComments: 0, totalShares: 0, totalSaves: 0,
         };
 
-        // Get recent snapshots for sparkline
-        const snapshots = await ctx.db
-          .query("campaignSnapshots")
-          .withIndex("by_campaignId", (q) => q.eq("campaignId", campaign.campaignId))
-          .collect();
-
-        // Filter to last 14 days and group by date (YYYYMMDD)
-        const recentSnapshots = snapshots.filter((s) => s.snapshotAt >= minSnapshotAt);
-        const byDate = new Map<number, typeof recentSnapshots[0]>();
-        for (const snap of recentSnapshots) {
+        // Build sparkline from pre-fetched snapshots
+        const campaignSnapshots = snapshotsByCampaign.get(campaign.campaignId) ?? [];
+        const byDate = new Map<number, typeof campaignSnapshots[0]>();
+        for (const snap of campaignSnapshots) {
           const dateKey = Math.floor(snap.snapshotAt / 100); // YYYYMMDD
           const existing = byDate.get(dateKey);
           // Take the latest snapshot per day (highest snapshotAt)

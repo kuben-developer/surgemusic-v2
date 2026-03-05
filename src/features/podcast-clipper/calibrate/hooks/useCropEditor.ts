@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { CropRegion } from "../../shared/types/podcast-clipper.types";
-import { clampCrop, cropHeightFromWidth, roundEven } from "../utils/crop.utils";
+import { clampCrop, cropHeightFromWidth } from "../utils/crop.utils";
 
 interface UseCropEditorProps {
   sourceWidth: number;
@@ -23,6 +23,14 @@ export function useCropEditor({
   const dragStart = useRef({ x: 0, y: 0 });
   const dragMode = useRef<"move" | "resize-left" | "resize-right">("move");
   const cropAtDragStart = useRef<CropRegion>(initialCrop);
+
+  // Sync internal state when initialCrop changes from outside (e.g. keyframe selection)
+  useEffect(() => {
+    if (!isDragging.current) {
+      setCrop(initialCrop);
+      cropAtDragStart.current = initialCrop;
+    }
+  }, [initialCrop.x, initialCrop.y, initialCrop.width, initialCrop.height]);
 
   // Notify parent after crop state has settled (avoids setState-during-render)
   useEffect(() => {

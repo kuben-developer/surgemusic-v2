@@ -1,8 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Camera, ArrowLeftRight } from "lucide-react";
 import { CropCanvas } from "./CropCanvas";
 import { KeyframeStrip } from "./KeyframeStrip";
 import { getEffectiveCrop } from "../utils/crop.utils";
@@ -44,7 +46,6 @@ export function SceneTypeCard({
     const kf = sceneType.keyframes[selectedKfIndex];
     activeFrameUrl = kf.frameUrl || sceneType.frameUrl;
 
-    // Get effective crop (walks backwards to find nearest set crop, falls back to default)
     const effective = getEffectiveCrop(
       sceneType.keyframes,
       selectedKfIndex,
@@ -72,14 +73,25 @@ export function SceneTypeCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden gap-0 py-0">
+      <CardHeader className="px-4 py-2.5 bg-muted/30 border-b [.border-b]:pb-2.5">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            Camera Angle {sceneType.sceneTypeId + 1}
-          </CardTitle>
           <div className="flex items-center gap-2">
-            <Label htmlFor={`alt-${sceneType.sceneTypeId}`} className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10">
+              <Camera className="h-3 w-3 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">
+                Camera Angle {sceneType.sceneTypeId + 1}
+              </h3>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor={`alt-${sceneType.sceneTypeId}`}
+              className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1.5"
+            >
+              <ArrowLeftRight className="h-3 w-3" />
               Alt Crop
             </Label>
             <Switch
@@ -90,7 +102,8 @@ export function SceneTypeCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+
+      <CardContent className="!px-4 py-3 space-y-3">
         {/* Keyframe strip */}
         {sceneType.keyframes.length > 0 && (
           <KeyframeStrip
@@ -101,10 +114,20 @@ export function SceneTypeCard({
         )}
 
         {/* Primary crop */}
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground font-medium">
-            Primary Crop{isEditingKeyframe ? " (keyframe override)" : ""}
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-foreground">Primary Crop</p>
+            <div className="flex items-center gap-1.5">
+              {isEditingKeyframe && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                  keyframe
+                </Badge>
+              )}
+              <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
+                {activeCrop.width}&times;{activeCrop.height} at ({activeCrop.x}, {activeCrop.y})
+              </span>
+            </div>
+          </div>
           <CropCanvas
             frameUrl={activeFrameUrl}
             sourceWidth={sourceWidth}
@@ -112,17 +135,24 @@ export function SceneTypeCard({
             crop={activeCrop}
             onCropChange={handleCropChange}
           />
-          <p className="text-xs text-muted-foreground">
-            {activeCrop.width}x{activeCrop.height} at ({activeCrop.x}, {activeCrop.y})
-          </p>
         </div>
 
         {/* Alt crop */}
         {sceneType.hasAltCrop && activeAltCrop && (
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground font-medium">
-              Alternating Crop{isEditingKeyframe ? " (keyframe override)" : ""}
-            </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-foreground">Alternating Crop</p>
+              <div className="flex items-center gap-1.5">
+                {isEditingKeyframe && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                    keyframe
+                  </Badge>
+                )}
+                <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
+                  {activeAltCrop.width}&times;{activeAltCrop.height} at ({activeAltCrop.x}, {activeAltCrop.y})
+                </span>
+              </div>
+            </div>
             <CropCanvas
               frameUrl={activeFrameUrl}
               sourceWidth={sourceWidth}
@@ -130,9 +160,6 @@ export function SceneTypeCard({
               crop={activeAltCrop}
               onCropChange={handleAltCropChange}
             />
-            <p className="text-xs text-muted-foreground">
-              {activeAltCrop.width}x{activeAltCrop.height} at ({activeAltCrop.x}, {activeAltCrop.y})
-            </p>
           </div>
         )}
       </CardContent>
