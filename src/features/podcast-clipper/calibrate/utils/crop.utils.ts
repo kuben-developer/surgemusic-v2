@@ -63,6 +63,25 @@ export function defaultCrop(sourceWidth: number, sourceHeight: number): CropRegi
   return { x, y, width, height };
 }
 
+/** Get the effective crop for a keyframe by walking backwards to find the nearest set crop.
+ *  Falls back to the scene type's default crop if no keyframe has a custom crop set. */
+export function getEffectiveCrop(
+  keyframes: Array<{ crop: CropRegion | null; altCrop: CropRegion | null }>,
+  selectedIndex: number,
+  defaultCropValue: CropRegion,
+  defaultAltCrop: CropRegion | null,
+): { crop: CropRegion; altCrop: CropRegion | null } {
+  // Walk backwards from selectedIndex to find the nearest keyframe with a custom crop
+  for (let i = selectedIndex; i >= 0; i--) {
+    const kf = keyframes[i];
+    if (kf.crop !== null) {
+      return { crop: kf.crop, altCrop: kf.altCrop };
+    }
+  }
+  // No keyframe has a custom crop — fall back to default
+  return { crop: defaultCropValue, altCrop: defaultAltCrop };
+}
+
 /** Convert source coordinates to display coordinates */
 export function toDisplayCoords(
   crop: CropRegion,

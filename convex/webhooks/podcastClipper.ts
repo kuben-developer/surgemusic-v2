@@ -106,10 +106,19 @@ export const postCalibrationResult = httpAction(async (ctx, request) => {
         sceneThreshold: body.sceneThreshold,
         clusterThreshold: body.clusterThreshold,
         sceneTypes: body.sceneTypes.map(
-          (st: { sceneTypeId: number; frameStorageId: string; histogramStorageId: string }) => ({
+          (st: {
+            sceneTypeId: number;
+            frameStorageId: string;
+            histogramStorageId: string;
+            keyframeFrames?: Array<{ timestamp: number; frameStorageId: string }>;
+          }) => ({
             sceneTypeId: st.sceneTypeId,
             frameStorageId: st.frameStorageId as Id<"_storage">,
             histogramStorageId: st.histogramStorageId as Id<"_storage">,
+            keyframeFrames: st.keyframeFrames?.map((kf) => ({
+              timestamp: kf.timestamp,
+              frameStorageId: kf.frameStorageId as Id<"_storage">,
+            })),
           })
         ),
       }

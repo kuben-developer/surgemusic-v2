@@ -431,6 +431,27 @@ export default defineSchema({
   })
     .index("by_folderId", ["folderId"]),
 
+  podcastClipperCropKeyframes: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    sceneTypeId: v.id("podcastClipperSceneTypes"),
+    timestamp: v.number(),
+    frameStorageId: v.id("_storage"),
+    crop: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      width: v.number(),
+      height: v.number(),
+    })),
+    altCrop: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      width: v.number(),
+      height: v.number(),
+    })),
+  })
+    .index("by_sceneTypeId", ["sceneTypeId"])
+    .index("by_folderId", ["folderId"]),
+
   podcastClipperTasks: defineTable({
     folderId: v.id("podcastClipperFolders"),
     type: v.union(v.literal("calibrate"), v.literal("reframe")),

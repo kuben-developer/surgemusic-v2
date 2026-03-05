@@ -8,11 +8,17 @@ export function useCalibrationData(folderId: PodcastFolderId) {
   const folder = useQuery(api.app.podcastClipperDb.getFolder, { folderId });
   const config = useQuery(api.app.podcastClipperDb.getConfig, { folderId });
   const sceneTypes = useQuery(api.app.podcastClipperDb.getSceneTypes, { folderId });
+  const cropKeyframes = useQuery(api.app.podcastClipperDb.getCropKeyframes, { folderId });
 
   return {
     folder,
     config,
     sceneTypes,
-    isLoading: folder === undefined || config === undefined || sceneTypes === undefined,
+    cropKeyframes,
+    isLoading:
+      folder === undefined ||
+      config === undefined ||
+      sceneTypes === undefined ||
+      cropKeyframes === undefined,
   };
 }

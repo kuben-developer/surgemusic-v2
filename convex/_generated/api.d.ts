@@ -36,6 +36,7 @@ import type * as app_users from "../app/users.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as services_openai from "../services/openai.js";
+import type * as services_reframeLambda from "../services/reframeLambda.js";
 import type * as services_tokapi_comments from "../services/tokapi/comments.js";
 import type * as services_tokapi_followers from "../services/tokapi/followers.js";
 import type * as services_tokapi_following from "../services/tokapi/following.js";
@@ -87,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   http: typeof http;
   "services/openai": typeof services_openai;
+  "services/reframeLambda": typeof services_reframeLambda;
   "services/tokapi/comments": typeof services_tokapi_comments;
   "services/tokapi/followers": typeof services_tokapi_followers;
   "services/tokapi/following": typeof services_tokapi_following;

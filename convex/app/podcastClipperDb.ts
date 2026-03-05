@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 // ============================================================
 // USER-FACING QUERIES
@@ -111,6 +112,26 @@ export const getSceneTypes = query({
   },
 });
 
+export const getCropKeyframes = query({
+  args: { folderId: v.id("podcastClipperFolders") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const keyframes = await ctx.db
+      .query("podcastClipperCropKeyframes")
+      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
+      .collect();
+
+    return await Promise.all(
+      keyframes.map(async (kf) => ({
+        ...kf,
+        frameUrl: await ctx.storage.getUrl(kf.frameStorageId),
+      }))
+    );
+  },
+});
+
 export const getTasks = query({
   args: { folderId: v.id("podcastClipperFolders") },
   handler: async (ctx, args) => {
@@ -182,6 +203,15 @@ export const deleteFolder = mutation({
       await ctx.storage.delete(st.frameStorageId);
       await ctx.storage.delete(st.histogramStorageId);
       await ctx.db.delete(st._id);
+    }
+
+    const cropKeyframes = await ctx.db
+      .query("podcastClipperCropKeyframes")
+      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
+      .collect();
+    for (const kf of cropKeyframes) {
+      await ctx.storage.delete(kf.frameStorageId);
+      await ctx.db.delete(kf._id);
     }
 
     const configs = await ctx.db
@@ -303,6 +333,16 @@ export const startCalibration = mutation({
       await ctx.db.delete(st._id);
     }
 
+    // Clear previous crop keyframes
+    const oldKeyframes = await ctx.db
+      .query("podcastClipperCropKeyframes")
+      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
+      .collect();
+    for (const kf of oldKeyframes) {
+      await ctx.storage.delete(kf.frameStorageId);
+      await ctx.db.delete(kf._id);
+    }
+
     // Clear previous config
     const oldConfig = await ctx.db
       .query("podcastClipperConfigs")
@@ -350,6 +390,23 @@ export const saveCropRegions = mutation({
         ),
       })
     ),
+    keyframeCrops: v.optional(v.array(
+      v.object({
+        keyframeId: v.id("podcastClipperCropKeyframes"),
+        crop: v.optional(v.object({
+          x: v.number(),
+          y: v.number(),
+          width: v.number(),
+          height: v.number(),
+        })),
+        altCrop: v.optional(v.object({
+          x: v.number(),
+          y: v.number(),
+          width: v.number(),
+          height: v.number(),
+        })),
+      })
+    )),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -369,6 +426,16 @@ export const saveCropRegions = mutation({
         crop: cropData.crop,
         altCrop: cropData.altCrop,
       });
+    }
+
+    // Save keyframe-level crops
+    if (args.keyframeCrops) {
+      for (const kfCrop of args.keyframeCrops) {
+        await ctx.db.patch(kfCrop.keyframeId, {
+          crop: kfCrop.crop,
+          altCrop: kfCrop.altCrop,
+        });
+      }
     }
 
     await ctx.db.patch(args.folderId, { calibrationStatus: "configured" });
@@ -405,6 +472,11 @@ export const startReframe = mutation({
         createdAt: Date.now(),
       });
       taskIds.push(taskId);
+
+      // Schedule Lambda reframe pipeline
+      await ctx.scheduler.runAfter(0, internal.services.reframeLambda.invokeReframePipeline, {
+        taskId,
+      });
     }
 
     return taskIds;
@@ -418,67 +490,91 @@ export const startReframe = mutation({
 export const getPendingTasksInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
+    // Only return calibrate tasks — reframe is handled by Lambda pipeline
     const pendingTasks = await ctx.db
       .query("podcastClipperTasks")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .withIndex("by_type_status", (q) => q.eq("type", "calibrate").eq("status", "pending"))
       .collect();
 
     const results = [];
     for (const task of pendingTasks) {
-      if (task.type === "calibrate" && task.referenceVideoId) {
-        const video = await ctx.db.get(task.referenceVideoId);
-        if (!video) continue;
+      if (!task.referenceVideoId) continue;
+      const video = await ctx.db.get(task.referenceVideoId);
+      if (!video) continue;
 
-        results.push({
-          taskId: task._id,
-          folderId: task.folderId,
-          type: "calibrate" as const,
-          referenceVideoUrl: video.inputVideoUrl,
-          sceneThreshold: task.sceneThreshold ?? 27.0,
-          clusterThreshold: task.clusterThreshold ?? 0.7,
-        });
-      } else if (task.type === "reframe" && task.targetVideoId) {
-        const video = await ctx.db.get(task.targetVideoId);
-        if (!video) continue;
-
-        const config = await ctx.db
-          .query("podcastClipperConfigs")
-          .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
-          .unique();
-        if (!config) continue;
-
-        const sceneTypes = await ctx.db
-          .query("podcastClipperSceneTypes")
-          .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
-          .collect();
-
-        const sceneTypesWithUrls = await Promise.all(
-          sceneTypes.map(async (st) => ({
-            sceneTypeId: st.sceneTypeId,
-            crop: st.crop,
-            altCrop: st.altCrop,
-            histogramUrl: await ctx.storage.getUrl(st.histogramStorageId),
-          }))
-        );
-
-        results.push({
-          taskId: task._id,
-          folderId: task.folderId,
-          videoId: task.targetVideoId,
-          type: "reframe" as const,
-          targetVideoUrl: video.inputVideoUrl,
-          config: {
-            sourceWidth: config.sourceWidth,
-            sourceHeight: config.sourceHeight,
-            sceneThreshold: config.sceneThreshold,
-            clusterThreshold: config.clusterThreshold,
-          },
-          sceneTypes: sceneTypesWithUrls,
-        });
-      }
+      results.push({
+        taskId: task._id,
+        folderId: task.folderId,
+        type: "calibrate" as const,
+        referenceVideoUrl: video.inputVideoUrl,
+        sceneThreshold: task.sceneThreshold ?? 27.0,
+        clusterThreshold: task.clusterThreshold ?? 0.7,
+      });
     }
 
     return results;
+  },
+});
+
+export const getReframeTaskData = internalQuery({
+  args: { taskId: v.id("podcastClipperTasks") },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.type !== "reframe" || !task.targetVideoId) return null;
+
+    const video = await ctx.db.get(task.targetVideoId);
+    if (!video) return null;
+
+    const config = await ctx.db
+      .query("podcastClipperConfigs")
+      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
+      .unique();
+    if (!config) return null;
+
+    const sceneTypes = await ctx.db
+      .query("podcastClipperSceneTypes")
+      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
+      .collect();
+
+    const allKeyframes = await ctx.db
+      .query("podcastClipperCropKeyframes")
+      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
+      .collect();
+
+    const sceneTypesWithUrls = await Promise.all(
+      sceneTypes.map(async (st) => {
+        const keyframes = allKeyframes
+          .filter((kf) => kf.sceneTypeId === st._id)
+          .sort((a, b) => a.timestamp - b.timestamp)
+          .map((kf) => ({
+            timestamp: kf.timestamp,
+            crop: kf.crop,
+            altCrop: kf.altCrop,
+          }));
+
+        return {
+          sceneTypeId: st.sceneTypeId,
+          crop: st.crop,
+          altCrop: st.altCrop,
+          histogramUrl: await ctx.storage.getUrl(st.histogramStorageId),
+          cropKeyframes: keyframes.length > 0 ? keyframes : undefined,
+        };
+      })
+    );
+
+    return {
+      taskId: task._id,
+      folderId: task.folderId,
+      videoId: task.targetVideoId,
+      targetVideoUrl: video.inputVideoUrl,
+      config: {
+        sourceWidth: config.sourceWidth,
+        sourceHeight: config.sourceHeight,
+        sceneThreshold: config.sceneThreshold,
+        clusterThreshold: config.clusterThreshold,
+      },
+      sceneTypes: sceneTypesWithUrls,
+    };
   },
 });
 
@@ -502,6 +598,12 @@ export const saveCalibrationResult = internalMutation({
         sceneTypeId: v.number(),
         frameStorageId: v.id("_storage"),
         histogramStorageId: v.id("_storage"),
+        keyframeFrames: v.optional(v.array(
+          v.object({
+            timestamp: v.number(),
+            frameStorageId: v.id("_storage"),
+          })
+        )),
       })
     ),
   },
@@ -515,14 +617,26 @@ export const saveCalibrationResult = internalMutation({
       clusterThreshold: args.clusterThreshold,
     });
 
-    // Create scene types
+    // Create scene types and their crop keyframes
     for (const st of args.sceneTypes) {
-      await ctx.db.insert("podcastClipperSceneTypes", {
+      const sceneTypeDocId = await ctx.db.insert("podcastClipperSceneTypes", {
         folderId: args.folderId,
         sceneTypeId: st.sceneTypeId,
         frameStorageId: st.frameStorageId,
         histogramStorageId: st.histogramStorageId,
       });
+
+      // Create crop keyframes for this scene type
+      if (st.keyframeFrames) {
+        for (const kf of st.keyframeFrames) {
+          await ctx.db.insert("podcastClipperCropKeyframes", {
+            folderId: args.folderId,
+            sceneTypeId: sceneTypeDocId,
+            timestamp: kf.timestamp,
+            frameStorageId: kf.frameStorageId,
+          });
+        }
+      }
     }
 
     // Update task
