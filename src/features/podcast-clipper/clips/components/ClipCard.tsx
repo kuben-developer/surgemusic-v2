@@ -3,7 +3,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, Clock, MessageSquareQuote } from "lucide-react";
+import { Download, ExternalLink, Clock, MessageSquareQuote, Trash2 } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import { CLIP_STATUS_LABELS } from "../../shared/constants/podcast-clipper.constants";
 import type { PodcastClipperClip } from "../../shared/types/podcast-clipper.types";
 
@@ -31,6 +33,7 @@ function getStatusVariant(status: string): "default" | "secondary" | "destructiv
 }
 
 export function ClipCard({ clip }: ClipCardProps) {
+  const deleteClip = useMutation(api.app.podcastClipperClipsDb.deleteClip);
   const duration = clip.endTime - clip.startTime;
   const statusLabel = CLIP_STATUS_LABELS[clip.status] ?? clip.status;
   const finalUrl = clip.finalVideoUrl ?? clip.reframedVideoUrl ?? clip.cutVideoUrl;
@@ -62,13 +65,6 @@ export function ClipCard({ clip }: ClipCardProps) {
           <p className="text-xs text-muted-foreground italic">{clip.hookText}</p>
         </div>
 
-        {/* AI reason */}
-        {clip.aiReason && (
-          <p className="text-xs text-muted-foreground/70">
-            {clip.aiReason}
-          </p>
-        )}
-
         {/* Error */}
         {clip.errorMessage && (
           <p className="text-xs text-destructive">{clip.errorMessage}</p>
@@ -94,6 +90,15 @@ export function ClipCard({ clip }: ClipCardProps) {
                   <Download className="h-3.5 w-3.5 mr-1.5" />
                   Download
                 </a>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive ml-auto"
+                onClick={() => deleteClip({ clipId: clip._id })}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Delete
               </Button>
             </div>
           </div>

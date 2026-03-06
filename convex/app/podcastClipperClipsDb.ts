@@ -54,6 +54,15 @@ export const getClipJobs = query({
 // USER-FACING MUTATIONS
 // ============================================================
 
+export const deleteClip = mutation({
+  args: { clipId: v.id("podcastClipperClips") },
+  handler: async (ctx, args) => {
+    const clip = await ctx.db.get(args.clipId);
+    if (!clip) return;
+    await ctx.db.delete(args.clipId);
+  },
+});
+
 export const startTranscription = mutation({
   args: {
     folderId: v.id("podcastClipperFolders"),
@@ -272,6 +281,76 @@ export const getClipReframeData = internalQuery({
   },
 });
 
+interface SubtitleWord {
+  text: string;
+  start: number;
+  end: number;
+  speakerId: string;
+}
+
+function filterOverlappingSpeech(words: SubtitleWord[]): SubtitleWord[] {
+  if (words.length === 0) return words;
+
+  // Find words that overlap with words from a different speaker
+  const overlapping = new Set<number>();
+  for (let i = 0; i < words.length; i++) {
+    for (let j = i + 1; j < words.length; j++) {
+      if (words[i].speakerId === words[j].speakerId) continue;
+      if (words[i].start < words[j].end && words[i].end > words[j].start) {
+        overlapping.add(i);
+        overlapping.add(j);
+      }
+    }
+  }
+
+  if (overlapping.size === 0) return words;
+
+  // Group consecutive overlapping words into segments
+  const sortedIndices = Array.from(overlapping).sort((a, b) => a - b);
+  const segments: number[][] = [];
+  let currentSegment: number[] = [sortedIndices[0]];
+
+  for (let i = 1; i < sortedIndices.length; i++) {
+    // Consecutive or near-consecutive indices belong to the same segment
+    if (sortedIndices[i] - sortedIndices[i - 1] <= 2) {
+      currentSegment.push(sortedIndices[i]);
+    } else {
+      segments.push(currentSegment);
+      currentSegment = [sortedIndices[i]];
+    }
+  }
+  segments.push(currentSegment);
+
+  // For each segment, find the dominant speaker (most total word duration)
+  const removeIndices = new Set<number>();
+  for (const segment of segments) {
+    const durationBySpeaker: Record<string, number> = {};
+    for (const idx of segment) {
+      const w = words[idx];
+      durationBySpeaker[w.speakerId] =
+        (durationBySpeaker[w.speakerId] ?? 0) + (w.end - w.start);
+    }
+
+    let dominantSpeaker = "";
+    let maxDuration = 0;
+    for (const [speaker, duration] of Object.entries(durationBySpeaker)) {
+      if (duration > maxDuration) {
+        maxDuration = duration;
+        dominantSpeaker = speaker;
+      }
+    }
+
+    // Remove non-dominant speaker words from this segment
+    for (const idx of segment) {
+      if (words[idx].speakerId !== dominantSpeaker) {
+        removeIndices.add(idx);
+      }
+    }
+  }
+
+  return words.filter((_, i) => !removeIndices.has(i));
+}
+
 export const getPendingOverlayClipsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -291,7 +370,7 @@ export const getPendingOverlayClipsInternal = internalQuery({
         .first();
 
       // Filter and shift word timestamps to clip time range
-      const subtitleCues = transcript
+      const mappedWords: SubtitleWord[] = transcript
         ? transcript.words
             .filter(
               (w) =>
@@ -303,8 +382,11 @@ export const getPendingOverlayClipsInternal = internalQuery({
               text: w.text,
               start: w.start - clip.startTime,
               end: w.end - clip.startTime,
+              speakerId: w.speakerId ?? "unknown",
             }))
         : [];
+
+      const subtitleCues = filterOverlappingSpeech(mappedWords);
 
       results.push({
         clipId: clip._id,
@@ -391,7 +473,6 @@ export const saveGeneratedClips = internalMutation({
         endTime: v.number(),
         hookText: v.string(),
         title: v.optional(v.string()),
-        aiReason: v.optional(v.string()),
         clipIndex: v.number(),
       })
     ),
@@ -406,7 +487,6 @@ export const saveGeneratedClips = internalMutation({
         endTime: clip.endTime,
         hookText: clip.hookText,
         title: clip.title,
-        aiReason: clip.aiReason,
         status: "approved",
         clipIndex: clip.clipIndex,
         createdAt: Date.now(),

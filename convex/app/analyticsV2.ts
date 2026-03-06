@@ -784,8 +784,10 @@ export const getContentSamplesV2 = query({
 export const getAllCampaignsWithAnalyticsV2 = query({
   args: {
     status: v.optional(v.string()),
+    page: v.optional(v.number()),
+    pageSize: v.optional(v.number()),
   },
-  handler: async (ctx, { status }) => {
+  handler: async (ctx, { status, page = 0, pageSize = 10 }) => {
     let allCampaigns;
     if (status) {
       allCampaigns = await ctx.db
@@ -795,6 +797,14 @@ export const getAllCampaignsWithAnalyticsV2 = query({
     } else {
       allCampaigns = await ctx.db.query("campaigns").collect();
     }
+
+    const totalCount = allCampaigns.length;
+
+    // Paginate campaigns to stay within document read limits
+    const paginatedCampaigns = allCampaigns.slice(
+      page * pageSize,
+      (page + 1) * pageSize,
+    );
 
     // Calculate date range for last 14 days of snapshots
     const now = new Date();
@@ -806,25 +816,18 @@ export const getAllCampaignsWithAnalyticsV2 = query({
       (fourteenDaysAgo.getMonth() + 1) * 10000 +
       fourteenDaysAgo.getDate() * 100;
 
-    // Batch fetch all recent snapshots in a single query to avoid per-campaign reads
-    const allRecentSnapshots = await ctx.db
-      .query("campaignSnapshots")
-      .withIndex("by_snapshotAt", (q) => q.gte("snapshotAt", minSnapshotAt))
-      .collect();
-
-    // Group snapshots by campaignId
-    const snapshotsByCampaign = new Map<string, typeof allRecentSnapshots>();
-    for (const snap of allRecentSnapshots) {
-      const list = snapshotsByCampaign.get(snap.campaignId);
-      if (list) {
-        list.push(snap);
-      } else {
-        snapshotsByCampaign.set(snap.campaignId, [snap]);
-      }
-    }
-
     const results = await Promise.all(
-      allCampaigns.map(async (campaign) => {
+      paginatedCampaigns.map(async (campaign) => {
+        // Fetch snapshots per-campaign using compound index (avoids bulk read)
+        const campaignSnapshots = await ctx.db
+          .query("campaignSnapshots")
+          .withIndex("by_campaignId_snapshotAt", (q) =>
+            q
+              .eq("campaignId", campaign.campaignId)
+              .gte("snapshotAt", minSnapshotAt),
+          )
+          .collect();
+
         // Get the earliest video posted date for this campaign
         const firstVideo = await ctx.db
           .query("tiktokVideoStats")
@@ -853,8 +856,7 @@ export const getAllCampaignsWithAnalyticsV2 = query({
           totalComments: 0, totalShares: 0, totalSaves: 0,
         };
 
-        // Build sparkline from pre-fetched snapshots
-        const campaignSnapshots = snapshotsByCampaign.get(campaign.campaignId) ?? [];
+        // Build sparkline from per-campaign snapshots
         const byDate = new Map<number, typeof campaignSnapshots[0]>();
         for (const snap of campaignSnapshots) {
           const dateKey = Math.floor(snap.snapshotAt / 100); // YYYYMMDD
@@ -905,7 +907,13 @@ export const getAllCampaignsWithAnalyticsV2 = query({
       }),
     );
 
-    return results;
+    return {
+      campaigns: results,
+      totalCount,
+      page,
+      pageSize,
+      totalPages: Math.ceil(totalCount / pageSize),
+    };
   },
 });
 
