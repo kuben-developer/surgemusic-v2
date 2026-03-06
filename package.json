@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.1002.0",
     "@aws-sdk/client-s3": "^3.997.0",
     "@aws-sdk/client-sfn": "^3.1002.0",
     "@aws-sdk/s3-request-presigner": "^3.997.0",

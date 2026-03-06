@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
-import { internal } from "../_generated/api";
 
 // ============================================================
 // USER-FACING QUERIES
@@ -112,26 +111,6 @@ export const getSceneTypes = query({
   },
 });
 
-export const getCropKeyframes = query({
-  args: { folderId: v.id("podcastClipperFolders") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const keyframes = await ctx.db
-      .query("podcastClipperCropKeyframes")
-      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
-      .collect();
-
-    return await Promise.all(
-      keyframes.map(async (kf) => ({
-        ...kf,
-        frameUrl: await ctx.storage.getUrl(kf.frameStorageId),
-      }))
-    );
-  },
-});
-
 export const getTasks = query({
   args: { folderId: v.id("podcastClipperFolders") },
   handler: async (ctx, args) => {
@@ -205,13 +184,28 @@ export const deleteFolder = mutation({
       await ctx.db.delete(st._id);
     }
 
-    const cropKeyframes = await ctx.db
-      .query("podcastClipperCropKeyframes")
+    const transcripts = await ctx.db
+      .query("podcastClipperTranscripts")
       .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
       .collect();
-    for (const kf of cropKeyframes) {
-      await ctx.storage.delete(kf.frameStorageId);
-      await ctx.db.delete(kf._id);
+    for (const t of transcripts) {
+      await ctx.db.delete(t._id);
+    }
+
+    const clips = await ctx.db
+      .query("podcastClipperClips")
+      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
+      .collect();
+    for (const c of clips) {
+      await ctx.db.delete(c._id);
+    }
+
+    const clipJobs = await ctx.db
+      .query("podcastClipperClipJobs")
+      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
+      .collect();
+    for (const j of clipJobs) {
+      await ctx.db.delete(j._id);
     }
 
     const configs = await ctx.db
@@ -268,6 +262,49 @@ export const uploadVideo = mutation({
   },
 });
 
+export const uploadVideoFromUrl = mutation({
+  args: {
+    folderId: v.id("podcastClipperFolders"),
+    youtubeUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder || folder.userId !== user._id) throw new Error("Folder not found");
+
+    const videoId = await ctx.db.insert("podcastClipperVideos", {
+      folderId: args.folderId,
+      videoName: "Downloading...",
+      inputVideoUrl: "",
+      status: "downloading",
+      youtubeUrl: args.youtubeUrl,
+    });
+
+    await ctx.db.patch(args.folderId, {
+      videoCount: (folder.videoCount ?? 0) + 1,
+    });
+
+    // Create download job for Docker service to pick up
+    await ctx.db.insert("podcastClipperClipJobs", {
+      folderId: args.folderId,
+      videoId,
+      type: "download",
+      status: "pending",
+      createdAt: Date.now(),
+    });
+
+    return videoId;
+  },
+});
+
 export const deleteVideo = mutation({
   args: { videoId: v.id("podcastClipperVideos") },
   handler: async (ctx, args) => {
@@ -286,15 +323,10 @@ export const deleteVideo = mutation({
     const folder = await ctx.db.get(video.folderId);
     if (!folder || folder.userId !== user._id) throw new Error("Folder not found");
 
-    const hadReframed = video.reframedVideoUrl !== undefined;
-
     await ctx.db.delete(args.videoId);
 
     await ctx.db.patch(video.folderId, {
       videoCount: Math.max(0, (folder.videoCount ?? 0) - 1),
-      ...(hadReframed
-        ? { reframedCount: Math.max(0, (folder.reframedCount ?? 0) - 1) }
-        : {}),
     });
   },
 });
@@ -331,16 +363,6 @@ export const startCalibration = mutation({
       await ctx.storage.delete(st.frameStorageId);
       await ctx.storage.delete(st.histogramStorageId);
       await ctx.db.delete(st._id);
-    }
-
-    // Clear previous crop keyframes
-    const oldKeyframes = await ctx.db
-      .query("podcastClipperCropKeyframes")
-      .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
-      .collect();
-    for (const kf of oldKeyframes) {
-      await ctx.storage.delete(kf.frameStorageId);
-      await ctx.db.delete(kf._id);
     }
 
     // Clear previous config
@@ -390,23 +412,6 @@ export const saveCropRegions = mutation({
         ),
       })
     ),
-    keyframeCrops: v.optional(v.array(
-      v.object({
-        keyframeId: v.id("podcastClipperCropKeyframes"),
-        crop: v.optional(v.object({
-          x: v.number(),
-          y: v.number(),
-          width: v.number(),
-          height: v.number(),
-        })),
-        altCrop: v.optional(v.object({
-          x: v.number(),
-          y: v.number(),
-          width: v.number(),
-          height: v.number(),
-        })),
-      })
-    )),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -428,58 +433,7 @@ export const saveCropRegions = mutation({
       });
     }
 
-    // Save keyframe-level crops
-    if (args.keyframeCrops) {
-      for (const kfCrop of args.keyframeCrops) {
-        await ctx.db.patch(kfCrop.keyframeId, {
-          crop: kfCrop.crop,
-          altCrop: kfCrop.altCrop,
-        });
-      }
-    }
-
     await ctx.db.patch(args.folderId, { calibrationStatus: "configured" });
-  },
-});
-
-export const startReframe = mutation({
-  args: {
-    folderId: v.id("podcastClipperFolders"),
-    videoIds: v.array(v.id("podcastClipperVideos")),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-    if (!user) throw new Error("User not found");
-
-    const folder = await ctx.db.get(args.folderId);
-    if (!folder || folder.userId !== user._id) throw new Error("Folder not found");
-
-    const taskIds = [];
-    for (const videoId of args.videoIds) {
-      await ctx.db.patch(videoId, { status: "reframing" });
-
-      const taskId = await ctx.db.insert("podcastClipperTasks", {
-        folderId: args.folderId,
-        type: "reframe",
-        status: "pending",
-        targetVideoId: videoId,
-        createdAt: Date.now(),
-      });
-      taskIds.push(taskId);
-
-      // Schedule Lambda reframe pipeline
-      await ctx.scheduler.runAfter(0, internal.services.reframeLambda.invokeReframePipeline, {
-        taskId,
-      });
-    }
-
-    return taskIds;
   },
 });
 
@@ -516,68 +470,6 @@ export const getPendingTasksInternal = internalQuery({
   },
 });
 
-export const getReframeTaskData = internalQuery({
-  args: { taskId: v.id("podcastClipperTasks") },
-  handler: async (ctx, args) => {
-    const task = await ctx.db.get(args.taskId);
-    if (!task || task.type !== "reframe" || !task.targetVideoId) return null;
-
-    const video = await ctx.db.get(task.targetVideoId);
-    if (!video) return null;
-
-    const config = await ctx.db
-      .query("podcastClipperConfigs")
-      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
-      .unique();
-    if (!config) return null;
-
-    const sceneTypes = await ctx.db
-      .query("podcastClipperSceneTypes")
-      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
-      .collect();
-
-    const allKeyframes = await ctx.db
-      .query("podcastClipperCropKeyframes")
-      .withIndex("by_folderId", (q) => q.eq("folderId", task.folderId))
-      .collect();
-
-    const sceneTypesWithUrls = await Promise.all(
-      sceneTypes.map(async (st) => {
-        const keyframes = allKeyframes
-          .filter((kf) => kf.sceneTypeId === st._id)
-          .sort((a, b) => a.timestamp - b.timestamp)
-          .map((kf) => ({
-            timestamp: kf.timestamp,
-            crop: kf.crop,
-            altCrop: kf.altCrop,
-          }));
-
-        return {
-          sceneTypeId: st.sceneTypeId,
-          crop: st.crop,
-          altCrop: st.altCrop,
-          histogramUrl: await ctx.storage.getUrl(st.histogramStorageId),
-          cropKeyframes: keyframes.length > 0 ? keyframes : undefined,
-        };
-      })
-    );
-
-    return {
-      taskId: task._id,
-      folderId: task.folderId,
-      videoId: task.targetVideoId,
-      targetVideoUrl: video.inputVideoUrl,
-      config: {
-        sourceWidth: config.sourceWidth,
-        sourceHeight: config.sourceHeight,
-        sceneThreshold: config.sceneThreshold,
-        clusterThreshold: config.clusterThreshold,
-      },
-      sceneTypes: sceneTypesWithUrls,
-    };
-  },
-});
-
 export const markTaskProcessing = internalMutation({
   args: { taskId: v.id("podcastClipperTasks") },
   handler: async (ctx, args) => {
@@ -598,12 +490,6 @@ export const saveCalibrationResult = internalMutation({
         sceneTypeId: v.number(),
         frameStorageId: v.id("_storage"),
         histogramStorageId: v.id("_storage"),
-        keyframeFrames: v.optional(v.array(
-          v.object({
-            timestamp: v.number(),
-            frameStorageId: v.id("_storage"),
-          })
-        )),
       })
     ),
   },
@@ -626,17 +512,6 @@ export const saveCalibrationResult = internalMutation({
         histogramStorageId: st.histogramStorageId,
       });
 
-      // Create crop keyframes for this scene type
-      if (st.keyframeFrames) {
-        for (const kf of st.keyframeFrames) {
-          await ctx.db.insert("podcastClipperCropKeyframes", {
-            folderId: args.folderId,
-            sceneTypeId: sceneTypeDocId,
-            timestamp: kf.timestamp,
-            frameStorageId: kf.frameStorageId,
-          });
-        }
-      }
     }
 
     // Update task
@@ -647,36 +522,6 @@ export const saveCalibrationResult = internalMutation({
 
     // Update folder status
     await ctx.db.patch(args.folderId, { calibrationStatus: "detected" });
-  },
-});
-
-export const saveReframeResult = internalMutation({
-  args: {
-    taskId: v.id("podcastClipperTasks"),
-    videoId: v.id("podcastClipperVideos"),
-    reframedVideoUrl: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const video = await ctx.db.get(args.videoId);
-    if (!video) throw new Error("Video not found");
-
-    await ctx.db.patch(args.videoId, {
-      reframedVideoUrl: args.reframedVideoUrl,
-      status: "reframed",
-    });
-
-    await ctx.db.patch(args.taskId, {
-      status: "completed",
-      completedAt: Date.now(),
-    });
-
-    // Increment reframed count on folder
-    const folder = await ctx.db.get(video.folderId);
-    if (folder) {
-      await ctx.db.patch(video.folderId, {
-        reframedCount: (folder.reframedCount ?? 0) + 1,
-      });
-    }
   },
 });
 
@@ -698,14 +543,6 @@ export const failTask = internalMutation({
     // If calibrate task failed, reset folder status
     if (task.type === "calibrate") {
       await ctx.db.patch(task.folderId, { calibrationStatus: "none" });
-    }
-
-    // If reframe task failed, reset video status
-    if (task.type === "reframe" && task.targetVideoId) {
-      await ctx.db.patch(task.targetVideoId, {
-        status: "failed",
-        errorMessage: args.errorMessage,
-      });
     }
   },
 });

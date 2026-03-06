@@ -17,6 +17,10 @@ export type PodcastClipperSceneType = Doc<"podcastClipperSceneTypes"> & {
 
 export type PodcastClipperTask = Doc<"podcastClipperTasks">;
 
+export type PodcastClipperTranscript = Doc<"podcastClipperTranscripts">;
+export type PodcastClipperClip = Doc<"podcastClipperClips">;
+export type PodcastClipperClipJob = Doc<"podcastClipperClipJobs">;
+
 export type PodcastFolderId = Id<"podcastClipperFolders">;
 export type PodcastVideoId = Id<"podcastClipperVideos">;
 export type PodcastSceneTypeId = Id<"podcastClipperSceneTypes">;

@@ -15,7 +15,6 @@ export function useFolderDetail(folderId: PodcastFolderId) {
 
   const deleteVideoMutation = useMutation(api.app.podcastClipperDb.deleteVideo);
   const startCalibrationMutation = useMutation(api.app.podcastClipperDb.startCalibration);
-  const startReframeMutation = useMutation(api.app.podcastClipperDb.startReframe);
 
   const deleteVideo = async (videoId: PodcastVideoId) => {
     try {
@@ -44,15 +43,6 @@ export function useFolderDetail(folderId: PodcastFolderId) {
     }
   };
 
-  const startReframe = async (videoIds: Id<"podcastClipperVideos">[]) => {
-    try {
-      await startReframeMutation({ folderId, videoIds });
-      toast.success(`Reframing ${videoIds.length} video(s)`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to start reframe");
-    }
-  };
-
   return {
     folder,
     videos,
@@ -62,6 +52,5 @@ export function useFolderDetail(folderId: PodcastFolderId) {
     isLoading: folder === undefined,
     deleteVideo,
     startCalibration,
-    startReframe,
   };
 }

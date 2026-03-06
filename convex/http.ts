@@ -10,9 +10,18 @@ import {
   getPendingPodcastClipperTasks,
   getPodcastClipperUploadUrl,
   postCalibrationResult,
-  postReframeResult,
   postTaskFailed,
 } from "./webhooks/podcastClipper";
+import {
+  getPendingClipJobs,
+  postDownloadResult,
+  postTranscriptResult,
+  postCutClipsResult,
+  postClipReframeResult,
+  getPendingOverlayClips,
+  postOverlayResult,
+  postOverlayFailed,
+} from "./webhooks/podcastClipperClips";
 
 const http = httpRouter();
 
@@ -140,18 +149,67 @@ http.route({
   handler: postCalibrationResult,
 });
 
-// Podcast Clipper API - Backend pushes reframe results
-http.route({
-  path: "/api/podcast-clipper/reframe-result",
-  method: "POST",
-  handler: postReframeResult,
-});
-
 // Podcast Clipper API - Backend reports task failure
 http.route({
   path: "/api/podcast-clipper/task-failed",
   method: "POST",
   handler: postTaskFailed,
+});
+
+// Podcast Clipper Clips API - Docker polls for download/transcribe/cut jobs
+http.route({
+  path: "/api/podcast-clipper/clip-jobs/pending",
+  method: "GET",
+  handler: getPendingClipJobs,
+});
+
+// Podcast Clipper Clips API - Docker posts download result
+http.route({
+  path: "/api/podcast-clipper/download-result",
+  method: "POST",
+  handler: postDownloadResult,
+});
+
+// Podcast Clipper Clips API - Docker posts transcript result
+http.route({
+  path: "/api/podcast-clipper/transcript-result",
+  method: "POST",
+  handler: postTranscriptResult,
+});
+
+// Podcast Clipper Clips API - Docker posts cut clips result
+http.route({
+  path: "/api/podcast-clipper/cut-clips-result",
+  method: "POST",
+  handler: postCutClipsResult,
+});
+
+// Podcast Clipper Clips API - Lambda posts clip reframe result
+http.route({
+  path: "/api/podcast-clipper/clip-reframe-result",
+  method: "POST",
+  handler: postClipReframeResult,
+});
+
+// Podcast Clipper Clips API - Remotion polls for clips needing overlay
+http.route({
+  path: "/api/podcast-clipper/clips/pending-overlay",
+  method: "GET",
+  handler: getPendingOverlayClips,
+});
+
+// Podcast Clipper Clips API - Remotion posts overlay result
+http.route({
+  path: "/api/podcast-clipper/clips/overlay-result",
+  method: "POST",
+  handler: postOverlayResult,
+});
+
+// Podcast Clipper Clips API - Remotion reports overlay failure
+http.route({
+  path: "/api/podcast-clipper/clips/overlay-failed",
+  method: "POST",
+  handler: postOverlayFailed,
 });
 
 export default http;

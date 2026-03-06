@@ -12,19 +12,19 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { defaultCrop } from "./utils/crop.utils";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { CropRegion } from "../shared/types/podcast-clipper.types";
-import type { SceneTypeCropState, CropKeyframe } from "./types/calibration.types";
+import type { SceneTypeCropState } from "./types/calibration.types";
 
 export function CalibrationPage() {
   const params = useParams();
   const router = useRouter();
   const folderId = params.folderId as Id<"podcastClipperFolders">;
 
-  const { folder, config, sceneTypes, cropKeyframes, isLoading } = useCalibrationData(folderId);
+  const { folder, config, sceneTypes, isLoading } = useCalibrationData(folderId);
   const { saveCrops, isSaving } = useSaveCropRegions(folderId);
 
   const [cropStates, setCropStates] = useState<SceneTypeCropState[]>([]);
 
-  // Initialize crop states from scene types + crop keyframes
+  // Initialize crop states from scene types (no keyframes)
   useEffect(() => {
     if (!sceneTypes || !config || cropStates.length > 0) return;
 
@@ -32,45 +32,22 @@ export function CalibrationPage() {
     const sourceH = config.sourceHeight;
 
     setCropStates(
-      sceneTypes.map((st) => {
-        // Find keyframes belonging to this scene type
-        const stKeyframes: CropKeyframe[] = (cropKeyframes ?? [])
-          .filter((kf) => kf.sceneTypeId === st._id)
-          .sort((a, b) => a.timestamp - b.timestamp)
-          .map((kf) => ({
-            keyframeId: kf._id,
-            sceneTypeId: kf.sceneTypeId,
-            timestamp: kf.timestamp,
-            frameUrl: kf.frameUrl ?? "",
-            crop: kf.crop ?? null,
-            altCrop: kf.altCrop ?? null,
-          }));
-
-        return {
-          sceneTypeDbId: st._id,
-          sceneTypeId: st.sceneTypeId,
-          frameUrl: st.frameUrl ?? "",
-          crop: st.crop ?? defaultCrop(sourceW, sourceH),
-          altCrop: st.altCrop ?? defaultCrop(sourceW, sourceH),
-          hasAltCrop: st.altCrop !== undefined && st.altCrop !== null,
-          keyframes: stKeyframes,
-          selectedKeyframeIndex: null,
-        };
-      })
+      sceneTypes.map((st) => ({
+        sceneTypeDbId: st._id,
+        sceneTypeId: st.sceneTypeId,
+        frameUrl: st.frameUrl ?? "",
+        crop: st.crop ?? defaultCrop(sourceW, sourceH),
+        altCrop: st.altCrop ?? defaultCrop(sourceW, sourceH),
+        hasAltCrop: st.altCrop !== undefined && st.altCrop !== null,
+      }))
     );
-  }, [sceneTypes, config, cropKeyframes, cropStates.length]);
+  }, [sceneTypes, config, cropStates.length]);
 
-  // Preload all keyframe images once crop states are initialized
+  // Preload images
   const hasStates = cropStates.length > 0;
   useEffect(() => {
     if (!hasStates) return;
-    const urls: string[] = [];
-    for (const cs of cropStates) {
-      if (cs.frameUrl) urls.push(cs.frameUrl);
-      for (const kf of cs.keyframes) {
-        if (kf.frameUrl) urls.push(kf.frameUrl);
-      }
-    }
+    const urls = cropStates.map((cs) => cs.frameUrl).filter(Boolean);
     preloadImages(urls);
   }, [hasStates]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -98,38 +75,6 @@ export function CalibrationPage() {
           };
         }
         return { ...item, hasAltCrop: false };
-      })
-    );
-  };
-
-  const selectKeyframe = (sceneIndex: number, keyframeIndex: number | null) => {
-    setCropStates((prev) =>
-      prev.map((item, i) =>
-        i === sceneIndex ? { ...item, selectedKeyframeIndex: keyframeIndex } : item
-      )
-    );
-  };
-
-  const updateKeyframeCrop = (sceneIndex: number, keyframeIndex: number, crop: CropRegion) => {
-    setCropStates((prev) =>
-      prev.map((item, i) => {
-        if (i !== sceneIndex) return item;
-        const newKeyframes = item.keyframes.map((kf, ki) =>
-          ki === keyframeIndex ? { ...kf, crop } : kf
-        );
-        return { ...item, keyframes: newKeyframes };
-      })
-    );
-  };
-
-  const updateKeyframeAltCrop = (sceneIndex: number, keyframeIndex: number, altCrop: CropRegion) => {
-    setCropStates((prev) =>
-      prev.map((item, i) => {
-        if (i !== sceneIndex) return item;
-        const newKeyframes = item.keyframes.map((kf, ki) =>
-          ki === keyframeIndex ? { ...kf, altCrop } : kf
-        );
-        return { ...item, keyframes: newKeyframes };
       })
     );
   };
@@ -208,9 +153,6 @@ export function CalibrationPage() {
             onCropChange={(crop) => updateCrop(index, crop)}
             onAltCropChange={(altCrop) => updateAltCrop(index, altCrop)}
             onToggleAltCrop={(enabled) => toggleAltCrop(index, enabled)}
-            onSelectKeyframe={(kfIndex) => selectKeyframe(index, kfIndex)}
-            onKeyframeCropChange={(kfIndex, crop) => updateKeyframeCrop(index, kfIndex, crop)}
-            onKeyframeAltCropChange={(kfIndex, altCrop) => updateKeyframeAltCrop(index, kfIndex, altCrop)}
           />
         ))}
       </div>

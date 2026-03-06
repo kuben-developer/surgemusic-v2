@@ -383,6 +383,14 @@ export default defineSchema({
       v.literal("detected"),
       v.literal("configured"),
     )),
+    transcriptionStatus: v.optional(v.union(
+      v.literal("none"),
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("failed"),
+    )),
+    clipCount: v.optional(v.number()),
+    completedClipCount: v.optional(v.number()),
   })
     .index("by_userId", ["userId"]),
 
@@ -390,15 +398,14 @@ export default defineSchema({
     folderId: v.id("podcastClipperFolders"),
     videoName: v.string(),
     inputVideoUrl: v.string(),
-    reframedVideoUrl: v.optional(v.string()),
     status: v.union(
+      v.literal("downloading"),
       v.literal("uploaded"),
-      v.literal("reframing"),
-      v.literal("reframed"),
       v.literal("failed"),
     ),
     errorMessage: v.optional(v.string()),
     isReferenceVideo: v.optional(v.boolean()),
+    youtubeUrl: v.optional(v.string()),
   })
     .index("by_folderId", ["folderId"])
     .index("by_folderId_status", ["folderId", "status"]),
@@ -432,30 +439,9 @@ export default defineSchema({
   })
     .index("by_folderId", ["folderId"]),
 
-  podcastClipperCropKeyframes: defineTable({
-    folderId: v.id("podcastClipperFolders"),
-    sceneTypeId: v.id("podcastClipperSceneTypes"),
-    timestamp: v.number(),
-    frameStorageId: v.id("_storage"),
-    crop: v.optional(v.object({
-      x: v.number(),
-      y: v.number(),
-      width: v.number(),
-      height: v.number(),
-    })),
-    altCrop: v.optional(v.object({
-      x: v.number(),
-      y: v.number(),
-      width: v.number(),
-      height: v.number(),
-    })),
-  })
-    .index("by_sceneTypeId", ["sceneTypeId"])
-    .index("by_folderId", ["folderId"]),
-
   podcastClipperTasks: defineTable({
     folderId: v.id("podcastClipperFolders"),
-    type: v.union(v.literal("calibrate"), v.literal("reframe")),
+    type: v.literal("calibrate"),
     status: v.union(
       v.literal("pending"),
       v.literal("processing"),
@@ -463,7 +449,6 @@ export default defineSchema({
       v.literal("failed"),
     ),
     referenceVideoId: v.optional(v.id("podcastClipperVideos")),
-    targetVideoId: v.optional(v.id("podcastClipperVideos")),
     sceneThreshold: v.optional(v.number()),
     clusterThreshold: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
@@ -473,6 +458,75 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_folderId", ["folderId"])
     .index("by_type_status", ["type", "status"]),
+
+  // Podcast Clipper - Transcripts
+  podcastClipperTranscripts: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    videoId: v.id("podcastClipperVideos"),
+    fullText: v.string(),
+    words: v.array(v.object({
+      text: v.string(),
+      start: v.number(),
+      end: v.number(),
+      type: v.string(),
+      speakerId: v.optional(v.string()),
+    })),
+    speakerNames: v.optional(v.record(v.string(), v.string())),
+    language: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_videoId", ["videoId"])
+    .index("by_folderId", ["folderId"]),
+
+  // Podcast Clipper - Clips
+  podcastClipperClips: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    videoId: v.id("podcastClipperVideos"),
+    transcriptId: v.id("podcastClipperTranscripts"),
+    startTime: v.number(),
+    endTime: v.number(),
+    hookText: v.string(),
+    title: v.optional(v.string()),
+    aiReason: v.optional(v.string()),
+    status: v.union(
+      v.literal("approved"),
+      v.literal("cutting"),
+      v.literal("cut"),
+      v.literal("reframing"),
+      v.literal("reframed"),
+      v.literal("rendering_overlay"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    cutVideoUrl: v.optional(v.string()),
+    reframedVideoUrl: v.optional(v.string()),
+    finalVideoUrl: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    overlayStyle: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    clipIndex: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_folderId", ["folderId"])
+    .index("by_status", ["status"])
+    .index("by_folderId_status", ["folderId", "status"]),
+
+  // Podcast Clipper - Clip Jobs (batch jobs)
+  podcastClipperClipJobs: defineTable({
+    folderId: v.id("podcastClipperFolders"),
+    videoId: v.id("podcastClipperVideos"),
+    type: v.union(v.literal("download"), v.literal("transcribe"), v.literal("cut_clips")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_type_status", ["type", "status"])
+    .index("by_folderId", ["folderId"]),
 
   // TIKTOK COMMENTS (for campaign analytics curation)
   tiktokComments: defineTable({

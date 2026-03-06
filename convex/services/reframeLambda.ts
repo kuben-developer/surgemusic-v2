@@ -3,70 +3,67 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 
-const SFN_STATE_MACHINE_ARN = process.env.REFRAME_STATE_MACHINE_ARN ?? "";
 const AWS_REGION = process.env.AWS_REGION ?? "us-east-1";
+const CLIP_REFRAME_FUNCTION_NAME = process.env.CLIP_REFRAME_FUNCTION_NAME ?? "podcast-clipper-ClipReframeFunction";
 
 /**
- * Convex action that invokes the AWS Step Functions reframe pipeline.
+ * Convex action that invokes the clip reframe Lambda directly (one per clip).
  *
- * Called via ctx.scheduler.runAfter(0, ...) from the startReframe mutation.
- * Gathers task data and starts a Step Functions execution for each reframe task.
+ * Called via ctx.scheduler.runAfter(0, ...) when a clip status becomes "cut".
+ * Downloads the short clip, detects scenes, reframes, and uploads result.
  */
-export const invokeReframePipeline = internalAction({
+export const invokeClipReframe = internalAction({
   args: {
-    taskId: v.id("podcastClipperTasks"),
+    clipId: v.id("podcastClipperClips"),
   },
   handler: async (ctx, args) => {
-    // Fetch full task data
-    const taskData = await ctx.runQuery(
-      internal.app.podcastClipperDb.getReframeTaskData,
-      { taskId: args.taskId }
+    // Fetch clip data
+    const clipData = await ctx.runQuery(
+      internal.app.podcastClipperClipsDb.getClipReframeData,
+      { clipId: args.clipId }
     );
 
-    if (!taskData) {
-      console.error(`No task data found for ${args.taskId}`);
+    if (!clipData) {
+      console.error(`No clip data found for ${args.clipId}`);
       return;
     }
 
-    // Mark task as processing
+    // Mark clip as reframing
     await ctx.runMutation(
-      internal.app.podcastClipperDb.markTaskProcessing,
-      { taskId: args.taskId }
+      internal.app.podcastClipperClipsDb.updateClipStatus,
+      { clipId: args.clipId, status: "reframing" }
     );
 
-    // Start Step Functions execution
-    const sfnClient = new SFNClient({ region: AWS_REGION });
+    const lambdaClient = new LambdaClient({ region: AWS_REGION });
 
-    const input = {
-      taskId: taskData.taskId,
-      videoId: taskData.videoId,
-      targetVideoUrl: taskData.targetVideoUrl,
-      config: taskData.config,
-      sceneTypes: taskData.sceneTypes,
+    const payload = {
+      clipId: clipData.clipId,
+      videoUrl: clipData.cutVideoUrl,
+      config: clipData.config,
+      sceneTypes: clipData.sceneTypes,
     };
 
     try {
-      const command = new StartExecutionCommand({
-        stateMachineArn: SFN_STATE_MACHINE_ARN,
-        name: `reframe-${taskData.taskId}-${Date.now()}`,
-        input: JSON.stringify(input),
+      const command = new InvokeCommand({
+        FunctionName: CLIP_REFRAME_FUNCTION_NAME,
+        InvocationType: "Event", // async — Lambda posts result back via webhook
+        Payload: new TextEncoder().encode(JSON.stringify(payload)),
       });
 
-      const response = await sfnClient.send(command);
+      const response = await lambdaClient.send(command);
       console.log(
-        `Started Step Functions execution: ${response.executionArn} for task ${args.taskId}`
+        `Invoked clip reframe Lambda for clip ${args.clipId}, status=${response.StatusCode}`
       );
     } catch (error) {
-      console.error(`Failed to start Step Functions for task ${args.taskId}:`, error);
+      console.error(`Failed to invoke clip reframe Lambda for ${args.clipId}:`, error);
 
-      // Report failure back to Convex
       await ctx.runMutation(
-        internal.app.podcastClipperDb.failTask,
+        internal.app.podcastClipperClipsDb.failClip,
         {
-          taskId: args.taskId,
-          errorMessage: `Failed to start Lambda pipeline: ${error instanceof Error ? error.message : String(error)}`,
+          clipId: args.clipId,
+          errorMessage: `Failed to invoke reframe Lambda: ${error instanceof Error ? error.message : String(error)}`,
         }
       );
     }

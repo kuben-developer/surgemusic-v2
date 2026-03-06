@@ -14,17 +14,6 @@ export function useSaveCropRegions(folderId: PodcastFolderId) {
   const saveCrops = async (sceneTypeCrops: SceneTypeCropState[]) => {
     setIsSaving(true);
     try {
-      // Collect keyframe crops that have been customized
-      const keyframeCrops = sceneTypeCrops.flatMap((st) =>
-        st.keyframes
-          .filter((kf) => kf.crop !== null)
-          .map((kf) => ({
-            keyframeId: kf.keyframeId,
-            crop: kf.crop ?? undefined,
-            altCrop: kf.altCrop ?? undefined,
-          }))
-      );
-
       await saveCropsMutation({
         folderId,
         crops: sceneTypeCrops.map((st) => ({
@@ -32,7 +21,6 @@ export function useSaveCropRegions(folderId: PodcastFolderId) {
           crop: st.crop,
           altCrop: st.hasAltCrop && st.altCrop ? st.altCrop : undefined,
         })),
-        keyframeCrops: keyframeCrops.length > 0 ? keyframeCrops : undefined,
       });
       toast.success("Crop regions saved");
     } catch (error) {

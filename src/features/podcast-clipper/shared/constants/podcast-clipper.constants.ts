@@ -11,8 +11,18 @@ export const CALIBRATION_STATUS_LABELS: Record<string, string> = {
 };
 
 export const VIDEO_STATUS_LABELS: Record<string, string> = {
+  downloading: "Downloading...",
   uploaded: "Uploaded",
+  failed: "Failed",
+};
+
+export const CLIP_STATUS_LABELS: Record<string, string> = {
+  approved: "Approved",
+  cutting: "Cutting...",
+  cut: "Cut",
   reframing: "Reframing...",
   reframed: "Reframed",
+  rendering_overlay: "Rendering...",
+  completed: "Completed",
   failed: "Failed",
 };

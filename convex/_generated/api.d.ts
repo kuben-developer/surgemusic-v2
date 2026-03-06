@@ -28,6 +28,8 @@ import type * as app_instagram from "../app/instagram.js";
 import type * as app_instagramAnalytics from "../app/instagramAnalytics.js";
 import type * as app_montager from "../app/montager.js";
 import type * as app_montagerDb from "../app/montagerDb.js";
+import type * as app_podcastClipperClipsActions from "../app/podcastClipperClipsActions.js";
+import type * as app_podcastClipperClipsDb from "../app/podcastClipperClipsDb.js";
 import type * as app_podcastClipperDb from "../app/podcastClipperDb.js";
 import type * as app_podcastClipperS3 from "../app/podcastClipperS3.js";
 import type * as app_tiktok from "../app/tiktok.js";
@@ -51,6 +53,7 @@ import type * as webhooks_clipper from "../webhooks/clipper.js";
 import type * as webhooks_montager from "../webhooks/montager.js";
 import type * as webhooks_montagerVideos from "../webhooks/montagerVideos.js";
 import type * as webhooks_podcastClipper from "../webhooks/podcastClipper.js";
+import type * as webhooks_podcastClipperClips from "../webhooks/podcastClipperClips.js";
 import type * as webhooks_test from "../webhooks/test.js";
 
 import type {
@@ -80,6 +83,8 @@ declare const fullApi: ApiFromModules<{
   "app/instagramAnalytics": typeof app_instagramAnalytics;
   "app/montager": typeof app_montager;
   "app/montagerDb": typeof app_montagerDb;
+  "app/podcastClipperClipsActions": typeof app_podcastClipperClipsActions;
+  "app/podcastClipperClipsDb": typeof app_podcastClipperClipsDb;
   "app/podcastClipperDb": typeof app_podcastClipperDb;
   "app/podcastClipperS3": typeof app_podcastClipperS3;
   "app/tiktok": typeof app_tiktok;
@@ -103,6 +108,7 @@ declare const fullApi: ApiFromModules<{
   "webhooks/montager": typeof webhooks_montager;
   "webhooks/montagerVideos": typeof webhooks_montagerVideos;
   "webhooks/podcastClipper": typeof webhooks_podcastClipper;
+  "webhooks/podcastClipperClips": typeof webhooks_podcastClipperClips;
   "webhooks/test": typeof webhooks_test;
 }>;
 

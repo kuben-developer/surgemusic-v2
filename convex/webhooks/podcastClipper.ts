@@ -110,15 +110,10 @@ export const postCalibrationResult = httpAction(async (ctx, request) => {
             sceneTypeId: number;
             frameStorageId: string;
             histogramStorageId: string;
-            keyframeFrames?: Array<{ timestamp: number; frameStorageId: string }>;
           }) => ({
             sceneTypeId: st.sceneTypeId,
             frameStorageId: st.frameStorageId as Id<"_storage">,
             histogramStorageId: st.histogramStorageId as Id<"_storage">,
-            keyframeFrames: st.keyframeFrames?.map((kf) => ({
-              timestamp: kf.timestamp,
-              frameStorageId: kf.frameStorageId as Id<"_storage">,
-            })),
           })
         ),
       }
@@ -130,52 +125,6 @@ export const postCalibrationResult = httpAction(async (ctx, request) => {
     );
   } catch (error) {
     console.error("Error in postCalibrationResult:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-});
-
-/**
- * POST /api/podcast-clipper/reframe-result
- *
- * Backend pushes reframed video URL.
- *
- * Body: { taskId, videoId, reframedVideoUrl }
- */
-export const postReframeResult = httpAction(async (ctx, request) => {
-  try {
-    const body = await request.json();
-
-    if (!body.taskId || !body.videoId || !body.reframedVideoUrl) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Missing required fields: taskId, videoId, reframedVideoUrl",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    await ctx.runMutation(
-      internal.app.podcastClipperDb.saveReframeResult,
-      {
-        taskId: body.taskId as Id<"podcastClipperTasks">,
-        videoId: body.videoId as Id<"podcastClipperVideos">,
-        reframedVideoUrl: body.reframedVideoUrl,
-      }
-    );
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Error in postReframeResult:", error);
     return new Response(
       JSON.stringify({
         success: false,

@@ -3,11 +3,8 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Camera, ArrowLeftRight } from "lucide-react";
 import { CropCanvas } from "./CropCanvas";
-import { KeyframeStrip } from "./KeyframeStrip";
-import { getEffectiveCrop } from "../utils/crop.utils";
 import type { CropRegion } from "../../shared/types/podcast-clipper.types";
 import type { SceneTypeCropState } from "../types/calibration.types";
 
@@ -18,9 +15,6 @@ interface SceneTypeCardProps {
   onCropChange: (crop: CropRegion) => void;
   onAltCropChange: (crop: CropRegion) => void;
   onToggleAltCrop: (enabled: boolean) => void;
-  onSelectKeyframe: (index: number | null) => void;
-  onKeyframeCropChange: (keyframeIndex: number, crop: CropRegion) => void;
-  onKeyframeAltCropChange: (keyframeIndex: number, altCrop: CropRegion) => void;
 }
 
 export function SceneTypeCard({
@@ -30,48 +24,7 @@ export function SceneTypeCard({
   onCropChange,
   onAltCropChange,
   onToggleAltCrop,
-  onSelectKeyframe,
-  onKeyframeCropChange,
-  onKeyframeAltCropChange,
 }: SceneTypeCardProps) {
-  const selectedKfIndex = sceneType.selectedKeyframeIndex;
-  const isEditingKeyframe = selectedKfIndex !== null;
-
-  // Determine which frame URL and crop to show
-  let activeFrameUrl = sceneType.frameUrl;
-  let activeCrop = sceneType.crop;
-  let activeAltCrop = sceneType.altCrop;
-
-  if (isEditingKeyframe && sceneType.keyframes[selectedKfIndex]) {
-    const kf = sceneType.keyframes[selectedKfIndex];
-    activeFrameUrl = kf.frameUrl || sceneType.frameUrl;
-
-    const effective = getEffectiveCrop(
-      sceneType.keyframes,
-      selectedKfIndex,
-      sceneType.crop,
-      sceneType.altCrop,
-    );
-    activeCrop = effective.crop;
-    activeAltCrop = effective.altCrop;
-  }
-
-  const handleCropChange = (crop: CropRegion) => {
-    if (isEditingKeyframe) {
-      onKeyframeCropChange(selectedKfIndex, crop);
-    } else {
-      onCropChange(crop);
-    }
-  };
-
-  const handleAltCropChange = (altCrop: CropRegion) => {
-    if (isEditingKeyframe) {
-      onKeyframeAltCropChange(selectedKfIndex, altCrop);
-    } else {
-      onAltCropChange(altCrop);
-    }
-  };
-
   return (
     <Card className="overflow-hidden gap-0 py-0">
       <CardHeader className="px-4 py-2.5 bg-muted/30 border-b [.border-b]:pb-2.5">
@@ -104,61 +57,38 @@ export function SceneTypeCard({
       </CardHeader>
 
       <CardContent className="!px-4 py-3 space-y-3">
-        {/* Keyframe strip */}
-        {sceneType.keyframes.length > 0 && (
-          <KeyframeStrip
-            keyframes={sceneType.keyframes}
-            selectedIndex={sceneType.selectedKeyframeIndex}
-            onSelect={onSelectKeyframe}
-          />
-        )}
-
         {/* Primary crop */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-foreground">Primary Crop</p>
-            <div className="flex items-center gap-1.5">
-              {isEditingKeyframe && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                  keyframe
-                </Badge>
-              )}
-              <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
-                {activeCrop.width}&times;{activeCrop.height} at ({activeCrop.x}, {activeCrop.y})
-              </span>
-            </div>
+            <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
+              {sceneType.crop.width}&times;{sceneType.crop.height} at ({sceneType.crop.x}, {sceneType.crop.y})
+            </span>
           </div>
           <CropCanvas
-            frameUrl={activeFrameUrl}
+            frameUrl={sceneType.frameUrl}
             sourceWidth={sourceWidth}
             sourceHeight={sourceHeight}
-            crop={activeCrop}
-            onCropChange={handleCropChange}
+            crop={sceneType.crop}
+            onCropChange={onCropChange}
           />
         </div>
 
         {/* Alt crop */}
-        {sceneType.hasAltCrop && activeAltCrop && (
+        {sceneType.hasAltCrop && sceneType.altCrop && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-foreground">Alternating Crop</p>
-              <div className="flex items-center gap-1.5">
-                {isEditingKeyframe && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                    keyframe
-                  </Badge>
-                )}
-                <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
-                  {activeAltCrop.width}&times;{activeAltCrop.height} at ({activeAltCrop.x}, {activeAltCrop.y})
-                </span>
-              </div>
+              <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
+                {sceneType.altCrop.width}&times;{sceneType.altCrop.height} at ({sceneType.altCrop.x}, {sceneType.altCrop.y})
+              </span>
             </div>
             <CropCanvas
-              frameUrl={activeFrameUrl}
+              frameUrl={sceneType.frameUrl}
               sourceWidth={sourceWidth}
               sourceHeight={sourceHeight}
-              crop={activeAltCrop}
-              onCropChange={handleAltCropChange}
+              crop={sceneType.altCrop}
+              onCropChange={onAltCropChange}
             />
           </div>
         )}
