@@ -463,14 +463,16 @@ export default defineSchema({
   podcastClipperTranscripts: defineTable({
     folderId: v.id("podcastClipperFolders"),
     videoId: v.id("podcastClipperVideos"),
-    fullText: v.string(),
-    words: v.array(v.object({
+    fullText: v.optional(v.string()),
+    words: v.optional(v.array(v.object({
       text: v.string(),
       start: v.number(),
       end: v.number(),
       type: v.string(),
       speakerId: v.optional(v.string()),
-    })),
+    }))),
+    wordsStorageId: v.optional(v.id("_storage")),
+    speakerIds: v.optional(v.array(v.string())),
     speakerNames: v.optional(v.record(v.string(), v.string())),
     language: v.optional(v.string()),
     createdAt: v.number(),

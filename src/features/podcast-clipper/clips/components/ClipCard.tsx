@@ -91,18 +91,22 @@ export function ClipCard({ clip }: ClipCardProps) {
                   Download
                 </a>
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive ml-auto"
-                onClick={() => deleteClip({ clipId: clip._id })}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Delete
-              </Button>
             </div>
           </div>
         )}
+
+        {/* Delete – always available */}
+        <div className="flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive ml-auto"
+            onClick={() => deleteClip({ clipId: clip._id })}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            Delete
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

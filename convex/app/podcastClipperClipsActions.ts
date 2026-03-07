@@ -117,7 +117,7 @@ export const generateClips = internalAction({
     const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
     if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not set");
 
-    // Fetch transcript
+    // Fetch transcript doc
     const transcript = await ctx.runQuery(
       internal.app.podcastClipperClipsDb.getTranscriptInternal,
       { transcriptId: args.transcriptId as any }
@@ -125,11 +125,20 @@ export const generateClips = internalAction({
 
     if (!transcript) throw new Error("Transcript not found");
 
+    // Load words from storage or inline
+    let words: Array<{ text: string; start: number; end: number; type: string; speakerId?: string }> = transcript.words ?? [];
+    if (transcript.wordsStorageId) {
+      const blob = await ctx.storage.get(transcript.wordsStorageId);
+      if (blob) {
+        words = JSON.parse(await blob.text());
+      }
+    }
+
     // Build transcript text with speaker names
     const speakerNames = transcript.speakerNames ?? {};
     let lastSpeaker = "";
     let transcriptText = "";
-    for (const word of transcript.words) {
+    for (const word of words) {
       if (word.type !== "word") continue;
       const speaker = word.speakerId
         ? (speakerNames[word.speakerId] ?? word.speakerId)
@@ -143,7 +152,7 @@ export const generateClips = internalAction({
 
     // Calculate target clip count
     // Use ceil for min to ensure we always meet the user's minimum expectation
-    const lastWord = transcript.words[transcript.words.length - 1];
+    const lastWord = words[words.length - 1];
     const durationHours = lastWord ? Math.max(lastWord.end / 3600, 0.5) : 1;
     const minClips = Math.max(args.minClipsPerHour, Math.ceil(durationHours * args.minClipsPerHour));
     const maxClips = Math.max(minClips, Math.ceil(durationHours * args.maxClipsPerHour));

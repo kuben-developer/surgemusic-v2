@@ -79,6 +79,8 @@ export const postDownloadResult = httpAction(async (ctx, request) => {
  *
  * Docker posts word-level transcript.
  * Body: { jobId, folderId, videoId, fullText, words, language? }
+ *
+ * Words are stored as a JSON blob in Convex storage to avoid document/arg size limits.
  */
 export const postTranscriptResult = httpAction(async (ctx, request) => {
   try {
@@ -91,14 +93,30 @@ export const postTranscriptResult = httpAction(async (ctx, request) => {
       );
     }
 
+    // Store words array as JSON blob in Convex storage
+    const wordsBlob = new Blob([JSON.stringify(body.words)], {
+      type: "application/json",
+    });
+    const wordsStorageId = await ctx.storage.store(wordsBlob);
+
+    // Extract unique speaker IDs for the document (small, used by UI)
+    const speakerIds = [
+      ...new Set(
+        (body.words as Array<{ speakerId?: string }>)
+          .map((w) => w.speakerId)
+          .filter((id): id is string => !!id)
+      ),
+    ];
+
     await ctx.runMutation(
       internal.app.podcastClipperClipsDb.saveTranscriptResult,
       {
         jobId: body.jobId as Id<"podcastClipperClipJobs">,
         folderId: body.folderId as Id<"podcastClipperFolders">,
         videoId: body.videoId as Id<"podcastClipperVideos">,
+        wordsStorageId,
+        speakerIds,
         fullText: body.fullText ?? "",
-        words: body.words,
         language: body.language,
       }
     );
@@ -194,7 +212,7 @@ export const postClipReframeResult = httpAction(async (ctx, request) => {
  */
 export const getPendingOverlayClips = httpAction(async (ctx) => {
   try {
-    const clips = await ctx.runQuery(
+    const clips = await ctx.runAction(
       internal.app.podcastClipperClipsDb.getPendingOverlayClipsInternal
     );
 
@@ -202,7 +220,7 @@ export const getPendingOverlayClips = httpAction(async (ctx) => {
     if (clips.length > 0) {
       await ctx.runMutation(
         internal.app.podcastClipperClipsDb.markOverlayRendering,
-        { clipIds: clips.map((c) => c.clipId) }
+        { clipIds: clips.map((c: any) => c.clipId) }
       );
     }
 

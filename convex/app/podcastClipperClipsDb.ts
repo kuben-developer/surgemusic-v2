@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import {
+  internalAction,
   internalMutation,
   internalQuery,
   mutation,
@@ -351,7 +352,8 @@ function filterOverlappingSpeech(words: SubtitleWord[]): SubtitleWord[] {
   return words.filter((_, i) => !removeIndices.has(i));
 }
 
-export const getPendingOverlayClipsInternal = internalQuery({
+// Query to get pending overlay clips with transcript metadata (no words loaded)
+export const _getPendingOverlayClipsData = internalQuery({
   args: {},
   handler: async (ctx) => {
     const clips = await ctx.db
@@ -363,36 +365,95 @@ export const getPendingOverlayClipsInternal = internalQuery({
     for (const clip of clips) {
       if (!clip.reframedVideoUrl) continue;
 
-      // Get transcript for subtitle cues
       const transcript = await ctx.db
         .query("podcastClipperTranscripts")
         .withIndex("by_videoId", (q) => q.eq("videoId", clip.videoId))
         .first();
-
-      // Filter and shift word timestamps to clip time range
-      const mappedWords: SubtitleWord[] = transcript
-        ? transcript.words
-            .filter(
-              (w) =>
-                w.type === "word" &&
-                w.start >= clip.startTime &&
-                w.end <= clip.endTime
-            )
-            .map((w) => ({
-              text: w.text,
-              start: w.start - clip.startTime,
-              end: w.end - clip.startTime,
-              speakerId: w.speakerId ?? "unknown",
-            }))
-        : [];
-
-      const subtitleCues = filterOverlappingSpeech(mappedWords);
 
       results.push({
         clipId: clip._id,
         videoUrl: clip.reframedVideoUrl,
         hookText: clip.hookText,
         overlayStyle: clip.overlayStyle ?? "tiktok",
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        wordsStorageId: transcript?.wordsStorageId ?? null,
+        inlineWords: transcript?.words ?? null,
+      });
+    }
+
+    return results;
+  },
+});
+
+interface OverlayClipResult {
+  clipId: string;
+  videoUrl: string;
+  hookText: string;
+  overlayStyle: string;
+  subtitleCues: SubtitleWord[];
+}
+
+// Action that loads words from storage and builds subtitle cues
+export const getPendingOverlayClipsInternal = internalAction({
+  args: {},
+  handler: async (ctx): Promise<OverlayClipResult[]> => {
+    const clipsData: Array<{
+      clipId: string;
+      videoUrl: string;
+      hookText: string;
+      overlayStyle: string;
+      startTime: number;
+      endTime: number;
+      wordsStorageId: string | null;
+      inlineWords: Array<{ text: string; start: number; end: number; type: string; speakerId?: string }> | null;
+    }> = await ctx.runQuery(
+      internal.app.podcastClipperClipsDb._getPendingOverlayClipsData
+    );
+
+    // Cache loaded words by storageId to avoid re-fetching for clips from the same video
+    const wordsCache = new Map<string, any[]>();
+
+    const results: OverlayClipResult[] = [];
+    for (const clip of clipsData) {
+      let allWords: any[] = [];
+
+      if (clip.wordsStorageId) {
+        const cacheKey = clip.wordsStorageId;
+        if (wordsCache.has(cacheKey)) {
+          allWords = wordsCache.get(cacheKey)!;
+        } else {
+          const blob = await ctx.storage.get(clip.wordsStorageId as any);
+          if (blob) {
+            allWords = JSON.parse(await blob.text());
+            wordsCache.set(cacheKey, allWords);
+          }
+        }
+      } else if (clip.inlineWords) {
+        allWords = clip.inlineWords;
+      }
+
+      const mappedWords: SubtitleWord[] = allWords
+        .filter(
+          (w: any) =>
+            w.type === "word" &&
+            w.start >= clip.startTime &&
+            w.end <= clip.endTime
+        )
+        .map((w: any) => ({
+          text: w.text,
+          start: w.start - clip.startTime,
+          end: w.end - clip.startTime,
+          speakerId: w.speakerId ?? "unknown",
+        }));
+
+      const subtitleCues = filterOverlappingSpeech(mappedWords);
+
+      results.push({
+        clipId: clip.clipId,
+        videoUrl: clip.videoUrl,
+        hookText: clip.hookText,
+        overlayStyle: clip.overlayStyle,
         subtitleCues,
       });
     }
@@ -435,24 +496,18 @@ export const saveTranscriptResult = internalMutation({
     jobId: v.id("podcastClipperClipJobs"),
     folderId: v.id("podcastClipperFolders"),
     videoId: v.id("podcastClipperVideos"),
-    fullText: v.string(),
-    words: v.array(
-      v.object({
-        text: v.string(),
-        start: v.number(),
-        end: v.number(),
-        type: v.string(),
-        speakerId: v.optional(v.string()),
-      })
-    ),
+    wordsStorageId: v.id("_storage"),
+    speakerIds: v.array(v.string()),
+    fullText: v.optional(v.string()),
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("podcastClipperTranscripts", {
       folderId: args.folderId,
       videoId: args.videoId,
+      wordsStorageId: args.wordsStorageId,
+      speakerIds: args.speakerIds,
       fullText: args.fullText,
-      words: args.words,
       language: args.language,
       createdAt: Date.now(),
     });

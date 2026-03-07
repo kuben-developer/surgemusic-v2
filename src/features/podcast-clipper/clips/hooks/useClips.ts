@@ -76,14 +76,15 @@ export function useClips(folderId: PodcastFolderId) {
   // Compute transcription status from folder or jobs
   const transcriptionStatus = folder?.transcriptionStatus ?? "none";
 
-  // Get unique speakers from transcript
-  const speakers = transcript
-    ? [...new Set(transcript.words.filter((w) => w.speakerId).map((w) => w.speakerId!))]
-    : [];
+  // Get unique speakers from transcript (uses speakerIds field, falls back to scanning words)
+  const speakers = transcript?.speakerIds
+    ?? (transcript?.words
+      ? [...new Set(transcript.words.filter((w) => w.speakerId).map((w) => w.speakerId!))]
+      : []);
 
-  // Get sample quotes per speaker
+  // Get sample quotes per speaker (only available if words are inline)
   const speakerSamples: Record<string, string> = {};
-  if (transcript) {
+  if (transcript?.words) {
     for (const speakerId of speakers) {
       const words = transcript.words
         .filter((w) => w.speakerId === speakerId && w.type === "word")
