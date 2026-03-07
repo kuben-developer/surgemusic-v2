@@ -30,6 +30,7 @@ import type * as app_montager from "../app/montager.js";
 import type * as app_montagerDb from "../app/montagerDb.js";
 import type * as app_podcastClipperClipsActions from "../app/podcastClipperClipsActions.js";
 import type * as app_podcastClipperClipsDb from "../app/podcastClipperClipsDb.js";
+import type * as app_podcastClipperClipsPrompt from "../app/podcastClipperClipsPrompt.js";
 import type * as app_podcastClipperDb from "../app/podcastClipperDb.js";
 import type * as app_podcastClipperS3 from "../app/podcastClipperS3.js";
 import type * as app_tiktok from "../app/tiktok.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   "app/montagerDb": typeof app_montagerDb;
   "app/podcastClipperClipsActions": typeof app_podcastClipperClipsActions;
   "app/podcastClipperClipsDb": typeof app_podcastClipperClipsDb;
+  "app/podcastClipperClipsPrompt": typeof app_podcastClipperClipsPrompt;
   "app/podcastClipperDb": typeof app_podcastClipperDb;
   "app/podcastClipperS3": typeof app_podcastClipperS3;
   "app/tiktok": typeof app_tiktok;

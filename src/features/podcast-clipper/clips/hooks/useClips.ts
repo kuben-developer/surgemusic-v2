@@ -5,6 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { toast } from "sonner";
 import type { PodcastFolderId } from "../../shared/types/podcast-clipper.types";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { buildClipGenerationPrompt } from "../../../../../convex/app/podcastClipperClipsPrompt";
 
 export function useClips(folderId: PodcastFolderId) {
   const folder = useQuery(api.app.podcastClipperDb.getFolder, { folderId });
@@ -44,11 +45,35 @@ export function useClips(folderId: PodcastFolderId) {
     }
   };
 
+  const getDefaultPrompt = (params: {
+    minClipDuration: number;
+    maxClipDuration: number;
+    minClipsPerHour: number;
+    maxClipsPerHour: number;
+  }) => {
+    const speakerNames = transcript?.speakerNames ?? {};
+    // Estimate clip counts the same way the server does
+    const durationHours = 1; // We don't have word-level data client-side; use 1hr as default
+    const minClips = Math.max(params.minClipsPerHour, Math.ceil(durationHours * params.minClipsPerHour));
+    const maxClips = Math.max(minClips, Math.ceil(durationHours * params.maxClipsPerHour));
+
+    return buildClipGenerationPrompt({
+      speakerNames,
+      minClips,
+      maxClips,
+      minClipDuration: params.minClipDuration,
+      maxClipDuration: params.maxClipDuration,
+      transcriptText: "[TRANSCRIPT WILL BE INSERTED HERE]",
+    });
+  };
+
   const generateClips = async (params: {
     minClipDuration: number;
     maxClipDuration: number;
     minClipsPerHour: number;
     maxClipsPerHour: number;
+    customPrompt?: string;
+    model?: string;
   }) => {
     if (!mainVideo || !transcript) return;
     try {
@@ -56,7 +81,12 @@ export function useClips(folderId: PodcastFolderId) {
         folderId,
         videoId: mainVideo._id,
         transcriptId: transcript._id,
-        ...params,
+        minClipDuration: params.minClipDuration,
+        maxClipDuration: params.maxClipDuration,
+        minClipsPerHour: params.minClipsPerHour,
+        maxClipsPerHour: params.maxClipsPerHour,
+        customPrompt: params.customPrompt,
+        model: params.model,
       });
       toast.success("Generating clips...");
     } catch (error) {
@@ -111,6 +141,7 @@ export function useClips(folderId: PodcastFolderId) {
     startTranscription,
     updateSpeakerNames,
     generateClips,
+    getDefaultPrompt,
     processApprovedClips,
   };
 }

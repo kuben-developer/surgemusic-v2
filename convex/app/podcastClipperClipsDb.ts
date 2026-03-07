@@ -167,6 +167,8 @@ export const triggerGenerateClips = mutation({
     maxClipDuration: v.number(),
     minClipsPerHour: v.number(),
     maxClipsPerHour: v.number(),
+    customPrompt: v.optional(v.string()),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -180,6 +182,8 @@ export const triggerGenerateClips = mutation({
       maxClipDuration: args.maxClipDuration,
       minClipsPerHour: args.minClipsPerHour,
       maxClipsPerHour: args.maxClipsPerHour,
+      customPrompt: args.customPrompt,
+      model: args.model,
     });
   },
 });

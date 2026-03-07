@@ -29,6 +29,7 @@ export function ClipsPage() {
     startTranscription,
     updateSpeakerNames,
     generateClips,
+    getDefaultPrompt,
     processApprovedClips,
   } = useClips(folderId);
 
@@ -109,6 +110,7 @@ export function ClipsPage() {
       {hasCompletedTranscription && (
         <ClipGenerationSection
           canGenerate={canGenerate}
+          getDefaultPrompt={getDefaultPrompt}
           onGenerate={generateClips}
         />
       )}
